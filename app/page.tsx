@@ -19,3 +19,4 @@ export default function Home() {
         <h1 className={'text-center my-16 text-4xl'}>Hi Team Kraken</h1>
     );
 }
+
