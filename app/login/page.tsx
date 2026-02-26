@@ -41,7 +41,7 @@ export default function LoginPage() {
 
         {/* Heading */}
         <h1 className="text-2xl font-bold text-center text-gray-900 mb-1">
-          Welcome back to ExpertConnect
+          Welcome Back to ExpertConnect
         </h1>
         <p className="text-center text-teal-500 text-sm mb-8">
           Please enter your details to sign in.
