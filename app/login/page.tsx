@@ -1,22 +1,41 @@
 "use client";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   IoEyeOutline,
   IoEyeOffOutline,
   IoMailOutline,
   IoLockClosedOutline,
 } from "react-icons/io5";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // TODO: handle login
-    console.log({ email, password });
+    setAuthError(null);
+    setIsSubmitting(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    router.push("/");
+    router.refresh();
   };
 
   return (
@@ -102,6 +121,8 @@ export default function LoginPage() {
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
                   className="w-full pl-11 pr-4 py-3 rounded-full text-sm text-white placeholder-[#649c8c] focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   style={{
                     background: 'linear-gradient(135deg, rgba(2,44,34,0.45), rgba(2,34,24,0.35))',
@@ -150,6 +171,8 @@ export default function LoginPage() {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
                   className="w-full pl-11 pr-11 py-3 rounded-full text-sm text-white placeholder-[#649c8c] focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                   style={{
                     background: 'linear-gradient(135deg, rgba(2,44,34,0.45), rgba(2,34,24,0.35))',
@@ -176,12 +199,16 @@ export default function LoginPage() {
           </div>
 
           {/* Log In Button */}
+       {authError ? (
+        <p className="text-sm text-center text-red-300">{authError}</p>
+       ) : null}
        <div
   className="p-[1px] rounded-full w-full"
   style={{ background: "rgba(28,196,133,0.1)" }}
 >
   <button
     type="submit"
+    disabled={isSubmitting}
     className="w-full py-3 text-white font-semibold rounded-full transition-all text-sm cursor-pointer hover:brightness-110 active:scale-[0.98]"
     style={{
       background: 'linear-gradient(135deg, rgba(28,196,133,0.45), rgba(20,150,100,0.45))',
@@ -190,7 +217,7 @@ export default function LoginPage() {
       boxShadow: 'inset 0 0 0 0.5px rgba(152,255,152,0.25), inset 0 1px 2px rgba(255,255,255,0.35), 0 6px 16px rgba(0,0,0,0.25)'
     }}
   >
-    Log In
+    {isSubmitting ? "Logging in..." : "Log In"}
   </button>
 </div>
         </form>
