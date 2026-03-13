@@ -13,6 +13,9 @@ import {
   IoGlobeOutline,
   IoAddCircleOutline,
   IoCloseCircle,
+  IoLockClosedOutline,
+  IoEyeOutline,
+  IoEyeOffOutline,
 } from "react-icons/io5";
 import { HiOutlineUserGroup, HiOutlineShieldCheck } from "react-icons/hi2";
 
@@ -54,6 +57,10 @@ export default function RegisterPage() {
   const [seekerStatus, setSeekerStatus] = useState("");
   const [seekerTimezone, setSeekerTimezone] = useState("UTC+5.5");
   const [seekerBio, setSeekerBio] = useState("");
+  const [seekerPassword, setSeekerPassword] = useState("");
+  const [seekerConfirmPassword, setSeekerConfirmPassword] = useState("");
+  const [showSeekerPassword, setShowSeekerPassword] = useState(false);
+  const [showSeekerConfirmPassword, setShowSeekerConfirmPassword] = useState(false);
 
   // Step 3 — professional profile
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -72,6 +79,12 @@ export default function RegisterPage() {
   const [timezone, setTimezone] = useState("Asia/Colombo (UTC+05:30)");
   const [verifyWindow, setVerifyWindow] = useState("Monday 09:00 AM");
   const [bio, setBio] = useState("");
+  const [expertUsername, setExpertUsername] = useState("");
+  const [expertEmail, setExpertEmail] = useState("");
+  const [expertPassword, setExpertPassword] = useState("");
+  const [expertConfirmPassword, setExpertConfirmPassword] = useState("");
+  const [showExpertPassword, setShowExpertPassword] = useState(false);
+  const [showExpertConfirmPassword, setShowExpertConfirmPassword] = useState(false);
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills(prev =>
@@ -81,7 +94,7 @@ export default function RegisterPage() {
 
   const handleContinue = () => {
     if (step === 1 && selectedRole) {
-      if (selectedRole === "expert") setStep(3); // skip step 2 for expert
+      if (selectedRole === "expert") setStep(3);
       else setStep(2);
     } else if (step === 2) {
       handleFinalSubmit();
@@ -93,9 +106,18 @@ export default function RegisterPage() {
     console.log({ role: selectedRole, fullName, email });
   };
 
-  const handleProfessionalSubmit = (e: React.FormEvent) => {
+  const handleProfessionalFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ role: selectedRole, fullName, email, jobTitle, employer, selectedSkills });
+    console.log({
+      role: selectedRole,
+      expertUsername,
+      expertEmail,
+      expertPassword,
+      fullName,
+      jobTitle,
+      employer,
+      selectedSkills,
+    });
   };
 
   // ── shared styles ──
@@ -118,8 +140,8 @@ export default function RegisterPage() {
   });
 
 
-  const totalSteps = 2;
-  const progressPct = step === 1 ? 50 : 100;
+  const totalSteps = selectedRole === "expert" ? 3 : 2;
+  const progressPct = step === 1 ? 100 / totalSteps : 100;
 
   return (
     <>
@@ -188,7 +210,7 @@ export default function RegisterPage() {
         @media (min-width: 768px) {
           .reg-page { padding: 40px 24px 48px; }
           .pro-card { padding: 40px; }
-          .pro-header { font-size: 32px; }
+          .pro-header { fontSize: 32px; }
         }
 
         .glass-input::placeholder { color: rgba(167,243,208,0.4); }
@@ -325,7 +347,7 @@ export default function RegisterPage() {
         )}
 
 
-        {/* ════════════════ STEP 2 — Service Seeker Profile ════════════════ */}
+        {/* ══════��═════════ STEP 2 — Service Seeker Profile ════════════════ */}
         {step === 2 && (
           <div className="pro-card">
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "8px" }}>
@@ -385,6 +407,40 @@ export default function RegisterPage() {
                   <div style={{ position: "relative" }}>
                     <IoMailOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
                     <input type="email" placeholder="john@example.com" value={email} onChange={e => setEmail(e.target.value)} className="round-input" style={roundInput} />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Password</label>
+                  <div style={{ position: "relative" }}>
+                    <IoLockClosedOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
+                    <input type={showSeekerPassword ? "text" : "password"} placeholder="Enter password" value={seekerPassword} onChange={e => setSeekerPassword(e.target.value)} className="round-input" style={{ ...roundInput, paddingRight: "44px" }} />
+                    <button
+                      type="button"
+                      onClick={() => setShowSeekerPassword(v => !v)}
+                      aria-label={showSeekerPassword ? "Hide password" : "Show password"}
+                      style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#649c8c", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      {showSeekerPassword ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Confirm Password</label>
+                  <div style={{ position: "relative" }}>
+                    <IoLockClosedOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
+                    <input type={showSeekerConfirmPassword ? "text" : "password"} placeholder="Confirm password" value={seekerConfirmPassword} onChange={e => setSeekerConfirmPassword(e.target.value)} className="round-input" style={{ ...roundInput, paddingRight: "44px" }} />
+                    <button
+                      type="button"
+                      onClick={() => setShowSeekerConfirmPassword(v => !v)}
+                      aria-label={showSeekerConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                      style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#649c8c", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      {showSeekerConfirmPassword ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
+                    </button>
                   </div>
                 </div>
 
@@ -469,18 +525,94 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {/* ════════════════ STEP 3 — Professional Profile ════════════════ */}
+        {/* ════════════════ STEP 3 — Professional Account ════════════════ */}
         {step === 3 && (
           <div className="pro-card">
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "8px" }}>
+              <div>
+                <p style={{ color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px" }}>Registration</p>
+                <h1 className="reg-header" style={{ color: "white", fontWeight: 700, margin: 0 }}>Professional Account</h1>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", marginTop: "4px", flexShrink: 0 }}>
+                <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0 }}>Step 2 of 3</p>
+                <div style={{ width: "192px", height: "6px", borderRadius: "999px", background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: "66.67%", background: "#10B981", borderRadius: "999px", boxShadow: "0 0 12px rgba(16,185,129,0.5)" }} />
+                </div>
+              </div>
+            </div>
 
-            {/* Header — same as steps 1 & 2 */}
+            <p style={{ fontSize: "14px", color: "#649c8c", marginTop: "12px", marginBottom: "28px" }}>
+              Set up your account credentials before completing your professional profile.
+            </p>
+
+            <form onSubmit={(e) => { e.preventDefault(); setStep(4); }} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div className="pro-form-grid">
+                <div>
+                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Username</label>
+                  <div style={{ position: "relative" }}>
+                    <IoPersonOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
+                    <input type="text" placeholder="your_username" value={expertUsername} onChange={e => setExpertUsername(e.target.value)} className="round-input" style={roundInput} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Email Address</label>
+                  <div style={{ position: "relative" }}>
+                    <IoMailOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
+                    <input type="email" placeholder="expert@example.com" value={expertEmail} onChange={e => setExpertEmail(e.target.value)} className="round-input" style={roundInput} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Password</label>
+                  <div style={{ position: "relative" }}>
+                    <IoLockClosedOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
+                    <input type={showExpertPassword ? "text" : "password"} placeholder="Enter password" value={expertPassword} onChange={e => setExpertPassword(e.target.value)} className="round-input" style={{ ...roundInput, paddingRight: "44px" }} />
+                    <button type="button" onClick={() => setShowExpertPassword(v => !v)} aria-label={showExpertPassword ? "Hide password" : "Show password"}
+                      style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#649c8c", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {showExpertPassword ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Confirm Password</label>
+                  <div style={{ position: "relative" }}>
+                    <IoLockClosedOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
+                    <input type={showExpertConfirmPassword ? "text" : "password"} placeholder="Confirm password" value={expertConfirmPassword} onChange={e => setExpertConfirmPassword(e.target.value)} className="round-input" style={{ ...roundInput, paddingRight: "44px" }} />
+                    <button type="button" onClick={() => setShowExpertConfirmPassword(v => !v)} aria-label={showExpertConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                      style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#649c8c", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {showExpertConfirmPassword ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", paddingTop: "24px", marginTop: "8px", borderTop: "1px solid rgba(16,185,129,0.1)" }}>
+                <button type="button" onClick={() => setStep(1)}
+                  style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 20px", borderRadius: "999px", fontWeight: 600, fontSize: "14px", color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  <IoArrowBack size={16} /> Back
+                </button>
+                <button type="submit"
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px", borderRadius: "999px", fontWeight: 600, color: "white", fontSize: "14px", border: "none", cursor: "pointer", background: "linear-gradient(135deg, #10B981, #059669)", boxShadow: "0 6px 20px rgba(16,185,129,0.35)" }}>
+                  Continue <IoArrowForward size={16} />
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+
+        {/* ════════════════ STEP 4 — Professional Profile ════════════════ */}
+        {step === 4 && (
+          <div className="pro-card">
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "8px" }}>
               <div>
                 <p style={{ color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px" }}>Registration</p>
                 <h1 className="reg-header" style={{ color: "white", fontWeight: 700, margin: 0 }}>Professional Profile</h1>
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", marginTop: "4px", flexShrink: 0 }}>
-                <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0 }}>Step 2 of 2</p>
+                <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0 }}>Step 3 of 3</p>
                 <div style={{ width: "192px", height: "6px", borderRadius: "999px", background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: "100%", background: "#10B981", borderRadius: "999px", boxShadow: "0 0 12px rgba(16,185,129,0.5)" }} />
                 </div>
@@ -491,16 +623,13 @@ export default function RegisterPage() {
               Complete your <span style={{ color: "#10B981" }}>Professional Expert</span> profile for verification.
             </p>
 
-            <form onSubmit={handleProfessionalSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <form onSubmit={handleProfessionalFinalSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
               {/* ── Profile Photo ── */}
               <div style={{ display: "flex", alignItems: "center", gap: "24px", flexWrap: "wrap", padding: "20px", borderRadius: "16px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)" }}>
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   <div style={{ width: "96px", height: "96px", borderRadius: "50%", overflow: "hidden", background: "rgba(6,78,59,0.5)", border: "2px dashed rgba(16,185,129,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {profilePhoto
-                      ? <img src={profilePhoto} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <IoAddCircleOutline size={32} style={{ color: "rgba(16,185,129,0.6)" }} />
-                    }
+                    {profilePhoto ? <img src={profilePhoto} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IoAddCircleOutline size={32} style={{ color: "rgba(16,185,129,0.6)" }} />}
                   </div>
                   <label htmlFor="photo-upload" style={{ position: "absolute", bottom: "0", right: "0", width: "28px", height: "28px", background: "#10B981", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
                     <svg width="12" height="12" fill="#022c22" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
@@ -513,9 +642,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* ── 2-col grid ── */}
               <div className="pro-form-grid">
-
                 {/* Full Name */}
                 <div>
                   <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Full Name</label>
@@ -548,16 +675,7 @@ export default function RegisterPage() {
                   <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>National ID</label>
                   <div style={{ position: "relative" }}>
                     <IoPersonOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
-                    <input type="text" placeholder="EX-12345" value={nationalId} onChange={e => setNationalId(e.target.value)} className="round-input" style={roundInput} />
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Email Address</label>
-                  <div style={{ position: "relative" }}>
-                    <IoMailOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
-                    <input type="email" placeholder="sarah.j@expertconnect.com" value={email} onChange={e => setEmail(e.target.value)} className="round-input" style={roundInput} />
+                    <input type="text" placeholder="19**********" value={nationalId} onChange={e => setNationalId(e.target.value)} className="round-input" style={roundInput} />
                   </div>
                 </div>
 
@@ -566,7 +684,7 @@ export default function RegisterPage() {
                   <label style={{ display: "block", color: "#10B981", fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>Phone Number</label>
                   <div style={{ position: "relative" }}>
                     <IoPersonOutline size={18} style={{ color: "#649c8c", position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", zIndex: 10, pointerEvents: "none" }} />
-                    <input type="tel" placeholder="+1 (555) 000-0000" value={phone} onChange={e => setPhone(e.target.value)} className="round-input" style={roundInput} />
+                    <input type="tel" placeholder="+94 00 000 0000" value={phone} onChange={e => setPhone(e.target.value)} className="round-input" style={roundInput} />
                   </div>
                 </div>
 
@@ -699,7 +817,7 @@ export default function RegisterPage() {
 
               {/* ── Action Buttons — pill style like seeker ── */}
               <div style={{ display: "flex", gap: "12px", paddingTop: "24px", marginTop: "8px", borderTop: "1px solid rgba(16,185,129,0.1)" }}>
-                <button type="button" onClick={() => setStep(1)}
+                <button type="button" onClick={() => setStep(3)}
                   style={{ display: "flex", alignItems: "center", gap: "8px", padding: "12px 20px", borderRadius: "999px", fontWeight: 600, fontSize: "14px", color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", whiteSpace: "nowrap" }}>
                   <IoArrowBack size={16} /> Back
                 </button>
