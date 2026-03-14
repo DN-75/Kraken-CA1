@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import {useState} from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {useRouter} from "next/navigation";
 import {
     IoPersonOutline,
     IoMailOutline,
@@ -14,14 +14,14 @@ import {
     IoGlobeOutline,
     IoCloseCircle,
 } from "react-icons/io5";
-import { HiOutlineUserGroup, HiOutlineShieldCheck } from "react-icons/hi2";
-import { supabase } from "@/lib/supabaseClient";
-import type { Database } from "@/types/database.types";
-import { Field } from "./components/Field";
-import { PasswordField } from "./components/PasswordField";
-import { PhotoUpload } from "./components/PhotoUpload";
-import { StepHeader } from "./components/StepHeader";
-import { FIELD_ICON, FIELD_LABEL, ROUND_INPUT } from "./components/registerUiStyles";
+import {HiOutlineUserGroup, HiOutlineShieldCheck} from "react-icons/hi2";
+import {supabase} from "@/lib/supabaseClient";
+import type {Database} from "@/types/database.types";
+import {Field} from "./components/Field";
+import {PasswordField} from "./components/PasswordField";
+import {PhotoUpload} from "./components/PhotoUpload";
+import {StepHeader} from "./components/StepHeader";
+import {FIELD_ICON, FIELD_LABEL, ROUND_INPUT} from "./components/registerUiStyles";
 
 type Role = "seeker" | "expert" | null;
 type UserStatus = Database["public"]["Enums"]["user_status"];
@@ -66,13 +66,13 @@ const SELECT_INPUT =
 const ACTION_ROW = "mt-2 flex gap-3 border-t border-emerald-500/10 pt-6";
 
 const BACK_BTN =
-    "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white/70";
+    "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white/70 cursor-pointer";
 
 const SUBMIT_BTN =
     "flex flex-1 items-center justify-center gap-2 rounded-full border-0 " +
     "bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 text-sm font-semibold text-white " +
     "shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 " +
-    "disabled:cursor-not-allowed disabled:opacity-80";
+    "disabled:cursor-not-allowed disabled:opacity-80 cursor-pointer";
 
 const TWO_COL_GRID = "grid grid-cols-1 gap-6 sm:grid-cols-2";
 
@@ -177,21 +177,21 @@ export default function RegisterPage() {
         }
         setSeekerSubmitting(true);
         try {
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            const {data: authData, error: authError} = await supabase.auth.signUp({
                 email: email.trim(),
                 password: seekerPassword,
-                options: { data: { role: "user", full_name: fullName.trim() } },
+                options: {data: {role: "user", full_name: fullName.trim()}},
             });
             if (authError) throw new Error(authError.message);
             const userId = authData.user?.id;
             if (!userId) throw new Error("Account was created but user id is missing.");
-            const { error: profileError } = await supabase.from("profiles").insert({
+            const {error: profileError} = await supabase.from("profiles").insert({
                 id: userId, role: "user", name: fullName.trim(),
                 bio: seekerBio.trim() || null, profile_photo: null,
                 time_zone: mapSeekerTimezone(seekerTimezone),
             });
             if (profileError) throw new Error(profileError.message);
-            const { error: userProfileError } = await supabase.from("user_profiles").insert({
+            const {error: userProfileError} = await supabase.from("user_profiles").insert({
                 profile_id: userId, status: mapSeekerStatus(seekerStatus),
             });
             if (userProfileError) throw new Error(userProfileError.message);
@@ -234,7 +234,7 @@ export default function RegisterPage() {
         }
         setExpertSubmitting(true);
         try {
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            const {data: authData, error: authError} = await supabase.auth.signUp({
                 email: expertEmail.trim(), password: expertPassword,
                 options: {
                     data: {
@@ -246,13 +246,13 @@ export default function RegisterPage() {
             if (authError) throw new Error(authError.message);
             const userId = authData.user?.id;
             if (!userId) throw new Error("Account was created but user id is missing.");
-            const { error: profileError } = await supabase.from("profiles").insert({
+            const {error: profileError} = await supabase.from("profiles").insert({
                 id: userId, role: "professional", name: fullName.trim(),
                 bio: bio.trim() || null, profile_photo: null,
                 time_zone: mapProfessionalTimezone(timezone),
             });
             if (profileError) throw new Error(profileError.message);
-            const { data: professionalProfile, error: professionalProfileError } = await supabase
+            const {data: professionalProfile, error: professionalProfileError} = await supabase
                 .from("professional_profiles")
                 .insert({
                     profile_id: userId, national_id: nationalId.trim() || null,
@@ -271,7 +271,7 @@ export default function RegisterPage() {
                 professional_profile_id: professionalProfile.id,
                 skill: skill as SkillTag,
             }));
-            const { error: skillsError } = await supabase.from("professional_skills").insert(skillRows);
+            const {error: skillsError} = await supabase.from("professional_skills").insert(skillRows);
             if (skillsError) throw new Error(skillsError.message);
             setExpertSubmitSuccess("Registration submitted. You can now log in.");
             router.push("/login");
@@ -293,19 +293,21 @@ export default function RegisterPage() {
             : "bg-white/[0.04] border-white/[0.08]"
         }`;
 
+
     return (
-        <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#022c22] to-[#126449] px-4 py-20 md:py-10">
+        <div
+            className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#022c22] to-[#126449] px-4 py-20 md:py-10">
 
             {/* ── Logo ─────────────────────────────────────────────────────── */}
             <div className="absolute left-5 top-5 z-10 flex items-center gap-2.5">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400">
                     <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                        <circle cx="12" cy="8" r="2.5" />
-                        <circle cx="7" cy="13" r="2.5" />
-                        <circle cx="17" cy="13" r="2.5" />
-                        <circle cx="12" cy="18" r="2.5" />
-                        <circle cx="7" cy="8" r="1.5" opacity="0.6" />
-                        <circle cx="17" cy="8" r="1.5" opacity="0.6" />
+                        <circle cx="12" cy="8" r="2.5"/>
+                        <circle cx="7" cy="13" r="2.5"/>
+                        <circle cx="17" cy="13" r="2.5"/>
+                        <circle cx="12" cy="18" r="2.5"/>
+                        <circle cx="7" cy="8" r="1.5" opacity="0.6"/>
+                        <circle cx="17" cy="8" r="1.5" opacity="0.6"/>
                     </svg>
                 </div>
                 <span className="hidden text-[18px] font-bold text-white sm:inline">
@@ -316,7 +318,7 @@ export default function RegisterPage() {
             {/* ════════════════ STEP 1 — Role Selection ════════════════ */}
             {step === 1 && (
                 <div className={`${CARD_BASE} max-w-2xl`}>
-                    <StepHeader title="Get Started" step={1} totalSteps={totalSteps} progressPct={progressPct} />
+                    <StepHeader title="Get Started" step={1} totalSteps={totalSteps} progressPct={progressPct}/>
 
                     <p className="mb-7 mt-6 text-center text-sm text-[#649c8c]">
                         Choose your journey on the platform. How will you participate?
@@ -326,18 +328,20 @@ export default function RegisterPage() {
                     <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {/* Service Seeker */}
                         <button type="button" onClick={() => setSelectedRole("seeker")}
-                            className={roleCardClass(selectedRole === "seeker")}>
-                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15">
-                                <HiOutlineUserGroup size={24} className="text-emerald-400" />
+                                className={roleCardClass(selectedRole === "seeker")}>
+                            <div
+                                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15">
+                                <HiOutlineUserGroup size={24} className="text-emerald-400"/>
                             </div>
                             <h3 className="mb-2 mt-0 text-[17px] font-bold text-white">Service Seeker</h3>
                             <p className="mb-4 mt-0 text-[13px] leading-relaxed text-[#649c8c]">
-                                Access top-tier professionals, get personalized advice, and accelerate your career growth.
+                                Access top-tier professionals, get personalized advice, and accelerate your career
+                                growth.
                             </p>
                             <ul className="m-0 flex list-none flex-col gap-2 p-0">
                                 {["Connect with global experts", "Flexible booking hours"].map((f) => (
                                     <li key={f} className="flex items-center gap-2 text-[13px] text-white/80">
-                                        <IoCheckmarkCircle size={17} className="shrink-0 text-emerald-400" />
+                                        <IoCheckmarkCircle size={17} className="shrink-0 text-emerald-400"/>
                                         {f}
                                     </li>
                                 ))}
@@ -346,9 +350,10 @@ export default function RegisterPage() {
 
                         {/* Professional Expert */}
                         <button type="button" onClick={() => setSelectedRole("expert")}
-                            className={roleCardClass(selectedRole === "expert")}>
-                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15">
-                                <HiOutlineShieldCheck size={24} className="text-emerald-400" />
+                                className={roleCardClass(selectedRole === "expert")}>
+                            <div
+                                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15">
+                                <HiOutlineShieldCheck size={24} className="text-emerald-400"/>
                             </div>
                             <h3 className="mb-2 mt-0 text-[17px] font-bold text-white">Professional Expert</h3>
                             <p className="mb-4 mt-0 text-[13px] leading-relaxed text-[#649c8c]">
@@ -357,7 +362,7 @@ export default function RegisterPage() {
                             <ul className="m-0 flex list-none flex-col gap-2 p-0">
                                 {["Set your own consultation rates", "Verified expert badge"].map((f) => (
                                     <li key={f} className="flex items-center gap-2 text-[13px] text-white/80">
-                                        <IoCheckmarkCircle size={17} className="shrink-0 text-emerald-400" />
+                                        <IoCheckmarkCircle size={17} className="shrink-0 text-emerald-400"/>
                                         {f}
                                     </li>
                                 ))}
@@ -372,7 +377,7 @@ export default function RegisterPage() {
                             disabled={!selectedRole}
                             className={`flex items-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 px-10 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 ${!selectedRole ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
                         >
-                            Continue <IoArrowForward size={16} />
+                            Continue <IoArrowForward size={16}/>
                         </button>
                         <p className="m-0 text-sm text-[#649c8c]">
                             Already have an account?{" "}
@@ -387,13 +392,16 @@ export default function RegisterPage() {
             {/* ════════════════ STEP 2 — Service Seeker Profile ════════════════ */}
             {step === 2 && (
                 <div className={`${CARD_BASE} max-w-3xl`}>
-                    <StepHeader title="Join the Network" step={2} totalSteps={2} progressPct={100} />
+                    <StepHeader title="Join the Network" step={2} totalSteps={2} progressPct={100}/>
                     <p className={SECTION_INTRO}>
                         Complete your <span className="text-emerald-400">Service Seeker</span> profile to get started.
                     </p>
 
-                    <form onSubmit={(e) => { e.preventDefault(); handleFinalSubmit(); }}
-                        className="flex flex-col gap-5">
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        handleFinalSubmit();
+                    }}
+                          className="flex flex-col gap-5">
 
                         <PhotoUpload
                             id="seeker-photo-upload"
@@ -403,17 +411,17 @@ export default function RegisterPage() {
 
                         <div className={TWO_COL_GRID}>
                             {/* Full Name */}
-                            <Field label="Full Name" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Full Name" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="John Doe" value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    className={ROUND_INPUT} />
+                                       onChange={(e) => setFullName(e.target.value)}
+                                       className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Email */}
-                            <Field label="Email Address" icon={<IoMailOutline size={18} />}>
+                            <Field label="Email Address" icon={<IoMailOutline size={18}/>}>
                                 <input type="email" placeholder="john@example.com" value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className={ROUND_INPUT} />
+                                       onChange={(e) => setEmail(e.target.value)}
+                                       className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Password */}
@@ -436,9 +444,9 @@ export default function RegisterPage() {
                             />
 
                             {/* Current Status */}
-                            <Field label="Current Status" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Current Status" icon={<IoPersonOutline size={18}/>}>
                                 <select value={seekerStatus} onChange={(e) => setSeekerStatus(e.target.value)}
-                                    className={SELECT_INPUT}>
+                                        className={SELECT_INPUT}>
                                     <option value="" className="bg-[#052e16]">Select status</option>
                                     <option value="undergraduate" className="bg-[#052e16]">Undergraduate</option>
                                     <option value="postgraduate" className="bg-[#052e16]">Post-Graduate Student</option>
@@ -448,9 +456,9 @@ export default function RegisterPage() {
                             </Field>
 
                             {/* Time Zone */}
-                            <Field label="Time Zone" icon={<IoGlobeOutline size={18} />}>
+                            <Field label="Time Zone" icon={<IoGlobeOutline size={18}/>}>
                                 <select value={seekerTimezone} onChange={(e) => setSeekerTimezone(e.target.value)}
-                                    className={SELECT_INPUT}>
+                                        className={SELECT_INPUT}>
                                     {[
                                         ["UTC-12", "(UTC-12:00) International Date Line West"],
                                         ["UTC-11", "(UTC-11:00) Midway Island, Samoa"],
@@ -488,7 +496,7 @@ export default function RegisterPage() {
                                         ROUND_INPUT.replace("rounded-full", "rounded-2xl") +
                                         " resize-y px-4 leading-relaxed"
                                     }
-                                    style={{ minHeight: "100px" }}
+                                    style={{minHeight: "100px"}}
                                 />
                             </div>
                         </div>
@@ -502,10 +510,10 @@ export default function RegisterPage() {
 
                         <div className={ACTION_ROW}>
                             <button type="button" onClick={() => setStep(1)} className={BACK_BTN}>
-                                <IoArrowBack size={16} /> Back
+                                <IoArrowBack size={16}/> Back
                             </button>
                             <button type="submit" disabled={seekerSubmitting} className={SUBMIT_BTN}>
-                                {seekerSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16} /></>}
+                                {seekerSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16}/></>}
                             </button>
                         </div>
                     </form>
@@ -522,25 +530,28 @@ export default function RegisterPage() {
             {/* ════════════════ STEP 3 — Professional Account (Credentials) ════════════════ */}
             {step === 3 && (
                 <div className={`${CARD_BASE} max-w-3xl`}>
-                    <StepHeader title="Professional Account" step={2} totalSteps={3} progressPct={66.67} />
+                    <StepHeader title="Professional Account" step={2} totalSteps={3} progressPct={66.67}/>
                     <p className={SECTION_INTRO}>
                         Set up your account credentials before completing your professional profile.
                     </p>
 
-                    <form onSubmit={(e) => { e.preventDefault(); setStep(4); }} className="flex flex-col gap-5">
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        setStep(4);
+                    }} className="flex flex-col gap-5">
                         <div className={TWO_COL_GRID}>
                             {/* Username */}
-                            <Field label="Username" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Username" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="your_username" value={expertUsername}
-                                    onChange={(e) => setExpertUsername(e.target.value)}
-                                    className={ROUND_INPUT} />
+                                       onChange={(e) => setExpertUsername(e.target.value)}
+                                       className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Email */}
-                            <Field label="Email Address" icon={<IoMailOutline size={18} />}>
+                            <Field label="Email Address" icon={<IoMailOutline size={18}/>}>
                                 <input type="email" placeholder="expert@example.com" value={expertEmail}
-                                    onChange={(e) => setExpertEmail(e.target.value)}
-                                    className={ROUND_INPUT} />
+                                       onChange={(e) => setExpertEmail(e.target.value)}
+                                       className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Password */}
@@ -565,10 +576,10 @@ export default function RegisterPage() {
 
                         <div className={ACTION_ROW}>
                             <button type="button" onClick={() => setStep(1)} className={BACK_BTN}>
-                                <IoArrowBack size={16} /> Back
+                                <IoArrowBack size={16}/> Back
                             </button>
                             <button type="submit" className={SUBMIT_BTN}>
-                                Continue <IoArrowForward size={16} />
+                                Continue <IoArrowForward size={16}/>
                             </button>
                         </div>
                     </form>
@@ -578,9 +589,10 @@ export default function RegisterPage() {
             {/* ════════════════ STEP 4 — Professional Profile ════════════════ */}
             {step === 4 && (
                 <div className={`${CARD_BASE} max-w-4xl`}>
-                    <StepHeader title="Professional Profile" step={3} totalSteps={3} progressPct={100} />
+                    <StepHeader title="Professional Profile" step={3} totalSteps={3} progressPct={100}/>
                     <p className={SECTION_INTRO}>
-                        Complete your <span className="text-emerald-400">Professional Expert</span> profile for verification.
+                        Complete your <span className="text-emerald-400">Professional Expert</span> profile for
+                        verification.
                     </p>
 
                     <form onSubmit={handleProfessionalFinalSubmit} className="flex flex-col gap-5">
@@ -594,39 +606,39 @@ export default function RegisterPage() {
 
                         <div className={TWO_COL_GRID}>
                             {/* Full Name */}
-                            <Field label="Full Name" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Full Name" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="Dr. Sarah Jenkins" value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setFullName(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Job Title */}
-                            <Field label="Current Job Title" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Current Job Title" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="Senior AI Research Lead" value={jobTitle}
-                                    onChange={(e) => setJobTitle(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setJobTitle(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Employer */}
-                            <Field label="Employer" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Employer" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="Google LLC" value={employer}
-                                    onChange={(e) => setEmployer(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setEmployer(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* National ID */}
-                            <Field label="National ID" icon={<IoPersonOutline size={18} />}>
+                            <Field label="National ID" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="19**********" value={nationalId}
-                                    onChange={(e) => setNationalId(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setNationalId(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Phone */}
-                            <Field label="Phone Number" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Phone Number" icon={<IoPersonOutline size={18}/>}>
                                 <input type="tel" placeholder="+94 00 000 0000" value={phone}
-                                    onChange={(e) => setPhone(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setPhone(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Field of Expertise */}
-                            <Field label="Field of Expertise" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Field of Expertise" icon={<IoPersonOutline size={18}/>}>
                                 <select value={expertise} onChange={(e) => setExpertise(e.target.value)}
-                                    className={SELECT_INPUT}>
+                                        className={SELECT_INPUT}>
                                     <option value="" className="bg-[#052e16]">Select your domain</option>
                                     {["Software Engineering", "Data Science", "Machine Learning",
                                         "Product Management", "Design", "Finance", "Law", "Medicine", "Other"
@@ -637,45 +649,45 @@ export default function RegisterPage() {
                             </Field>
 
                             {/* University */}
-                            <Field label="University" icon={<IoPersonOutline size={18} />}>
+                            <Field label="University" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="Stanford University" value={university}
-                                    onChange={(e) => setUniversity(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setUniversity(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Degree */}
-                            <Field label="Degree" icon={<IoPersonOutline size={18} />}>
+                            <Field label="Degree" icon={<IoPersonOutline size={18}/>}>
                                 <input type="text" placeholder="Ph.D. Computer Science" value={degree}
-                                    onChange={(e) => setDegree(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setDegree(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Portfolio */}
-                            <Field label="Portfolio Link" icon={<IoLinkOutline size={18} />}>
+                            <Field label="Portfolio Link" icon={<IoLinkOutline size={18}/>}>
                                 <input type="url" placeholder="https://portfolio.com" value={portfolio}
-                                    onChange={(e) => setPortfolio(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setPortfolio(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* LinkedIn */}
-                            <Field label="LinkedIn" icon={<IoLogoLinkedin size={18} />}>
+                            <Field label="LinkedIn" icon={<IoLogoLinkedin size={18}/>}>
                                 <input type="url" placeholder="linkedin.com/in/username" value={linkedin}
-                                    onChange={(e) => setLinkedin(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setLinkedin(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Instagram */}
-                            <Field label="Instagram" icon={<IoLogoInstagram size={18} />}>
+                            <Field label="Instagram" icon={<IoLogoInstagram size={18}/>}>
                                 <input type="url" placeholder="instagram.com/username" value={instagram}
-                                    onChange={(e) => setInstagram(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setInstagram(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Facebook */}
-                            <Field label="Facebook" icon={<IoGlobeOutline size={18} />}>
+                            <Field label="Facebook" icon={<IoGlobeOutline size={18}/>}>
                                 <input type="url" placeholder="facebook.com/username" value={facebook}
-                                    onChange={(e) => setFacebook(e.target.value)} className={ROUND_INPUT} />
+                                       onChange={(e) => setFacebook(e.target.value)} className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Timezone */}
-                            <Field label="Time Zone" icon={<IoGlobeOutline size={18} />}>
+                            <Field label="Time Zone" icon={<IoGlobeOutline size={18}/>}>
                                 <select value={timezone} onChange={(e) => setTimezone(e.target.value)}
-                                    className={SELECT_INPUT}>
+                                        className={SELECT_INPUT}>
                                     {TIMEZONES.map((tz) => (
                                         <option key={tz} value={tz} className="bg-[#052e16]">{tz}</option>
                                     ))}
@@ -685,24 +697,29 @@ export default function RegisterPage() {
                             {/* Verification Window */}
                             <div>
                                 <div className="mb-2 flex items-center gap-2">
-                                    <label className="m-0 text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
+                                    <label
+                                        className="m-0 text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
                                         Preferred Verification Window
                                     </label>
                                     {/* Tooltip */}
                                     <div className="group relative inline-flex">
-                                        <span className="cursor-help text-[11px] font-semibold text-emerald-400 underline decoration-dotted">
+                                        <span
+                                            className="cursor-help text-[11px] font-semibold text-emerald-400 underline decoration-dotted">
                                             Learn more
                                         </span>
-                                        <div className="pointer-events-none invisible absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-60 -translate-x-1/2 rounded-lg border border-emerald-500/35 bg-[rgba(2,44,34,0.98)] px-3.5 py-2.5 text-xs leading-relaxed text-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:visible">
-                                            Please provide your availability for a one-on-one manual verification meeting with a site administrator.
-                                            <span className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-emerald-500/35" />
+                                        <div
+                                            className="pointer-events-none invisible absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-60 -translate-x-1/2 rounded-lg border border-emerald-500/35 bg-[rgba(2,44,34,0.98)] px-3.5 py-2.5 text-xs leading-relaxed text-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:visible">
+                                            Please provide your availability for a one-on-one manual verification
+                                            meeting with a site administrator.
+                                            <span
+                                                className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-emerald-500/35"/>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="relative">
-                                    <IoPersonOutline size={18} className={FIELD_ICON} />
+                                    <IoPersonOutline size={18} className={FIELD_ICON}/>
                                     <select value={verifyWindow} onChange={(e) => setVerifyWindow(e.target.value)}
-                                        className={SELECT_INPUT}>
+                                            className={SELECT_INPUT}>
                                         {WINDOWS.map((w) => (
                                             <option key={w} value={w} className="bg-[#052e16]">{w}</option>
                                         ))}
@@ -712,10 +729,12 @@ export default function RegisterPage() {
 
                             {/* Skills — full width */}
                             <div className="col-span-full">
-                                <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
+                                <label
+                                    className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
                                     Skills &amp; Technologies
                                 </label>
-                                <div className="flex min-h-[60px] flex-wrap gap-2 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] p-3.5 shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.1)]">
+                                <div
+                                    className="flex min-h-[60px] flex-wrap gap-2 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] p-3.5 shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.1)]">
                                     {ALL_SKILLS.map((skill) => {
                                         const active = selectedSkills.includes(skill);
                                         return (
@@ -726,9 +745,9 @@ export default function RegisterPage() {
                                                 className={`flex items-center gap-1 rounded-full px-3.5 py-1 text-xs font-semibold transition-all duration-200 ${active
                                                     ? "border border-emerald-500/60 bg-emerald-500/25 text-white"
                                                     : "border border-white/10 bg-white/[0.04] text-[#649c8c]"
-                                                    }`}
+                                                }`}
                                             >
-                                                {active && <IoCloseCircle size={13} className="text-emerald-400" />}
+                                                {active && <IoCloseCircle size={13} className="text-emerald-400"/>}
                                                 {skill}
                                             </button>
                                         );
@@ -748,7 +767,7 @@ export default function RegisterPage() {
                                         ROUND_INPUT.replace("rounded-full", "rounded-2xl") +
                                         " resize-y px-4 leading-relaxed"
                                     }
-                                    style={{ minHeight: "100px" }}
+                                    style={{minHeight: "100px"}}
                                 />
                             </div>
                         </div>
@@ -762,10 +781,10 @@ export default function RegisterPage() {
 
                         <div className={ACTION_ROW}>
                             <button type="button" onClick={() => setStep(3)} className={BACK_BTN}>
-                                <IoArrowBack size={16} /> Back
+                                <IoArrowBack size={16}/> Back
                             </button>
                             <button type="submit" disabled={expertSubmitting} className={SUBMIT_BTN}>
-                                {expertSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16} /></>}
+                                {expertSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16}/></>}
                             </button>
                         </div>
                     </form>
