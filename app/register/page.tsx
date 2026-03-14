@@ -1,7 +1,7 @@
 "use client";
-import {useState} from "react";
+import { useState } from "react";
 import Link from "next/link";
-import {useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
     IoPersonOutline,
     IoMailOutline,
@@ -18,10 +18,10 @@ import {
     IoEyeOutline,
     IoEyeOffOutline,
 } from "react-icons/io5";
-import {HiOutlineUserGroup, HiOutlineShieldCheck} from "react-icons/hi2";
+import { HiOutlineUserGroup, HiOutlineShieldCheck } from "react-icons/hi2";
 import Image from "next/image";
-import {supabase} from "@/lib/supabaseClient";
-import type {Database} from "@/types/database.types";
+import { supabase } from "@/lib/supabaseClient";
+import type { Database } from "@/types/database.types";
 
 type Role = "seeker" | "expert" | null;
 type UserStatus = Database["public"]["Enums"]["user_status"];
@@ -53,12 +53,186 @@ const WINDOWS = [
     "Saturday 10:00 AM", "Saturday 03:00 PM", "Sunday 10:00 AM",
 ];
 
+// ── Shared Tailwind class strings ──────────────────────────────────────────────
+
+const CARD_BASE =
+    "w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10";
+
+const KICKER = "mb-1 text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400";
+
+const STEP_TEXT = "m-0 text-xs text-white/55";
+
+const PROGRESS_TRACK = "h-1.5 w-48 overflow-hidden rounded-full bg-white/10";
+
+const PROGRESS_BAR_BASE = "h-full rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-[width] duration-500";
+
+const SECTION_INTRO = "mt-3 mb-7 text-sm text-[#649c8c]";
+
+const FIELD_LABEL =
+    "mb-2 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400";
+
+const FIELD_ICON =
+    "pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-[#649c8c]";
+
+// Glass pill input — applied via className
+const ROUND_INPUT =
+    "w-full rounded-full border-none py-3 pl-11 pr-4 text-sm text-white outline-none " +
+    "bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] " +
+    "shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] " +
+    "placeholder:text-emerald-200/40 " +
+    "focus:bg-[rgba(2,44,34,0.8)] focus:shadow-[0_0_20px_rgba(16,185,129,0.25),0_0_0_2px_rgba(16,185,129,0.4)]";
+
+const SELECT_INPUT =
+    ROUND_INPUT + " appearance-none cursor-pointer";
+
+const ACTION_ROW = "mt-2 flex gap-3 border-t border-emerald-500/10 pt-6";
+
+const BACK_BTN =
+    "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-semibold text-white/70";
+
+const SUBMIT_BTN =
+    "flex flex-1 items-center justify-center gap-2 rounded-full border-0 " +
+    "bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 text-sm font-semibold text-white " +
+    "shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 " +
+    "disabled:cursor-not-allowed disabled:opacity-80";
+
+const TWO_COL_GRID = "grid grid-cols-1 gap-6 sm:grid-cols-2";
+
+// ── Reusable field wrapper ─────────────────────────────────────────────────────
+
+interface FieldProps {
+    label: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+}
+const Field = ({ label, icon, children }: FieldProps) => (
+    <div>
+        <label className={FIELD_LABEL}>{label}</label>
+        <div className="relative">
+            <span className={FIELD_ICON}>{icon}</span>
+            {children}
+        </div>
+    </div>
+);
+
+// ── Password field ─────────────────────────────────────────────────────────────
+
+interface PasswordFieldProps {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    show: boolean;
+    onToggle: () => void;
+    placeholder?: string;
+}
+const PasswordField = ({
+    label, value, onChange, show, onToggle, placeholder = "Enter password",
+}: PasswordFieldProps) => (
+    <Field label={label} icon={<IoLockClosedOutline size={18} />}>
+        <input
+            type={show ? "text" : "password"}
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={ROUND_INPUT + " pr-11"}
+        />
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-label={show ? "Hide password" : "Show password"}
+            className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent p-0 text-[#649c8c] cursor-pointer flex items-center"
+        >
+            {show ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
+        </button>
+    </Field>
+);
+
+// ── Photo uploader ─────────────────────────────────────────────────────────────
+
+interface PhotoUploadProps {
+    id: string;
+    photo: string | null;
+    onPhoto: (url: string) => void;
+    title?: string;
+    subtitle?: string;
+}
+const PhotoUpload = ({
+    id, photo, onPhoto,
+    title = "Upload Profile Photo",
+    subtitle = "JPG or PNG, max 5MB. A professional photo helps you stand out.",
+}: PhotoUploadProps) => (
+    <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-emerald-500/15 bg-emerald-500/5 p-5">
+        <div className="relative shrink-0">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-emerald-500/50 bg-[rgba(6,78,59,0.5)]">
+                {photo ? (
+                    <Image
+                        src={photo}
+                        alt="Profile"
+                        width={96}
+                        height={96}
+                        className="h-full w-full object-cover"
+                    />
+                ) : (
+                    <IoAddCircleOutline size={32} className="text-emerald-500/60" />
+                )}
+            </div>
+            <label
+                htmlFor={id}
+                className="absolute bottom-0 right-0 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-emerald-400 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+            >
+                <svg width="12" height="12" fill="#022c22" viewBox="0 0 24 24">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+                <input
+                    id={id}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onPhoto(URL.createObjectURL(f));
+                    }}
+                />
+            </label>
+        </div>
+        <div>
+            <p className="mb-1 text-[15px] font-semibold text-white">{title}</p>
+            <p className="m-0 text-[13px] text-[#649c8c]">{subtitle}</p>
+        </div>
+    </div>
+);
+
+// ── Step header ────────────────────────────────────────────────────────────────
+
+interface StepHeaderProps {
+    title: string;
+    step: number;
+    totalSteps: number;
+    progressPct: number;
+}
+const StepHeader = ({ title, step, totalSteps, progressPct }: StepHeaderProps) => (
+    <div className="mb-2 flex items-start justify-between">
+        <div>
+            <p className={KICKER}>Registration</p>
+            <h1 className="m-0 text-2xl font-bold text-white sm:text-3xl">{title}</h1>
+        </div>
+        <div className="mt-1 flex shrink-0 flex-col items-end gap-1.5">
+            <p className={STEP_TEXT}>Step {step} of {totalSteps}</p>
+            <div className={PROGRESS_TRACK}>
+                <div className={PROGRESS_BAR_BASE} style={{ width: `${progressPct}%` }} />
+            </div>
+        </div>
+    </div>
+);
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function RegisterPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
     const [selectedRole, setSelectedRole] = useState<Role>(null);
 
-    // Step 2 — basic account
+    // Seeker fields
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [seekerPhoto, setSeekerPhoto] = useState<string | null>(null);
@@ -73,7 +247,7 @@ export default function RegisterPage() {
     const [seekerSubmitError, setSeekerSubmitError] = useState<string | null>(null);
     const [seekerSubmitSuccess, setSeekerSubmitSuccess] = useState<string | null>(null);
 
-    // Step 3 — professional profile
+    // Expert fields
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
     const [jobTitle, setJobTitle] = useState("");
     const [employer, setEmployer] = useState("");
@@ -101,15 +275,14 @@ export default function RegisterPage() {
     const [expertSubmitSuccess, setExpertSubmitSuccess] = useState<string | null>(null);
 
     const toggleSkill = (skill: string) => {
-        setSelectedSkills(prev =>
-            prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+        setSelectedSkills((prev) =>
+            prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
         );
     };
 
     const handleContinue = () => {
         if (step === 1 && selectedRole) {
-            if (selectedRole === "expert") setStep(3);
-            else setStep(2);
+            setStep(selectedRole === "expert" ? 3 : 2);
         } else if (step === 2) {
             handleFinalSubmit();
         }
@@ -122,34 +295,22 @@ export default function RegisterPage() {
     };
 
     const mapSeekerTimezone = (value: string): TimeZone => {
-        const timezoneMap: Record<string, TimeZone> = {
-            "UTC+0": "Asia/Dubai",
-            "UTC+1": "Asia/Baghdad",
-            "UTC+2": "Asia/Riyadh",
-            "UTC+3": "Asia/Riyadh",
-            "UTC+5": "Asia/Karachi",
-            "UTC+5.5": "Asia/Colombo",
-            "UTC+6": "Asia/Dhaka",
-            "UTC+7": "Asia/Bangkok",
-            "UTC+8": "Asia/Singapore",
-            "UTC+9": "Asia/Tokyo",
-            "UTC+10": "Asia/Tokyo",
+        const map: Record<string, TimeZone> = {
+            "UTC+0": "Asia/Dubai", "UTC+1": "Asia/Baghdad", "UTC+2": "Asia/Riyadh",
+            "UTC+3": "Asia/Riyadh", "UTC+5": "Asia/Karachi", "UTC+5.5": "Asia/Colombo",
+            "UTC+6": "Asia/Dhaka", "UTC+7": "Asia/Bangkok", "UTC+8": "Asia/Singapore",
+            "UTC+9": "Asia/Tokyo", "UTC+10": "Asia/Tokyo",
         };
-
-        return timezoneMap[value] ?? "Asia/Colombo";
+        return map[value] ?? "Asia/Colombo";
     };
 
-    const mapProfessionalTimezone = (value: string): TimeZone => {
-        const timezoneValue = value.split(" ")[0] as TimeZone;
-        return timezoneValue || "Asia/Colombo";
-    };
-
+    const mapProfessionalTimezone = (value: string): TimeZone =>
+        (value.split(" ")[0] as TimeZone) || "Asia/Colombo";
 
     const handleFinalSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
         setSeekerSubmitError(null);
         setSeekerSubmitSuccess(null);
-
         if (!fullName.trim() || !email.trim()) {
             setSeekerSubmitError("Full name and email are required.");
             return;
@@ -162,48 +323,30 @@ export default function RegisterPage() {
             setSeekerSubmitError("Passwords do not match.");
             return;
         }
-
         setSeekerSubmitting(true);
-
         try {
-            const {data: authData, error: authError} = await supabase.auth.signUp({
+            const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email.trim(),
                 password: seekerPassword,
-                options: {
-                    data: {
-                        role: "user",
-                        full_name: fullName.trim(),
-                    },
-                },
+                options: { data: { role: "user", full_name: fullName.trim() } },
             });
-
             if (authError) throw new Error(authError.message);
-
             const userId = authData.user?.id;
             if (!userId) throw new Error("Account was created but user id is missing.");
-
-            const {error: profileError} = await supabase.from("profiles").insert({
-                id: userId,
-                role: "user",
-                name: fullName.trim(),
-                bio: seekerBio.trim() || null,
-                profile_photo: null,
+            const { error: profileError } = await supabase.from("profiles").insert({
+                id: userId, role: "user", name: fullName.trim(),
+                bio: seekerBio.trim() || null, profile_photo: null,
                 time_zone: mapSeekerTimezone(seekerTimezone),
             });
-
             if (profileError) throw new Error(profileError.message);
-
-            const {error: userProfileError} = await supabase.from("user_profiles").insert({
-                profile_id: userId,
-                status: mapSeekerStatus(seekerStatus),
+            const { error: userProfileError } = await supabase.from("user_profiles").insert({
+                profile_id: userId, status: mapSeekerStatus(seekerStatus),
             });
-
             if (userProfileError) throw new Error(userProfileError.message);
-
             setSeekerSubmitSuccess("Registration complete. You can now log in.");
             router.push("/login");
         } catch (error) {
-            setSeekerSubmitError(error instanceof Error ? error.message : "Failed to register seeker account.");
+            setSeekerSubmitError(error instanceof Error ? error.message : "Failed to register.");
         } finally {
             setSeekerSubmitting(false);
         }
@@ -213,7 +356,6 @@ export default function RegisterPage() {
         e.preventDefault();
         setExpertSubmitError(null);
         setExpertSubmitSuccess(null);
-
         if (!expertUsername.trim() || !expertEmail.trim() || !fullName.trim()) {
             setExpertSubmitError("Username, full name and email are required.");
             return;
@@ -235,1872 +377,560 @@ export default function RegisterPage() {
             return;
         }
         if (selectedSkills.includes("Other")) {
-            setExpertSubmitError("Please remove 'Other' skill for now (custom label is not implemented yet).");
+            setExpertSubmitError("Please remove 'Other' skill.");
             return;
         }
-
         setExpertSubmitting(true);
-
         try {
-            const {data: authData, error: authError} = await supabase.auth.signUp({
-                email: expertEmail.trim(),
-                password: expertPassword,
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: expertEmail.trim(), password: expertPassword,
                 options: {
                     data: {
-                        role: "professional",
-                        full_name: fullName.trim(),
+                        role: "professional", full_name: fullName.trim(),
                         username: expertUsername.trim(),
                     },
                 },
             });
-
             if (authError) throw new Error(authError.message);
-
             const userId = authData.user?.id;
             if (!userId) throw new Error("Account was created but user id is missing.");
-
-            const {error: profileError} = await supabase.from("profiles").insert({
-                id: userId,
-                role: "professional",
-                name: fullName.trim(),
-                bio: bio.trim() || null,
-                profile_photo: null,
+            const { error: profileError } = await supabase.from("profiles").insert({
+                id: userId, role: "professional", name: fullName.trim(),
+                bio: bio.trim() || null, profile_photo: null,
                 time_zone: mapProfessionalTimezone(timezone),
             });
-
             if (profileError) throw new Error(profileError.message);
-
-            const verifyTimeId = null;
-
-            const {data: professionalProfile, error: professionalProfileError} = await supabase
+            const { data: professionalProfile, error: professionalProfileError } = await supabase
                 .from("professional_profiles")
                 .insert({
-                    profile_id: userId,
-                    national_id: nationalId.trim() || null,
-                    linkedin: linkedin.trim() || null,
-                    instagram: instagram.trim() || null,
-                    facebook: facebook.trim() || null,
-                    field: expertise.trim(),
-                    university: university.trim() || null,
-                    degree: degree.trim() || null,
-                    job: employer.trim() || null,
-                    job_title: jobTitle.trim() || null,
-                    phone_number: phone.trim() || null,
-                    portfolio: portfolio.trim() || null,
-                    verify_time_id: verifyTimeId,
+                    profile_id: userId, national_id: nationalId.trim() || null,
+                    linkedin: linkedin.trim() || null, instagram: instagram.trim() || null,
+                    facebook: facebook.trim() || null, field: expertise.trim(),
+                    university: university.trim() || null, degree: degree.trim() || null,
+                    job: employer.trim() || null, job_title: jobTitle.trim() || null,
+                    phone_number: phone.trim() || null, portfolio: portfolio.trim() || null,
+                    verify_time_id: null,
                 })
                 .select("id")
                 .single();
-
             if (professionalProfileError) throw new Error(professionalProfileError.message);
             if (!professionalProfile?.id) throw new Error("Professional profile id is missing.");
-
             const skillRows = selectedSkills.map((skill) => ({
                 professional_profile_id: professionalProfile.id,
                 skill: skill as SkillTag,
             }));
-
-            const {error: skillsError} = await supabase.from("professional_skills").insert(skillRows);
+            const { error: skillsError } = await supabase.from("professional_skills").insert(skillRows);
             if (skillsError) throw new Error(skillsError.message);
-
             setExpertSubmitSuccess("Registration submitted. You can now log in.");
             router.push("/login");
         } catch (error) {
-            setExpertSubmitError(error instanceof Error ? error.message : "Failed to register professional account.");
+            setExpertSubmitError(error instanceof Error ? error.message : "Failed to register.");
         } finally {
             setExpertSubmitting(false);
         }
     };
 
-    // ── shared styles ──
-    const roundInput: React.CSSProperties = {
-        width: "100%", paddingLeft: "44px", paddingRight: "16px",
-        paddingTop: "12px", paddingBottom: "12px",
-        borderRadius: "999px", fontSize: "14px", color: "white",
-        border: "none", outline: "none",
-        background: "linear-gradient(135deg, rgba(2,44,34,0.45), rgba(2,34,24,0.35))",
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.3),inset 0.3px 0.5px 1px rgba(255,255,255,0.35), 0 4px 5px rgba(0,0,0,0.2)",
-    };
-
-    const roleCardStyle = (active: boolean): React.CSSProperties => ({
-        textAlign: "left", padding: "24px", borderRadius: "12px",
-        cursor: "pointer", transition: "all 0.2s",
-        background: active ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)",
-        border: active ? "1.5px solid rgba(16,185,129,0.55)" : "1.5px solid rgba(255,255,255,0.08)",
-        boxShadow: active ? "0 0 24px rgba(16,185,129,0.1)" : "none",
-    });
-
-
     const totalSteps = selectedRole === "expert" ? 3 : 2;
     const progressPct = step === 1 ? 100 / totalSteps : 100;
 
+    // ── Role card helper ─────────────────────────────────────────────────────
+    const roleCardClass = (active: boolean) =>
+        `text-left rounded-xl p-6 cursor-pointer transition-all duration-200 border
+        ${active
+            ? "bg-emerald-500/[0.12] border-emerald-500/55 shadow-[0_0_24px_rgba(16,185,129,0.1)]"
+            : "bg-white/[0.04] border-white/[0.08]"
+        }`;
+
     return (
-        <>
-            <style>{`
-        .reg-page {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 80px 16px 48px;
-          position: relative;
-          background: linear-gradient(135deg, #022c22 0%, #126449 100%);
-        }
-        .reg-card {
-          width: 100%;
-          max-width: 800px;
-          border-radius: 20px;
-          padding: 32px 24px;
-          background: rgba(17,49,39,0.55);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(16,185,129,0.15);
-          box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(16,185,129,0.05);
-        }
-        .pro-card {
-          width: 100%;
-          max-width: 900px;
-          border-radius: 20px;
-          padding: 32px 24px;
-          background: rgba(17,49,39,0.55);
-          backdrop-filter: blur(24px);
-          -webkit-backdrop-filter: blur(24px);
-          border: 1px solid rgba(16,185,129,0.15);
-          box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 40px rgba(16,185,129,0.05);
-        }
-        .reg-role-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 16px;
-          margin-bottom: 32px;
-        }
-        .pro-form-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 24px;
-        }
-        .reg-header { font-size: 24px; }
-        .reg-logo-text { display: none; }
-        .pro-header { font-size: 32px; }
+        <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#022c22] to-[#126449] px-4 py-20 md:py-10">
 
-        @media (min-width: 480px) {
-          .reg-logo-text { display: inline; }
-          .reg-card { padding: 36px 32px; }
-          .pro-card { padding: 36px 32px; }
-          .reg-header { font-size: 28px; }
-        }
-        @media (min-width: 640px) {
-          .reg-role-grid { grid-template-columns: 1fr 1fr; }
-          .reg-card { padding: 40px; }
-          .pro-card { padding: 40px; }
-          .reg-header { font-size: 32px; }
-          .pro-form-grid { grid-template-columns: 1fr 1fr; }
-          .pro-header { font-size: 40px; }
-        }
-        @media (min-width: 768px) {
-          .reg-page { padding: 40px 24px 48px; }
-          .pro-card { padding: 40px; }
-          .pro-header { fontSize: 32px; }
-        }
-
-        .glass-input::placeholder { color: rgba(167,243,208,0.4); }
-        .glass-input:focus {
-          background: rgba(2,44,34,0.8) !important;
-          border-color: #10B981 !important;
-          box-shadow: 0 0 20px rgba(16,185,129,0.25);
-          outline: none;
-        }
-        .round-input::placeholder { color: #649c8c; }
-        .round-input:focus {
-          outline: none;
-          box-shadow: inset 0 0px 1.5px rgba(255,255,255,0.3), 0 0 0 2px rgba(16,185,129,0.4);
-        }
-        select.glass-input option { background: #052e16; color: white; }
-
-        .tooltip-wrapper { position: relative; }
-        .tooltip-box {
-          display: none;
-          position: absolute;
-          bottom: calc(100% + 8px);
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(2, 44, 34, 0.98);
-          border: 1px solid rgba(16,185,129,0.35);
-          color: rgba(255,255,255,0.9);
-          font-size: 12px;
-          font-weight: 400;
-          line-height: 1.5;
-          padding: 10px 14px;
-          border-radius: 8px;
-          width: 240px;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-          z-index: 50;
-          pointer-events: none;
-          letter-spacing: 0;
-          text-transform: none;
-        }
-        .tooltip-box::after {
-          content: "";
-          position: absolute;
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          border: 6px solid transparent;
-          border-top-color: rgba(16,185,129,0.35);
-        }
-        .tooltip-wrapper:hover .tooltip-box { display: block; }
-      `}</style>
-
-            <div className="reg-page">
-
-                {/* ── Logo ── */}
-                <div style={{
-                    position: "absolute",
-                    top: "20px",
-                    left: "20px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    zIndex: 10
-                }}>
-                    <div style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "8px",
-                        backgroundColor: "#10B981",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0
-                    }}>
-                        <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                            <circle cx="12" cy="8" r="2.5"/>
-                            <circle cx="7" cy="13" r="2.5"/>
-                            <circle cx="17" cy="13" r="2.5"/>
-                            <circle cx="12" cy="18" r="2.5"/>
-                            <circle cx="7" cy="8" r="1.5" opacity="0.6"/>
-                            <circle cx="17" cy="8" r="1.5" opacity="0.6"/>
-                        </svg>
-                    </div>
-                    <span className="reg-logo-text" style={{color: "white", fontSize: "18px", fontWeight: 700}}>
-            Expert<span style={{color: "#10B981"}}>Connect</span>
-          </span>
+            {/* ── Logo ─────────────────────────────────────────────────────── */}
+            <div className="absolute left-5 top-5 z-10 flex items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                        <circle cx="12" cy="8" r="2.5" />
+                        <circle cx="7" cy="13" r="2.5" />
+                        <circle cx="17" cy="13" r="2.5" />
+                        <circle cx="12" cy="18" r="2.5" />
+                        <circle cx="7" cy="8" r="1.5" opacity="0.6" />
+                        <circle cx="17" cy="8" r="1.5" opacity="0.6" />
+                    </svg>
                 </div>
+                <span className="hidden text-[18px] font-bold text-white sm:inline">
+                    Expert<span className="text-emerald-400">Connect</span>
+                </span>
+            </div>
 
-                {/* ════════════════ STEP 1 — Role Selection ════════════════ */}
-                {step === 1 && (
-                    <div className="reg-card">
-                        <div style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            justifyContent: "space-between",
-                            marginBottom: "8px"
-                        }}>
-                            <div>
-                                <p style={{
-                                    color: "#10B981",
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    letterSpacing: "2px",
-                                    textTransform: "uppercase",
-                                    marginBottom: "4px"
-                                }}>Registration</p>
-                                <h1 className="reg-header" style={{color: "white", fontWeight: 700, margin: 0}}>Get
-                                    Started</h1>
+            {/* ════════════════ STEP 1 — Role Selection ════════════════ */}
+            {step === 1 && (
+                <div className={`${CARD_BASE} max-w-2xl`}>
+                    <StepHeader title="Get Started" step={1} totalSteps={totalSteps} progressPct={progressPct} />
+
+                    <p className="mb-7 mt-6 text-center text-sm text-[#649c8c]">
+                        Choose your journey on the platform. How will you participate?
+                    </p>
+
+                    {/* Role grid */}
+                    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {/* Service Seeker */}
+                        <button type="button" onClick={() => setSelectedRole("seeker")}
+                            className={roleCardClass(selectedRole === "seeker")}>
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15">
+                                <HiOutlineUserGroup size={24} className="text-emerald-400" />
                             </div>
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "flex-end",
-                                gap: "6px",
-                                marginTop: "4px",
-                                flexShrink: 0
-                            }}>
-                                <p style={{color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0}}>Step 1
-                                    of {totalSteps}</p>
-                                <div style={{
-                                    width: "192px",
-                                    height: "6px",
-                                    borderRadius: "999px",
-                                    background: "rgba(255,255,255,0.1)",
-                                    overflow: "hidden"
-                                }}>
-                                    <div style={{
-                                        height: "100%",
-                                        width: `${progressPct}%`,
-                                        background: "#10B981",
-                                        borderRadius: "999px",
-                                        boxShadow: "0 0 12px rgba(16,185,129,0.5)",
-                                        transition: "width 0.4s ease"
-                                    }}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p style={{
-                            textAlign: "center",
-                            fontSize: "14px",
-                            color: "#649c8c",
-                            marginTop: "24px",
-                            marginBottom: "28px"
-                        }}>
-                            Choose your journey on the platform. How will you participate?
-                        </p>
-
-                        <div className="reg-role-grid">
-                            <button type="button" onClick={() => setSelectedRole("seeker")}
-                                    style={roleCardStyle(selectedRole === "seeker")}>
-                                <div style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "12px",
-                                    background: "rgba(16,185,129,0.15)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    marginBottom: "16px"
-                                }}>
-                                    <HiOutlineUserGroup size={24} style={{color: "#10B981"}}/>
-                                </div>
-                                <h3 style={{
-                                    color: "white",
-                                    fontWeight: 700,
-                                    fontSize: "17px",
-                                    marginBottom: "8px",
-                                    marginTop: 0
-                                }}>Service Seeker</h3>
-                                <p style={{
-                                    color: "#649c8c",
-                                    fontSize: "13px",
-                                    marginBottom: "16px",
-                                    lineHeight: "1.55",
-                                    marginTop: 0
-                                }}>
-                                    Access top-tier professionals, get personalized advice, and accelerate your career
-                                    growth.
-                                </p>
-                                <ul style={{
-                                    listStyle: "none",
-                                    padding: 0,
-                                    margin: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "8px"
-                                }}>
-                                    {["Connect with global experts", "Flexible booking hours"].map(f => (
-                                        <li key={f} style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            fontSize: "13px",
-                                            color: "rgba(255,255,255,0.8)"
-                                        }}>
-                                            <IoCheckmarkCircle size={17} style={{color: "#10B981", flexShrink: 0}}/>{f}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </button>
-
-                            <button type="button" onClick={() => setSelectedRole("expert")}
-                                    style={roleCardStyle(selectedRole === "expert")}>
-                                <div style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "12px",
-                                    background: "rgba(16,185,129,0.15)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    marginBottom: "16px"
-                                }}>
-                                    <HiOutlineShieldCheck size={24} style={{color: "#10B981"}}/>
-                                </div>
-                                <h3 style={{
-                                    color: "white",
-                                    fontWeight: 700,
-                                    fontSize: "17px",
-                                    marginBottom: "8px",
-                                    marginTop: 0
-                                }}>Professional Expert</h3>
-                                <p style={{
-                                    color: "#649c8c",
-                                    fontSize: "13px",
-                                    marginBottom: "16px",
-                                    lineHeight: "1.55",
-                                    marginTop: 0
-                                }}>
-                                    Share your expertise, build your personal brand, and earn by helping others succeed.
-                                </p>
-                                <ul style={{
-                                    listStyle: "none",
-                                    padding: 0,
-                                    margin: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: "8px"
-                                }}>
-                                    {["Set your own consultation rates", "Verified expert badge"].map(f => (
-                                        <li key={f} style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            fontSize: "13px",
-                                            color: "rgba(255,255,255,0.8)"
-                                        }}>
-                                            <IoCheckmarkCircle size={17} style={{color: "#10B981", flexShrink: 0}}/>{f}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </button>
-                        </div>
-
-                        <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: "16px"}}>
-                            <button type="button" onClick={handleContinue} disabled={!selectedRole}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        padding: "13px 40px",
-                                        borderRadius: "999px",
-                                        fontWeight: 600,
-                                        color: "white",
-                                        fontSize: "14px",
-                                        border: "none",
-                                        cursor: selectedRole ? "pointer" : "not-allowed",
-                                        opacity: selectedRole ? 1 : 0.4,
-                                        background: "linear-gradient(135deg, #10B981, #059669)",
-                                        boxShadow: "0 6px 20px rgba(16,185,129,0.35)",
-                                        transition: "all 0.2s"
-                                    }}>
-                                Continue <IoArrowForward size={16}/>
-                            </button>
-                            <p style={{fontSize: "14px", color: "#649c8c", margin: 0}}>
-                                Already have an account?{" "}
-                                <Link href="/login" style={{color: "#10B981", fontWeight: 600, textDecoration: "none"}}>Sign
-                                    In</Link>
+                            <h3 className="mb-2 mt-0 text-[17px] font-bold text-white">Service Seeker</h3>
+                            <p className="mb-4 mt-0 text-[13px] leading-relaxed text-[#649c8c]">
+                                Access top-tier professionals, get personalized advice, and accelerate your career growth.
                             </p>
-                        </div>
+                            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                                {["Connect with global experts", "Flexible booking hours"].map((f) => (
+                                    <li key={f} className="flex items-center gap-2 text-[13px] text-white/80">
+                                        <IoCheckmarkCircle size={17} className="shrink-0 text-emerald-400" />
+                                        {f}
+                                    </li>
+                                ))}
+                            </ul>
+                        </button>
+
+                        {/* Professional Expert */}
+                        <button type="button" onClick={() => setSelectedRole("expert")}
+                            className={roleCardClass(selectedRole === "expert")}>
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15">
+                                <HiOutlineShieldCheck size={24} className="text-emerald-400" />
+                            </div>
+                            <h3 className="mb-2 mt-0 text-[17px] font-bold text-white">Professional Expert</h3>
+                            <p className="mb-4 mt-0 text-[13px] leading-relaxed text-[#649c8c]">
+                                Share your expertise, build your personal brand, and earn by helping others succeed.
+                            </p>
+                            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                                {["Set your own consultation rates", "Verified expert badge"].map((f) => (
+                                    <li key={f} className="flex items-center gap-2 text-[13px] text-white/80">
+                                        <IoCheckmarkCircle size={17} className="shrink-0 text-emerald-400" />
+                                        {f}
+                                    </li>
+                                ))}
+                            </ul>
+                        </button>
                     </div>
-                )}
 
+                    <div className="flex flex-col items-center gap-4">
+                        <button
+                            type="button"
+                            onClick={handleContinue}
+                            disabled={!selectedRole}
+                            className={`flex items-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 px-10 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 ${!selectedRole ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
+                        >
+                            Continue <IoArrowForward size={16} />
+                        </button>
+                        <p className="m-0 text-sm text-[#649c8c]">
+                            Already have an account?{" "}
+                            <Link href="/login" className="font-semibold text-emerald-400 no-underline">
+                                Sign In
+                            </Link>
+                        </p>
+                    </div>
+                </div>
+            )}
 
-                {/* ══════��═════════ STEP 2 — Service Seeker Profile ════════════════ */}
-                {step === 2 && (
-                    <div className="pro-card">
-                        <div style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            justifyContent: "space-between",
-                            marginBottom: "8px"
-                        }}>
-                            <div>
-                                <p style={{
-                                    color: "#10B981",
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    letterSpacing: "2px",
-                                    textTransform: "uppercase",
-                                    marginBottom: "4px"
-                                }}>Registration</p>
-                                <h1 className="reg-header" style={{color: "white", fontWeight: 700, margin: 0}}>Join the
-                                    Network</h1>
-                            </div>
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "flex-end",
-                                gap: "6px",
-                                marginTop: "4px",
-                                flexShrink: 0
-                            }}>
-                                <p style={{color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0}}>Step 2 of
-                                    2</p>
-                                <div style={{
-                                    width: "192px",
-                                    height: "6px",
-                                    borderRadius: "999px",
-                                    background: "rgba(255,255,255,0.1)",
-                                    overflow: "hidden"
-                                }}>
-                                    <div style={{
-                                        height: "100%",
-                                        width: "100%",
-                                        background: "#10B981",
-                                        borderRadius: "999px",
-                                        boxShadow: "0 0 12px rgba(16,185,129,0.5)"
-                                    }}/>
-                                </div>
+            {/* ════════════════ STEP 2 — Service Seeker Profile ════════════════ */}
+            {step === 2 && (
+                <div className={`${CARD_BASE} max-w-3xl`}>
+                    <StepHeader title="Join the Network" step={2} totalSteps={2} progressPct={100} />
+                    <p className={SECTION_INTRO}>
+                        Complete your <span className="text-emerald-400">Service Seeker</span> profile to get started.
+                    </p>
+
+                    <form onSubmit={(e) => { e.preventDefault(); handleFinalSubmit(); }}
+                        className="flex flex-col gap-5">
+
+                        <PhotoUpload
+                            id="seeker-photo-upload"
+                            photo={seekerPhoto}
+                            onPhoto={setSeekerPhoto}
+                        />
+
+                        <div className={TWO_COL_GRID}>
+                            {/* Full Name */}
+                            <Field label="Full Name" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="John Doe" value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Email */}
+                            <Field label="Email Address" icon={<IoMailOutline size={18} />}>
+                                <input type="email" placeholder="john@example.com" value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Password */}
+                            <PasswordField
+                                label="Password"
+                                value={seekerPassword}
+                                onChange={setSeekerPassword}
+                                show={showSeekerPassword}
+                                onToggle={() => setShowSeekerPassword((v) => !v)}
+                            />
+
+                            {/* Confirm Password */}
+                            <PasswordField
+                                label="Confirm Password"
+                                value={seekerConfirmPassword}
+                                onChange={setSeekerConfirmPassword}
+                                show={showSeekerConfirmPassword}
+                                onToggle={() => setShowSeekerConfirmPassword((v) => !v)}
+                                placeholder="Confirm password"
+                            />
+
+                            {/* Current Status */}
+                            <Field label="Current Status" icon={<IoPersonOutline size={18} />}>
+                                <select value={seekerStatus} onChange={(e) => setSeekerStatus(e.target.value)}
+                                    className={SELECT_INPUT}>
+                                    <option value="" className="bg-[#052e16]">Select status</option>
+                                    <option value="undergraduate" className="bg-[#052e16]">Undergraduate</option>
+                                    <option value="postgraduate" className="bg-[#052e16]">Post-Graduate Student</option>
+                                    <option value="professional" className="bg-[#052e16]">Working Professional</option>
+                                    <option value="other" className="bg-[#052e16]">Other</option>
+                                </select>
+                            </Field>
+
+                            {/* Time Zone */}
+                            <Field label="Time Zone" icon={<IoGlobeOutline size={18} />}>
+                                <select value={seekerTimezone} onChange={(e) => setSeekerTimezone(e.target.value)}
+                                    className={SELECT_INPUT}>
+                                    {[
+                                        ["UTC-12", "(UTC-12:00) International Date Line West"],
+                                        ["UTC-11", "(UTC-11:00) Midway Island, Samoa"],
+                                        ["UTC-10", "(UTC-10:00) Hawaii"],
+                                        ["UTC-9", "(UTC-09:00) Alaska"],
+                                        ["UTC-8", "(UTC-08:00) Pacific Time (US & Canada)"],
+                                        ["UTC-7", "(UTC-07:00) Mountain Time (US & Canada)"],
+                                        ["UTC-6", "(UTC-06:00) Central Time (US & Canada)"],
+                                        ["UTC-5", "(UTC-05:00) Eastern Time (US & Canada)"],
+                                        ["UTC-4", "(UTC-04:00) Atlantic Time (Canada)"],
+                                        ["UTC-3", "(UTC-03:00) Buenos Aires, Georgetown"],
+                                        ["UTC+0", "(UTC+00:00) Dublin, Edinburgh, London"],
+                                        ["UTC+1", "(UTC+01:00) Amsterdam, Berlin, Paris"],
+                                        ["UTC+2", "(UTC+02:00) Athens, Istanbul, Jerusalem"],
+                                        ["UTC+3", "(UTC+03:00) Baghdad, Kuwait, Riyadh"],
+                                        ["UTC+5.5", "(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi"],
+                                        ["UTC+8", "(UTC+08:00) Beijing, Hong Kong, Singapore"],
+                                        ["UTC+9", "(UTC+09:00) Osaka, Sapporo, Tokyo"],
+                                        ["UTC+10", "(UTC+10:00) Brisbane, Melbourne, Sydney"],
+                                    ].map(([val, label]) => (
+                                        <option key={val} value={val} className="bg-[#052e16]">{label}</option>
+                                    ))}
+                                </select>
+                            </Field>
+
+                            {/* Short Bio — full width */}
+                            <div className="col-span-full">
+                                <label className={FIELD_LABEL}>Short Bio</label>
+                                <textarea
+                                    placeholder="Tell us about your goals and what you're looking for..."
+                                    rows={4}
+                                    value={seekerBio}
+                                    onChange={(e) => setSeekerBio(e.target.value)}
+                                    className={
+                                        ROUND_INPUT.replace("rounded-full", "rounded-2xl") +
+                                        " resize-y px-4 leading-relaxed"
+                                    }
+                                    style={{ minHeight: "100px" }}
+                                />
                             </div>
                         </div>
 
-                        <p style={{fontSize: "14px", color: "#649c8c", marginTop: "12px", marginBottom: "28px"}}>
-                            Complete your <span style={{color: "#10B981"}}>Service Seeker</span> profile to get started.
-                        </p>
+                        {seekerSubmitError && (
+                            <p className="m-0 text-[13px] text-red-300">{seekerSubmitError}</p>
+                        )}
+                        {seekerSubmitSuccess && (
+                            <p className="m-0 text-[13px] text-green-300">{seekerSubmitSuccess}</p>
+                        )}
 
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            handleFinalSubmit();
-                        }} style={{display: "flex", flexDirection: "column", gap: "20px"}}>
+                        <div className={ACTION_ROW}>
+                            <button type="button" onClick={() => setStep(1)} className={BACK_BTN}>
+                                <IoArrowBack size={16} /> Back
+                            </button>
+                            <button type="submit" disabled={seekerSubmitting} className={SUBMIT_BTN}>
+                                {seekerSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16} /></>}
+                            </button>
+                        </div>
+                    </form>
 
-                            {/* Profile Photo */}
-                            <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "24px",
-                                flexWrap: "wrap",
-                                padding: "20px",
-                                borderRadius: "16px",
-                                background: "rgba(16,185,129,0.05)",
-                                border: "1px solid rgba(16,185,129,0.15)"
-                            }}>
-                                <div style={{position: "relative", flexShrink: 0}}>
-                                    <div style={{
-                                        width: "96px",
-                                        height: "96px",
-                                        borderRadius: "50%",
-                                        overflow: "hidden",
-                                        background: "rgba(6,78,59,0.5)",
-                                        border: "2px dashed rgba(16,185,129,0.5)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center"
-                                    }}>
-                                        {seekerPhoto
-                                            ? <Image src={seekerPhoto} alt="Profile"
-                                                   style={{width: "100%", height: "100%", objectFit: "cover"}}/>
-                                            : <IoAddCircleOutline size={32} style={{color: "rgba(16,185,129,0.6)"}}/>
-                                        }
-                                    </div>
-                                    <label htmlFor="seeker-photo-upload" style={{
-                                        position: "absolute",
-                                        bottom: 0,
-                                        right: 0,
-                                        width: "28px",
-                                        height: "28px",
-                                        background: "#10B981",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        cursor: "pointer",
-                                        boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
-                                    }}>
-                                        <svg width="12" height="12" fill="#022c22" viewBox="0 0 24 24">
-                                            <path
-                                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                                        </svg>
-                                        <input id="seeker-photo-upload" type="file" accept="image/*"
-                                               style={{display: "none"}} onChange={e => {
-                                            const f = e.target.files?.[0];
-                                            if (f) setSeekerPhoto(URL.createObjectURL(f));
-                                        }}/>
+                    <p className="mt-6 text-center text-[13px] text-[#649c8c]">
+                        By clicking Register, you agree to ExpertConnect&apos;s{" "}
+                        <Link href="#" className="text-emerald-400 no-underline">Terms of Service</Link>
+                        {" "}and{" "}
+                        <Link href="#" className="text-emerald-400 no-underline">Privacy Policy</Link>.
+                    </p>
+                </div>
+            )}
+
+            {/* ════════════════ STEP 3 — Professional Account (Credentials) ════════════════ */}
+            {step === 3 && (
+                <div className={`${CARD_BASE} max-w-3xl`}>
+                    <StepHeader title="Professional Account" step={2} totalSteps={3} progressPct={66.67} />
+                    <p className={SECTION_INTRO}>
+                        Set up your account credentials before completing your professional profile.
+                    </p>
+
+                    <form onSubmit={(e) => { e.preventDefault(); setStep(4); }} className="flex flex-col gap-5">
+                        <div className={TWO_COL_GRID}>
+                            {/* Username */}
+                            <Field label="Username" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="your_username" value={expertUsername}
+                                    onChange={(e) => setExpertUsername(e.target.value)}
+                                    className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Email */}
+                            <Field label="Email Address" icon={<IoMailOutline size={18} />}>
+                                <input type="email" placeholder="expert@example.com" value={expertEmail}
+                                    onChange={(e) => setExpertEmail(e.target.value)}
+                                    className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Password */}
+                            <PasswordField
+                                label="Password"
+                                value={expertPassword}
+                                onChange={setExpertPassword}
+                                show={showExpertPassword}
+                                onToggle={() => setShowExpertPassword((v) => !v)}
+                            />
+
+                            {/* Confirm Password */}
+                            <PasswordField
+                                label="Confirm Password"
+                                value={expertConfirmPassword}
+                                onChange={setExpertConfirmPassword}
+                                show={showExpertConfirmPassword}
+                                onToggle={() => setShowExpertConfirmPassword((v) => !v)}
+                                placeholder="Confirm password"
+                            />
+                        </div>
+
+                        <div className={ACTION_ROW}>
+                            <button type="button" onClick={() => setStep(1)} className={BACK_BTN}>
+                                <IoArrowBack size={16} /> Back
+                            </button>
+                            <button type="submit" className={SUBMIT_BTN}>
+                                Continue <IoArrowForward size={16} />
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* ════════════════ STEP 4 — Professional Profile ════════════════ */}
+            {step === 4 && (
+                <div className={`${CARD_BASE} max-w-4xl`}>
+                    <StepHeader title="Professional Profile" step={3} totalSteps={3} progressPct={100} />
+                    <p className={SECTION_INTRO}>
+                        Complete your <span className="text-emerald-400">Professional Expert</span> profile for verification.
+                    </p>
+
+                    <form onSubmit={handleProfessionalFinalSubmit} className="flex flex-col gap-5">
+                        <PhotoUpload
+                            id="photo-upload"
+                            photo={profilePhoto}
+                            onPhoto={setProfilePhoto}
+                            title="Profile Photo"
+                            subtitle="Upload a professional headshot. JPEG or PNG, max 5MB."
+                        />
+
+                        <div className={TWO_COL_GRID}>
+                            {/* Full Name */}
+                            <Field label="Full Name" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="Dr. Sarah Jenkins" value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Job Title */}
+                            <Field label="Current Job Title" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="Senior AI Research Lead" value={jobTitle}
+                                    onChange={(e) => setJobTitle(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Employer */}
+                            <Field label="Employer" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="Google LLC" value={employer}
+                                    onChange={(e) => setEmployer(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* National ID */}
+                            <Field label="National ID" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="19**********" value={nationalId}
+                                    onChange={(e) => setNationalId(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Phone */}
+                            <Field label="Phone Number" icon={<IoPersonOutline size={18} />}>
+                                <input type="tel" placeholder="+94 00 000 0000" value={phone}
+                                    onChange={(e) => setPhone(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Field of Expertise */}
+                            <Field label="Field of Expertise" icon={<IoPersonOutline size={18} />}>
+                                <select value={expertise} onChange={(e) => setExpertise(e.target.value)}
+                                    className={SELECT_INPUT}>
+                                    <option value="" className="bg-[#052e16]">Select your domain</option>
+                                    {["Software Engineering", "Data Science", "Machine Learning",
+                                        "Product Management", "Design", "Finance", "Law", "Medicine", "Other"
+                                    ].map((o) => (
+                                        <option key={o} value={o} className="bg-[#052e16]">{o}</option>
+                                    ))}
+                                </select>
+                            </Field>
+
+                            {/* University */}
+                            <Field label="University" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="Stanford University" value={university}
+                                    onChange={(e) => setUniversity(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Degree */}
+                            <Field label="Degree" icon={<IoPersonOutline size={18} />}>
+                                <input type="text" placeholder="Ph.D. Computer Science" value={degree}
+                                    onChange={(e) => setDegree(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Portfolio */}
+                            <Field label="Portfolio Link" icon={<IoLinkOutline size={18} />}>
+                                <input type="url" placeholder="https://portfolio.com" value={portfolio}
+                                    onChange={(e) => setPortfolio(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* LinkedIn */}
+                            <Field label="LinkedIn" icon={<IoLogoLinkedin size={18} />}>
+                                <input type="url" placeholder="linkedin.com/in/username" value={linkedin}
+                                    onChange={(e) => setLinkedin(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Instagram */}
+                            <Field label="Instagram" icon={<IoLogoInstagram size={18} />}>
+                                <input type="url" placeholder="instagram.com/username" value={instagram}
+                                    onChange={(e) => setInstagram(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Facebook */}
+                            <Field label="Facebook" icon={<IoGlobeOutline size={18} />}>
+                                <input type="url" placeholder="facebook.com/username" value={facebook}
+                                    onChange={(e) => setFacebook(e.target.value)} className={ROUND_INPUT} />
+                            </Field>
+
+                            {/* Timezone */}
+                            <Field label="Time Zone" icon={<IoGlobeOutline size={18} />}>
+                                <select value={timezone} onChange={(e) => setTimezone(e.target.value)}
+                                    className={SELECT_INPUT}>
+                                    {TIMEZONES.map((tz) => (
+                                        <option key={tz} value={tz} className="bg-[#052e16]">{tz}</option>
+                                    ))}
+                                </select>
+                            </Field>
+
+                            {/* Verification Window */}
+                            <div>
+                                <div className="mb-2 flex items-center gap-2">
+                                    <label className="m-0 text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
+                                        Preferred Verification Window
                                     </label>
-                                </div>
-                                <div>
-                                    <p style={{
-                                        color: "white",
-                                        fontWeight: 600,
-                                        fontSize: "15px",
-                                        margin: "0 0 4px"
-                                    }}>Upload Profile Photo</p>
-                                    <p style={{color: "#649c8c", fontSize: "13px", margin: 0}}>JPG or PNG, max 5MB. A
-                                        professional photo helps you stand out.</p>
-                                </div>
-                            </div>
-
-                            {/* 2-col grid */}
-                            <div className="pro-form-grid">
-
-                                {/* Full Name */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Full Name</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="John Doe" value={fullName}
-                                               onChange={e => setFullName(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Email */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Email Address</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoMailOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="email" placeholder="john@example.com" value={email}
-                                               onChange={e => setEmail(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Password */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Password</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLockClosedOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type={showSeekerPassword ? "text" : "password"}
-                                               placeholder="Enter password" value={seekerPassword}
-                                               onChange={e => setSeekerPassword(e.target.value)} className="round-input"
-                                               style={{...roundInput, paddingRight: "44px"}}/>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowSeekerPassword(v => !v)}
-                                            aria-label={showSeekerPassword ? "Hide password" : "Show password"}
-                                            style={{
-                                                position: "absolute",
-                                                right: "12px",
-                                                top: "50%",
-                                                transform: "translateY(-50%)",
-                                                background: "transparent",
-                                                border: "none",
-                                                color: "#649c8c",
-                                                cursor: "pointer",
-                                                padding: 0,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center"
-                                            }}
-                                        >
-                                            {showSeekerPassword ? <IoEyeOffOutline size={18}/> :
-                                                <IoEyeOutline size={18}/>}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Confirm Password */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Confirm Password</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLockClosedOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type={showSeekerConfirmPassword ? "text" : "password"}
-                                               placeholder="Confirm password" value={seekerConfirmPassword}
-                                               onChange={e => setSeekerConfirmPassword(e.target.value)}
-                                               className="round-input" style={{...roundInput, paddingRight: "44px"}}/>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowSeekerConfirmPassword(v => !v)}
-                                            aria-label={showSeekerConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                                            style={{
-                                                position: "absolute",
-                                                right: "12px",
-                                                top: "50%",
-                                                transform: "translateY(-50%)",
-                                                background: "transparent",
-                                                border: "none",
-                                                color: "#649c8c",
-                                                cursor: "pointer",
-                                                padding: 0,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center"
-                                            }}
-                                        >
-                                            {showSeekerConfirmPassword ? <IoEyeOffOutline size={18}/> :
-                                                <IoEyeOutline size={18}/>}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Current Status */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Current Status</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <select value={seekerStatus} onChange={e => setSeekerStatus(e.target.value)}
-                                                className="round-input" style={{
-                                            ...roundInput,
-                                            paddingLeft: "44px",
-                                            appearance: "none" as const,
-                                            cursor: "pointer"
-                                        }}>
-                                            <option value="" style={{background: "#052e16"}}>Select status</option>
-                                            <option value="undergraduate"
-                                                    style={{background: "#052e16"}}>Undergraduate
-                                            </option>
-                                            <option value="postgraduate" style={{background: "#052e16"}}>Post-Graduate
-                                                Student
-                                            </option>
-                                            <option value="professional" style={{background: "#052e16"}}>Working
-                                                Professional
-                                            </option>
-                                            <option value="other" style={{background: "#052e16"}}>Other</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Time Zone */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Time Zone</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoGlobeOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <select value={seekerTimezone} onChange={e => setSeekerTimezone(e.target.value)}
-                                                className="round-input" style={{
-                                            ...roundInput,
-                                            paddingLeft: "44px",
-                                            appearance: "none" as const,
-                                            cursor: "pointer"
-                                        }}>
-                                            {[
-                                                ["UTC-12", "(UTC-12:00) International Date Line West"],
-                                                ["UTC-11", "(UTC-11:00) Midway Island, Samoa"],
-                                                ["UTC-10", "(UTC-10:00) Hawaii"],
-                                                ["UTC-9", "(UTC-09:00) Alaska"],
-                                                ["UTC-8", "(UTC-08:00) Pacific Time (US & Canada)"],
-                                                ["UTC-7", "(UTC-07:00) Mountain Time (US & Canada)"],
-                                                ["UTC-6", "(UTC-06:00) Central Time (US & Canada)"],
-                                                ["UTC-5", "(UTC-05:00) Eastern Time (US & Canada)"],
-                                                ["UTC-4", "(UTC-04:00) Atlantic Time (Canada)"],
-                                                ["UTC-3", "(UTC-03:00) Buenos Aires, Georgetown"],
-                                                ["UTC+0", "(UTC+00:00) Dublin, Edinburgh, London"],
-                                                ["UTC+1", "(UTC+01:00) Amsterdam, Berlin, Paris"],
-                                                ["UTC+2", "(UTC+02:00) Athens, Istanbul, Jerusalem"],
-                                                ["UTC+3", "(UTC+03:00) Baghdad, Kuwait, Riyadh"],
-                                                ["UTC+5.5", "(UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi"],
-                                                ["UTC+8", "(UTC+08:00) Beijing, Hong Kong, Singapore"],
-                                                ["UTC+9", "(UTC+09:00) Osaka, Sapporo, Tokyo"],
-                                                ["UTC+10", "(UTC+10:00) Brisbane, Melbourne, Sydney"],
-                                            ].map(([val, label]) => (
-                                                <option key={val} value={val}
-                                                        style={{background: "#052e16"}}>{label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Short Bio — full width */}
-                                <div style={{gridColumn: "1 / -1"}}>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Short Bio</label>
-                                    <textarea
-                                        placeholder="Tell us about your goals and what you're looking for..."
-                                        rows={4} value={seekerBio} onChange={e => setSeekerBio(e.target.value)}
-                                        className="round-input"
-                                        style={{
-                                            ...roundInput,
-                                            paddingLeft: "16px",
-                                            borderRadius: "16px",
-                                            resize: "vertical",
-                                            minHeight: "100px",
-                                            lineHeight: "1.6"
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            {seekerSubmitError && (
-                                <p style={{color: "#fca5a5", fontSize: "13px", margin: 0}}>{seekerSubmitError}</p>
-                            )}
-                            {seekerSubmitSuccess && (
-                                <p style={{color: "#86efac", fontSize: "13px", margin: 0}}>{seekerSubmitSuccess}</p>
-                            )}
-                            <div style={{
-                                display: "flex",
-                                gap: "12px",
-                                paddingTop: "24px",
-                                marginTop: "8px",
-                                borderTop: "1px solid rgba(16,185,129,0.1)"
-                            }}>
-                                <button type="button" onClick={() => setStep(1)}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            padding: "12px 20px",
-                                            borderRadius: "999px",
-                                            fontWeight: 600,
-                                            fontSize: "14px",
-                                            color: "rgba(255,255,255,0.7)",
-                                            background: "rgba(255,255,255,0.06)",
-                                            border: "1px solid rgba(255,255,255,0.1)",
-                                            cursor: "pointer",
-                                            whiteSpace: "nowrap"
-                                        }}>
-                                    <IoArrowBack size={16}/> Back
-                                </button>
-                                <button type="submit"
-                                        disabled={seekerSubmitting}
-                                        style={{
-                                            flex: 1,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "8px",
-                                            padding: "12px",
-                                            borderRadius: "999px",
-                                            fontWeight: 600,
-                                            color: "white",
-                                            fontSize: "14px",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            background: "linear-gradient(135deg, #10B981, #059669)",
-                                            boxShadow: "0 6px 20px rgba(16,185,129,0.35)"
-                                        }}>
-                                    {seekerSubmitting ? "Registering..." : "Register Now"} {!seekerSubmitting && <IoArrowForward size={16}/>}
-                                </button>
-                            </div>
-                        </form>
-
-                        <p style={{textAlign: "center", fontSize: "13px", color: "#649c8c", marginTop: "24px"}}>
-                            By clicking Register, you agree to ExpertConnect&apos;s{" "}
-                            <Link href="#" style={{color: "#10B981", textDecoration: "none"}}>Terms of Service</Link>
-                            {" "}and{" "}
-                            <Link href="#" style={{color: "#10B981", textDecoration: "none"}}>Privacy Policy</Link>.
-                        </p>
-                    </div>
-                )}
-
-                {/* ════════════════ STEP 3 — Professional Account ════════════════ */}
-                {step === 3 && (
-                    <div className="pro-card">
-                        <div style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            justifyContent: "space-between",
-                            marginBottom: "8px"
-                        }}>
-                            <div>
-                                <p style={{
-                                    color: "#10B981",
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    letterSpacing: "2px",
-                                    textTransform: "uppercase",
-                                    marginBottom: "4px"
-                                }}>Registration</p>
-                                <h1 className="reg-header"
-                                    style={{color: "white", fontWeight: 700, margin: 0}}>Professional Account</h1>
-                            </div>
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "flex-end",
-                                gap: "6px",
-                                marginTop: "4px",
-                                flexShrink: 0
-                            }}>
-                                <p style={{color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0}}>Step 2 of
-                                    3</p>
-                                <div style={{
-                                    width: "192px",
-                                    height: "6px",
-                                    borderRadius: "999px",
-                                    background: "rgba(255,255,255,0.1)",
-                                    overflow: "hidden"
-                                }}>
-                                    <div style={{
-                                        height: "100%",
-                                        width: "66.67%",
-                                        background: "#10B981",
-                                        borderRadius: "999px",
-                                        boxShadow: "0 0 12px rgba(16,185,129,0.5)"
-                                    }}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p style={{fontSize: "14px", color: "#649c8c", marginTop: "12px", marginBottom: "28px"}}>
-                            Set up your account credentials before completing your professional profile.
-                        </p>
-
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            setStep(4);
-                        }} style={{display: "flex", flexDirection: "column", gap: "20px"}}>
-                            <div className="pro-form-grid">
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Username</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="your_username" value={expertUsername}
-                                               onChange={e => setExpertUsername(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Email Address</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoMailOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="email" placeholder="expert@example.com" value={expertEmail}
-                                               onChange={e => setExpertEmail(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Password</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLockClosedOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type={showExpertPassword ? "text" : "password"}
-                                               placeholder="Enter password" value={expertPassword}
-                                               onChange={e => setExpertPassword(e.target.value)} className="round-input"
-                                               style={{...roundInput, paddingRight: "44px"}}/>
-                                        <button type="button" onClick={() => setShowExpertPassword(v => !v)}
-                                                aria-label={showExpertPassword ? "Hide password" : "Show password"}
-                                                style={{
-                                                    position: "absolute",
-                                                    right: "12px",
-                                                    top: "50%",
-                                                    transform: "translateY(-50%)",
-                                                    background: "transparent",
-                                                    border: "none",
-                                                    color: "#649c8c",
-                                                    cursor: "pointer",
-                                                    padding: 0,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center"
-                                                }}>
-                                            {showExpertPassword ? <IoEyeOffOutline size={18}/> :
-                                                <IoEyeOutline size={18}/>}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Confirm Password</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLockClosedOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type={showExpertConfirmPassword ? "text" : "password"}
-                                               placeholder="Confirm password" value={expertConfirmPassword}
-                                               onChange={e => setExpertConfirmPassword(e.target.value)}
-                                               className="round-input" style={{...roundInput, paddingRight: "44px"}}/>
-                                        <button type="button" onClick={() => setShowExpertConfirmPassword(v => !v)}
-                                                aria-label={showExpertConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                                                style={{
-                                                    position: "absolute",
-                                                    right: "12px",
-                                                    top: "50%",
-                                                    transform: "translateY(-50%)",
-                                                    background: "transparent",
-                                                    border: "none",
-                                                    color: "#649c8c",
-                                                    cursor: "pointer",
-                                                    padding: 0,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center"
-                                                }}>
-                                            {showExpertConfirmPassword ? <IoEyeOffOutline size={18}/> :
-                                                <IoEyeOutline size={18}/>}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{
-                                display: "flex",
-                                gap: "12px",
-                                paddingTop: "24px",
-                                marginTop: "8px",
-                                borderTop: "1px solid rgba(16,185,129,0.1)"
-                            }}>
-                                <button type="button" onClick={() => setStep(1)}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            padding: "12px 20px",
-                                            borderRadius: "999px",
-                                            fontWeight: 600,
-                                            fontSize: "14px",
-                                            color: "rgba(255,255,255,0.7)",
-                                            background: "rgba(255,255,255,0.06)",
-                                            border: "1px solid rgba(255,255,255,0.1)",
-                                            cursor: "pointer",
-                                            whiteSpace: "nowrap"
-                                        }}>
-                                    <IoArrowBack size={16}/> Back
-                                </button>
-                                <button type="submit"
-                                        style={{
-                                            flex: 1,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "8px",
-                                            padding: "12px",
-                                            borderRadius: "999px",
-                                            fontWeight: 600,
-                                            color: "white",
-                                            fontSize: "14px",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            background: "linear-gradient(135deg, #10B981, #059669)",
-                                            boxShadow: "0 6px 20px rgba(16,185,129,0.35)"
-                                        }}>
-                                    Continue <IoArrowForward size={16}/>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
-
-
-                {/* ════════════════ STEP 4 — Professional Profile ════════════════ */}
-                {step === 4 && (
-                    <div className="pro-card">
-                        <div style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            justifyContent: "space-between",
-                            marginBottom: "8px"
-                        }}>
-                            <div>
-                                <p style={{
-                                    color: "#10B981",
-                                    fontSize: "11px",
-                                    fontWeight: 600,
-                                    letterSpacing: "2px",
-                                    textTransform: "uppercase",
-                                    marginBottom: "4px"
-                                }}>Registration</p>
-                                <h1 className="reg-header"
-                                    style={{color: "white", fontWeight: 700, margin: 0}}>Professional Profile</h1>
-                            </div>
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "flex-end",
-                                gap: "6px",
-                                marginTop: "4px",
-                                flexShrink: 0
-                            }}>
-                                <p style={{color: "rgba(255,255,255,0.55)", fontSize: "12px", margin: 0}}>Step 3 of
-                                    3</p>
-                                <div style={{
-                                    width: "192px",
-                                    height: "6px",
-                                    borderRadius: "999px",
-                                    background: "rgba(255,255,255,0.1)",
-                                    overflow: "hidden"
-                                }}>
-                                    <div style={{
-                                        height: "100%",
-                                        width: "100%",
-                                        background: "#10B981",
-                                        borderRadius: "999px",
-                                        boxShadow: "0 0 12px rgba(16,185,129,0.5)"
-                                    }}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        <p style={{fontSize: "14px", color: "#649c8c", marginTop: "12px", marginBottom: "28px"}}>
-                            Complete your <span style={{color: "#10B981"}}>Professional Expert</span> profile for
-                            verification.
-                        </p>
-
-                        <form onSubmit={handleProfessionalFinalSubmit}
-                              style={{display: "flex", flexDirection: "column", gap: "20px"}}>
-
-                            {/* ── Profile Photo ── */}
-                            <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "24px",
-                                flexWrap: "wrap",
-                                padding: "20px",
-                                borderRadius: "16px",
-                                background: "rgba(16,185,129,0.05)",
-                                border: "1px solid rgba(16,185,129,0.15)"
-                            }}>
-                                <div style={{position: "relative", flexShrink: 0}}>
-                                    <div style={{
-                                        width: "96px",
-                                        height: "96px",
-                                        borderRadius: "50%",
-                                        overflow: "hidden",
-                                        background: "rgba(6,78,59,0.5)",
-                                        border: "2px dashed rgba(16,185,129,0.5)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center"
-                                    }}>
-                                        {profilePhoto ? <img src={profilePhoto} alt="Profile" style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            objectFit: "cover"
-                                        }}/> : <IoAddCircleOutline size={32} style={{color: "rgba(16,185,129,0.6)"}}/>}
-                                    </div>
-                                    <label htmlFor="photo-upload" style={{
-                                        position: "absolute",
-                                        bottom: "0",
-                                        right: "0",
-                                        width: "28px",
-                                        height: "28px",
-                                        background: "#10B981",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        cursor: "pointer",
-                                        boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
-                                    }}>
-                                        <svg width="12" height="12" fill="#022c22" viewBox="0 0 24 24">
-                                            <path
-                                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                                        </svg>
-                                        <input id="photo-upload" type="file" accept="image/*" style={{display: "none"}}
-                                               onChange={e => {
-                                                   const f = e.target.files?.[0];
-                                                   if (f) setProfilePhoto(URL.createObjectURL(f));
-                                               }}/>
-                                    </label>
-                                </div>
-                                <div>
-                                    <p style={{
-                                        color: "white",
-                                        fontWeight: 600,
-                                        fontSize: "15px",
-                                        margin: "0 0 4px"
-                                    }}>Profile Photo</p>
-                                    <p style={{color: "#649c8c", fontSize: "13px", margin: 0}}>Upload a professional
-                                        headshot. JPEG or PNG, max 5MB.</p>
-                                </div>
-                            </div>
-
-                            <div className="pro-form-grid">
-                                {/* Full Name */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Full Name</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="Dr. Sarah Jenkins" value={fullName}
-                                               onChange={e => setFullName(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Job Title */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Current Job Title</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="Senior AI Research Lead" value={jobTitle}
-                                               onChange={e => setJobTitle(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Employer */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Employer</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="Google LLC" value={employer}
-                                               onChange={e => setEmployer(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* National ID */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>National ID</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="19**********" value={nationalId}
-                                               onChange={e => setNationalId(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Phone */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Phone Number</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="tel" placeholder="+94 00 000 0000" value={phone}
-                                               onChange={e => setPhone(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Field of Expertise */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Field of Expertise</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <select value={expertise} onChange={e => setExpertise(e.target.value)}
-                                                className="round-input" style={{
-                                            ...roundInput,
-                                            paddingLeft: "44px",
-                                            appearance: "none" as const,
-                                            cursor: "pointer"
-                                        }}>
-                                            <option value="" style={{background: "#052e16"}}>Select your domain</option>
-                                            {["Software Engineering", "Data Science", "Machine Learning", "Product Management", "Design", "Finance", "Law", "Medicine", "Other"].map(o =>
-                                                <option key={o} value={o} style={{background: "#052e16"}}>{o}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* University */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>University</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="Stanford University" value={university}
-                                               onChange={e => setUniversity(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Degree */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Degree</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="text" placeholder="Ph.D. Computer Science" value={degree}
-                                               onChange={e => setDegree(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Portfolio */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Portfolio Link</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLinkOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="url" placeholder="https://portfolio.com" value={portfolio}
-                                               onChange={e => setPortfolio(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* LinkedIn */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>LinkedIn</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLogoLinkedin size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="url" placeholder="linkedin.com/in/username" value={linkedin}
-                                               onChange={e => setLinkedin(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Instagram */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Instagram</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoLogoInstagram size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="url" placeholder="instagram.com/username" value={instagram}
-                                               onChange={e => setInstagram(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Facebook */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Facebook</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoGlobeOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <input type="url" placeholder="facebook.com/username" value={facebook}
-                                               onChange={e => setFacebook(e.target.value)} className="round-input"
-                                               style={roundInput}/>
-                                    </div>
-                                </div>
-
-                                {/* Timezone */}
-                                <div>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Time Zone</label>
-                                    <div style={{position: "relative"}}>
-                                        <IoGlobeOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                                                className="round-input" style={{
-                                            ...roundInput,
-                                            paddingLeft: "44px",
-                                            appearance: "none" as const,
-                                            cursor: "pointer"
-                                        }}>
-                                            {TIMEZONES.map(tz => <option key={tz} value={tz}
-                                                                         style={{background: "#052e16"}}>{tz}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Verification Window */}
-                                <div>
-                                    <div style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        marginBottom: "8px"
-                                    }}>
-                                        <label style={{
-                                            display: "block",
-                                            color: "#10B981",
-                                            fontSize: "11px",
-                                            fontWeight: 600,
-                                            letterSpacing: "2px",
-                                            textTransform: "uppercase",
-                                            margin: 0
-                                        }}>Preferred Verification Window</label>
-                                        <div style={{position: "relative", display: "inline-flex"}}
-                                             className="tooltip-wrapper">
-                      <span style={{
-                          color: "#10B981",
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          textDecoration: "underline",
-                          textDecorationStyle: "dotted",
-                          cursor: "help"
-                      }}>
-                        Learn more
-                      </span>
-                                            <div className="tooltip-box">
-                                                Please provide your availability for a one-on-one manual verification
-                                                meeting with a site administrator.
-                                            </div>
+                                    {/* Tooltip */}
+                                    <div className="group relative inline-flex">
+                                        <span className="cursor-help text-[11px] font-semibold text-emerald-400 underline decoration-dotted">
+                                            Learn more
+                                        </span>
+                                        <div className="pointer-events-none invisible absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-60 -translate-x-1/2 rounded-lg border border-emerald-500/35 bg-[rgba(2,44,34,0.98)] px-3.5 py-2.5 text-xs leading-relaxed text-white/90 shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:visible">
+                                            Please provide your availability for a one-on-one manual verification meeting with a site administrator.
+                                            <span className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-emerald-500/35" />
                                         </div>
                                     </div>
-                                    <div style={{position: "relative"}}>
-                                        <IoPersonOutline size={18} style={{
-                                            color: "#649c8c",
-                                            position: "absolute",
-                                            left: "14px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            zIndex: 10,
-                                            pointerEvents: "none"
-                                        }}/>
-                                        <select value={verifyWindow} onChange={e => setVerifyWindow(e.target.value)}
-                                                className="round-input" style={{
-                                            ...roundInput,
-                                            paddingLeft: "44px",
-                                            appearance: "none" as const,
-                                            cursor: "pointer"
-                                        }}>
-                                            {WINDOWS.map(w => <option key={w} value={w}
-                                                                      style={{background: "#052e16"}}>{w}</option>)}
-                                        </select>
-                                    </div>
                                 </div>
-
-                                {/* Skills — full width */}
-                                <div style={{gridColumn: "1 / -1"}}>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "10px"
-                                    }}>Skills &amp; Technologies</label>
-                                    <div style={{
-                                        display: "flex",
-                                        flexWrap: "wrap",
-                                        gap: "8px",
-                                        padding: "14px",
-                                        minHeight: "60px",
-                                        borderRadius: "16px",
-                                        background: "linear-gradient(135deg, rgba(2,44,34,0.45), rgba(2,34,24,0.35))",
-                                        border: "1px solid rgba(16,185,129,0.15)",
-                                        boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.1)"
-                                    }}>
-                                        {ALL_SKILLS.map(skill => {
-                                            const active = selectedSkills.includes(skill);
-                                            return (
-                                                <button key={skill} type="button" onClick={() => toggleSkill(skill)}
-                                                        style={{
-                                                            padding: "5px 14px",
-                                                            borderRadius: "999px",
-                                                            fontSize: "12px",
-                                                            fontWeight: 600,
-                                                            color: active ? "white" : "#649c8c",
-                                                            background: active ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)",
-                                                            border: active ? "1px solid rgba(16,185,129,0.6)" : "1px solid rgba(255,255,255,0.1)",
-                                                            cursor: "pointer",
-                                                            transition: "all 0.2s",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            gap: "4px"
-                                                        }}>
-                                                    {active && <IoCloseCircle size={13} style={{color: "#10B981"}}/>}
-                                                    {skill}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Bio — full width */}
-                                <div style={{gridColumn: "1 / -1"}}>
-                                    <label style={{
-                                        display: "block",
-                                        color: "#10B981",
-                                        fontSize: "11px",
-                                        fontWeight: 600,
-                                        letterSpacing: "2px",
-                                        textTransform: "uppercase",
-                                        marginBottom: "8px"
-                                    }}>Professional Bio</label>
-                                    <textarea
-                                        placeholder="Briefly describe your journey and accomplishments..."
-                                        rows={4} value={bio} onChange={e => setBio(e.target.value)}
-                                        className="round-input"
-                                        style={{
-                                            ...roundInput,
-                                            paddingLeft: "16px",
-                                            borderRadius: "16px",
-                                            resize: "vertical",
-                                            minHeight: "100px",
-                                            lineHeight: "1.6"
-                                        }}
-                                    />
+                                <div className="relative">
+                                    <IoPersonOutline size={18} className={FIELD_ICON} />
+                                    <select value={verifyWindow} onChange={(e) => setVerifyWindow(e.target.value)}
+                                        className={SELECT_INPUT}>
+                                        {WINDOWS.map((w) => (
+                                            <option key={w} value={w} className="bg-[#052e16]">{w}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
-                            {/* ── Action Buttons — pill style like seeker ── */}
-                            {expertSubmitError && (
-                                <p style={{color: "#fca5a5", fontSize: "13px", margin: 0}}>{expertSubmitError}</p>
-                            )}
-                            {expertSubmitSuccess && (
-                                <p style={{color: "#86efac", fontSize: "13px", margin: 0}}>{expertSubmitSuccess}</p>
-                            )}
-                            <div style={{
-                                display: "flex",
-                                gap: "12px",
-                                paddingTop: "24px",
-                                marginTop: "8px",
-                                borderTop: "1px solid rgba(16,185,129,0.1)"
-                            }}>
-                                <button type="button" onClick={() => setStep(3)}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: "8px",
-                                            padding: "12px 20px",
-                                            borderRadius: "999px",
-                                            fontWeight: 600,
-                                            fontSize: "14px",
-                                            color: "rgba(255,255,255,0.7)",
-                                            background: "rgba(255,255,255,0.06)",
-                                            border: "1px solid rgba(255,255,255,0.1)",
-                                            cursor: "pointer",
-                                            whiteSpace: "nowrap"
-                                        }}>
-                                    <IoArrowBack size={16}/> Back
-                                </button>
-                                <button type="submit"
-                                        disabled={expertSubmitting}
-                                        style={{
-                                            flex: 1,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            gap: "8px",
-                                            padding: "12px",
-                                            borderRadius: "999px",
-                                            fontWeight: 600,
-                                            color: "white",
-                                            fontSize: "14px",
-                                            border: "none",
-                                            cursor: expertSubmitting ? "not-allowed" : "pointer",
-                                            opacity: expertSubmitting ? 0.8 : 1,
-                                            background: "linear-gradient(135deg, #10B981, #059669)",
-                                            boxShadow: "0 6px 20px rgba(16,185,129,0.35)"
-                                        }}>
-                                    {expertSubmitting ? "Registering..." : "Register Now"} {!expertSubmitting && <IoArrowForward size={16}/>} 
-                                </button>
+                            {/* Skills — full width */}
+                            <div className="col-span-full">
+                                <label className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
+                                    Skills &amp; Technologies
+                                </label>
+                                <div className="flex min-h-[60px] flex-wrap gap-2 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] p-3.5 shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.1)]">
+                                    {ALL_SKILLS.map((skill) => {
+                                        const active = selectedSkills.includes(skill);
+                                        return (
+                                            <button
+                                                key={skill}
+                                                type="button"
+                                                onClick={() => toggleSkill(skill)}
+                                                className={`flex items-center gap-1 rounded-full px-3.5 py-1 text-xs font-semibold transition-all duration-200 ${active
+                                                    ? "border border-emerald-500/60 bg-emerald-500/25 text-white"
+                                                    : "border border-white/10 bg-white/[0.04] text-[#649c8c]"
+                                                    }`}
+                                            >
+                                                {active && <IoCloseCircle size={13} className="text-emerald-400" />}
+                                                {skill}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </form>
 
-                        <p style={{textAlign: "center", fontSize: "14px", color: "#649c8c", marginTop: "28px"}}>
-                            Already have an account?{" "}
-                            <Link href="/login" style={{color: "#10B981", fontWeight: 600, textDecoration: "none"}}>Sign
-                                In</Link>
-                        </p>
-                    </div>
-                )}
+                            {/* Bio — full width */}
+                            <div className="col-span-full">
+                                <label className={FIELD_LABEL}>Professional Bio</label>
+                                <textarea
+                                    placeholder="Briefly describe your journey and accomplishments..."
+                                    rows={4}
+                                    value={bio}
+                                    onChange={(e) => setBio(e.target.value)}
+                                    className={
+                                        ROUND_INPUT.replace("rounded-full", "rounded-2xl") +
+                                        " resize-y px-4 leading-relaxed"
+                                    }
+                                    style={{ minHeight: "100px" }}
+                                />
+                            </div>
+                        </div>
 
+                        {expertSubmitError && (
+                            <p className="m-0 text-[13px] text-red-300">{expertSubmitError}</p>
+                        )}
+                        {expertSubmitSuccess && (
+                            <p className="m-0 text-[13px] text-green-300">{expertSubmitSuccess}</p>
+                        )}
 
-                {/* Footer */}
-                <footer
-                    style={{marginTop: "32px", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: "13px"}}>
-                    <p>© 2024 ExpertConnect Professional Network. Secure SSL Encrypted.</p>
-                </footer>
-            </div>
-        </>
+                        <div className={ACTION_ROW}>
+                            <button type="button" onClick={() => setStep(3)} className={BACK_BTN}>
+                                <IoArrowBack size={16} /> Back
+                            </button>
+                            <button type="submit" disabled={expertSubmitting} className={SUBMIT_BTN}>
+                                {expertSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16} /></>}
+                            </button>
+                        </div>
+                    </form>
+
+                    <p className="mt-7 text-center text-sm text-[#649c8c]">
+                        Already have an account?{" "}
+                        <Link href="/login" className="font-semibold text-emerald-400 no-underline">
+                            Sign In
+                        </Link>
+                    </p>
+                </div>
+            )}
+
+            {/* Footer */}
+            <footer className="mt-8 text-center text-[13px] text-white/30">
+                <p>© 2024 ExpertConnect Professional Network. Secure SSL Encrypted.</p>
+            </footer>
+        </div>
     );
 }
-
