@@ -12,16 +12,16 @@ import {
     IoLogoLinkedin,
     IoLogoInstagram,
     IoGlobeOutline,
-    IoAddCircleOutline,
     IoCloseCircle,
-    IoLockClosedOutline,
-    IoEyeOutline,
-    IoEyeOffOutline,
 } from "react-icons/io5";
 import { HiOutlineUserGroup, HiOutlineShieldCheck } from "react-icons/hi2";
-import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 import type { Database } from "@/types/database.types";
+import { Field } from "./components/Field";
+import { PasswordField } from "./components/PasswordField";
+import { PhotoUpload } from "./components/PhotoUpload";
+import { StepHeader } from "./components/StepHeader";
+import { FIELD_ICON, FIELD_LABEL, ROUND_INPUT } from "./components/registerUiStyles";
 
 type Role = "seeker" | "expert" | null;
 type UserStatus = Database["public"]["Enums"]["user_status"];
@@ -58,29 +58,7 @@ const WINDOWS = [
 const CARD_BASE =
     "w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10";
 
-const KICKER = "mb-1 text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400";
-
-const STEP_TEXT = "m-0 text-xs text-white/55";
-
-const PROGRESS_TRACK = "h-1.5 w-48 overflow-hidden rounded-full bg-white/10";
-
-const PROGRESS_BAR_BASE = "h-full rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.5)] transition-[width] duration-500";
-
 const SECTION_INTRO = "mt-3 mb-7 text-sm text-[#649c8c]";
-
-const FIELD_LABEL =
-    "mb-2 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400";
-
-const FIELD_ICON =
-    "pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-[#649c8c]";
-
-// Glass pill input — applied via className
-const ROUND_INPUT =
-    "w-full rounded-full border-none py-3 pl-11 pr-4 text-sm text-white outline-none " +
-    "bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] " +
-    "shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] " +
-    "placeholder:text-emerald-200/40 " +
-    "focus:bg-[rgba(2,44,34,0.8)] focus:shadow-[0_0_20px_rgba(16,185,129,0.25),0_0_0_2px_rgba(16,185,129,0.4)]";
 
 const SELECT_INPUT =
     ROUND_INPUT + " appearance-none cursor-pointer";
@@ -98,132 +76,6 @@ const SUBMIT_BTN =
 
 const TWO_COL_GRID = "grid grid-cols-1 gap-6 sm:grid-cols-2";
 
-// ── Reusable field wrapper ─────────────────────────────────────────────────────
-
-interface FieldProps {
-    label: string;
-    icon: React.ReactNode;
-    children: React.ReactNode;
-}
-const Field = ({ label, icon, children }: FieldProps) => (
-    <div>
-        <label className={FIELD_LABEL}>{label}</label>
-        <div className="relative">
-            <span className={FIELD_ICON}>{icon}</span>
-            {children}
-        </div>
-    </div>
-);
-
-// ── Password field ─────────────────────────────────────────────────────────────
-
-interface PasswordFieldProps {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    show: boolean;
-    onToggle: () => void;
-    placeholder?: string;
-}
-const PasswordField = ({
-    label, value, onChange, show, onToggle, placeholder = "Enter password",
-}: PasswordFieldProps) => (
-    <Field label={label} icon={<IoLockClosedOutline size={18} />}>
-        <input
-            type={show ? "text" : "password"}
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={ROUND_INPUT + " pr-11"}
-        />
-        <button
-            type="button"
-            onClick={onToggle}
-            aria-label={show ? "Hide password" : "Show password"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent p-0 text-[#649c8c] cursor-pointer flex items-center"
-        >
-            {show ? <IoEyeOffOutline size={18} /> : <IoEyeOutline size={18} />}
-        </button>
-    </Field>
-);
-
-// ── Photo uploader ─────────────────────────────────────────────────────────────
-
-interface PhotoUploadProps {
-    id: string;
-    photo: string | null;
-    onPhoto: (url: string) => void;
-    title?: string;
-    subtitle?: string;
-}
-const PhotoUpload = ({
-    id, photo, onPhoto,
-    title = "Upload Profile Photo",
-    subtitle = "JPG or PNG, max 5MB. A professional photo helps you stand out.",
-}: PhotoUploadProps) => (
-    <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-emerald-500/15 bg-emerald-500/5 p-5">
-        <div className="relative shrink-0">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-emerald-500/50 bg-[rgba(6,78,59,0.5)]">
-                {photo ? (
-                    <Image
-                        src={photo}
-                        alt="Profile"
-                        width={96}
-                        height={96}
-                        className="h-full w-full object-cover"
-                    />
-                ) : (
-                    <IoAddCircleOutline size={32} className="text-emerald-500/60" />
-                )}
-            </div>
-            <label
-                htmlFor={id}
-                className="absolute bottom-0 right-0 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-emerald-400 shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
-            >
-                <svg width="12" height="12" fill="#022c22" viewBox="0 0 24 24">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                </svg>
-                <input
-                    id={id}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) onPhoto(URL.createObjectURL(f));
-                    }}
-                />
-            </label>
-        </div>
-        <div>
-            <p className="mb-1 text-[15px] font-semibold text-white">{title}</p>
-            <p className="m-0 text-[13px] text-[#649c8c]">{subtitle}</p>
-        </div>
-    </div>
-);
-
-// ── Step header ────────────────────────────────────────────────────────────────
-
-interface StepHeaderProps {
-    title: string;
-    step: number;
-    totalSteps: number;
-    progressPct: number;
-}
-const StepHeader = ({ title, step, totalSteps, progressPct }: StepHeaderProps) => (
-    <div className="mb-2 flex items-start justify-between">
-        <div>
-            <p className={KICKER}>Registration</p>
-            <h1 className="m-0 text-2xl font-bold text-white sm:text-3xl">{title}</h1>
-        </div>
-        <div className="mt-1 flex shrink-0 flex-col items-end gap-1.5">
-            <p className={STEP_TEXT}>Step {step} of {totalSteps}</p>
-            <div className={PROGRESS_TRACK}>
-                <div className={PROGRESS_BAR_BASE} style={{ width: `${progressPct}%` }} />
-            </div>
-        </div>
-    </div>
-);
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
