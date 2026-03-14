@@ -26,6 +26,7 @@ import type {Database} from "@/types/database.types";
 type Role = "seeker" | "expert" | null;
 type UserStatus = Database["public"]["Enums"]["user_status"];
 type TimeZone = Database["public"]["Enums"]["time_zone"];
+type SkillTag = Database["public"]["Enums"]["skill_tag"];
 
 const ALL_SKILLS = [
     "Web Development", "Mobile Development", "Machine Learning", "Data Science",
@@ -95,6 +96,9 @@ export default function RegisterPage() {
     const [expertConfirmPassword, setExpertConfirmPassword] = useState("");
     const [showExpertPassword, setShowExpertPassword] = useState(false);
     const [showExpertConfirmPassword, setShowExpertConfirmPassword] = useState(false);
+    const [expertSubmitting, setExpertSubmitting] = useState(false);
+    const [expertSubmitError, setExpertSubmitError] = useState<string | null>(null);
+    const [expertSubmitSuccess, setExpertSubmitSuccess] = useState<string | null>(null);
 
     const toggleSkill = (skill: string) => {
         setSelectedSkills(prev =>
@@ -134,6 +138,12 @@ export default function RegisterPage() {
 
         return timezoneMap[value] ?? "Asia/Colombo";
     };
+
+    const mapProfessionalTimezone = (value: string): TimeZone => {
+        const timezoneValue = value.split(" ")[0] as TimeZone;
+        return timezoneValue || "Asia/Colombo";
+    };
+
 
     const handleFinalSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
@@ -199,18 +209,107 @@ export default function RegisterPage() {
         }
     };
 
-    const handleProfessionalFinalSubmit = (e: React.FormEvent) => {
+    const handleProfessionalFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({
-            role: selectedRole,
-            expertUsername,
-            expertEmail,
-            expertPassword,
-            fullName,
-            jobTitle,
-            employer,
-            selectedSkills,
-        });
+        setExpertSubmitError(null);
+        setExpertSubmitSuccess(null);
+
+        if (!expertUsername.trim() || !expertEmail.trim() || !fullName.trim()) {
+            setExpertSubmitError("Username, full name and email are required.");
+            return;
+        }
+        if (!expertPassword || expertPassword.length < 6) {
+            setExpertSubmitError("Password must be at least 6 characters.");
+            return;
+        }
+        if (expertPassword !== expertConfirmPassword) {
+            setExpertSubmitError("Passwords do not match.");
+            return;
+        }
+        if (!expertise.trim()) {
+            setExpertSubmitError("Field of expertise is required.");
+            return;
+        }
+        if (selectedSkills.length === 0) {
+            setExpertSubmitError("Select at least one skill.");
+            return;
+        }
+        if (selectedSkills.includes("Other")) {
+            setExpertSubmitError("Please remove 'Other' skill for now (custom label is not implemented yet).");
+            return;
+        }
+
+        setExpertSubmitting(true);
+
+        try {
+            const {data: authData, error: authError} = await supabase.auth.signUp({
+                email: expertEmail.trim(),
+                password: expertPassword,
+                options: {
+                    data: {
+                        role: "professional",
+                        full_name: fullName.trim(),
+                        username: expertUsername.trim(),
+                    },
+                },
+            });
+
+            if (authError) throw new Error(authError.message);
+
+            const userId = authData.user?.id;
+            if (!userId) throw new Error("Account was created but user id is missing.");
+
+            const {error: profileError} = await supabase.from("profiles").insert({
+                id: userId,
+                role: "professional",
+                name: fullName.trim(),
+                bio: bio.trim() || null,
+                profile_photo: null,
+                time_zone: mapProfessionalTimezone(timezone),
+            });
+
+            if (profileError) throw new Error(profileError.message);
+
+            const verifyTimeId = null;
+
+            const {data: professionalProfile, error: professionalProfileError} = await supabase
+                .from("professional_profiles")
+                .insert({
+                    profile_id: userId,
+                    national_id: nationalId.trim() || null,
+                    linkedin: linkedin.trim() || null,
+                    instagram: instagram.trim() || null,
+                    facebook: facebook.trim() || null,
+                    field: expertise.trim(),
+                    university: university.trim() || null,
+                    degree: degree.trim() || null,
+                    job: employer.trim() || null,
+                    job_title: jobTitle.trim() || null,
+                    phone_number: phone.trim() || null,
+                    portfolio: portfolio.trim() || null,
+                    verify_time_id: verifyTimeId,
+                })
+                .select("id")
+                .single();
+
+            if (professionalProfileError) throw new Error(professionalProfileError.message);
+            if (!professionalProfile?.id) throw new Error("Professional profile id is missing.");
+
+            const skillRows = selectedSkills.map((skill) => ({
+                professional_profile_id: professionalProfile.id,
+                skill: skill as SkillTag,
+            }));
+
+            const {error: skillsError} = await supabase.from("professional_skills").insert(skillRows);
+            if (skillsError) throw new Error(skillsError.message);
+
+            setExpertSubmitSuccess("Registration submitted. You can now log in.");
+            router.push("/login");
+        } catch (error) {
+            setExpertSubmitError(error instanceof Error ? error.message : "Failed to register professional account.");
+        } finally {
+            setExpertSubmitting(false);
+        }
     };
 
     // ── shared styles ──
@@ -1932,6 +2031,12 @@ export default function RegisterPage() {
                             </div>
 
                             {/* ── Action Buttons — pill style like seeker ── */}
+                            {expertSubmitError && (
+                                <p style={{color: "#fca5a5", fontSize: "13px", margin: 0}}>{expertSubmitError}</p>
+                            )}
+                            {expertSubmitSuccess && (
+                                <p style={{color: "#86efac", fontSize: "13px", margin: 0}}>{expertSubmitSuccess}</p>
+                            )}
                             <div style={{
                                 display: "flex",
                                 gap: "12px",
@@ -1957,6 +2062,7 @@ export default function RegisterPage() {
                                     <IoArrowBack size={16}/> Back
                                 </button>
                                 <button type="submit"
+                                        disabled={expertSubmitting}
                                         style={{
                                             flex: 1,
                                             display: "flex",
@@ -1969,11 +2075,12 @@ export default function RegisterPage() {
                                             color: "white",
                                             fontSize: "14px",
                                             border: "none",
-                                            cursor: "pointer",
+                                            cursor: expertSubmitting ? "not-allowed" : "pointer",
+                                            opacity: expertSubmitting ? 0.8 : 1,
                                             background: "linear-gradient(135deg, #10B981, #059669)",
                                             boxShadow: "0 6px 20px rgba(16,185,129,0.35)"
                                         }}>
-                                    Register Now <IoArrowForward size={16}/>
+                                    {expertSubmitting ? "Registering..." : "Register Now"} {!expertSubmitting && <IoArrowForward size={16}/>} 
                                 </button>
                             </div>
                         </form>
