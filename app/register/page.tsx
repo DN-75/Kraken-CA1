@@ -22,6 +22,7 @@ import {PasswordField} from "./components/PasswordField";
 import {PhotoUpload} from "./components/PhotoUpload";
 import {StepHeader} from "./components/StepHeader";
 import {FIELD_ICON, FIELD_LABEL, ROUND_INPUT} from "./components/registerUiStyles";
+import {uploadProfilePhoto} from "@/utils/uploadProfilePhoto";
 
 type Role = "seeker" | "expert" | null;
 type UserStatus = Database["public"]["Enums"]["user_status"];
@@ -160,49 +161,73 @@ export default function RegisterPage() {
         (value.split(" ")[0] as TimeZone) || "Asia/Colombo";
 
     const handleFinalSubmit = async (e?: React.FormEvent) => {
-        e?.preventDefault();
-        setSeekerSubmitError(null);
-        setSeekerSubmitSuccess(null);
-        if (!fullName.trim() || !email.trim()) {
-            setSeekerSubmitError("Full name and email are required.");
-            return;
+            e?.preventDefault();
+            setSeekerSubmitError(null);
+            setSeekerSubmitSuccess(null);
+            if (!fullName.trim() || !email.trim()) {
+                setSeekerSubmitError("Full name and email are required.");
+                return;
+            }
+            if (!seekerPassword || seekerPassword.length < 6) {
+                setSeekerSubmitError("Password must be at least 6 characters.");
+                return;
+            }
+            if (seekerPassword !== seekerConfirmPassword) {
+                setSeekerSubmitError("Passwords do not match.");
+                return;
+            }
+            setSeekerSubmitting(true);
+            try {
+                const {data: authData, error: authError} = await supabase.auth.signUp({
+                    email: email.trim(),
+                    password: seekerPassword,
+                    options: {data: {role: "user", full_name: fullName.trim()}},
+                });
+                if (authError) throw new Error(authError.message);
+
+                const userId = authData.user?.id;
+
+                if (!userId) throw new Error("Account was created but user id is missing.");
+
+                // ✅ Upload photo — soft fail if it doesn't work
+                let photoUrl: string | null = null;
+                let photoWarning = false;
+                // ✅ Upload photo and get public URL
+                if (seekerPhoto) {  // or profilePhoto for expert
+                    photoUrl = await uploadProfilePhoto(userId, seekerPhoto);
+                    if (!photoUrl) photoWarning = true;  // upload silently failed
+                }
+
+                const {error: profileError} = await supabase.from("profiles").insert({
+                    id: userId, role: "user",
+                    name: fullName.trim(),
+                    bio: seekerBio.trim() || null,
+                    profile_photo: photoUrl,
+                    time_zone: mapSeekerTimezone(seekerTimezone),
+                });
+                if (profileError) throw new Error(profileError.message);
+
+                const {error: userProfileError} = await supabase.from("user_profiles").insert({
+                    profile_id: userId,
+                    status: mapSeekerStatus(seekerStatus),
+                });
+
+                if (userProfileError) throw new Error(userProfileError.message);
+                // ✅ Correct — use else, or add return
+                if (photoWarning) {
+                    setSeekerSubmitSuccess("Account created! Photo upload failed — you can add it later in settings.");
+                } else {
+                    setSeekerSubmitSuccess("Registration complete. You can now log in.");
+                }
+                setTimeout(() => router.push("/login"), 2500); // ← runs once at the end
+            } catch
+                (error) {
+                setSeekerSubmitError(error instanceof Error ? error.message : "Failed to register.");
+            } finally {
+                setSeekerSubmitting(false);
+            }
         }
-        if (!seekerPassword || seekerPassword.length < 6) {
-            setSeekerSubmitError("Password must be at least 6 characters.");
-            return;
-        }
-        if (seekerPassword !== seekerConfirmPassword) {
-            setSeekerSubmitError("Passwords do not match.");
-            return;
-        }
-        setSeekerSubmitting(true);
-        try {
-            const {data: authData, error: authError} = await supabase.auth.signUp({
-                email: email.trim(),
-                password: seekerPassword,
-                options: {data: {role: "user", full_name: fullName.trim()}},
-            });
-            if (authError) throw new Error(authError.message);
-            const userId = authData.user?.id;
-            if (!userId) throw new Error("Account was created but user id is missing.");
-            const {error: profileError} = await supabase.from("profiles").insert({
-                id: userId, role: "user", name: fullName.trim(),
-                bio: seekerBio.trim() || null, profile_photo: null,
-                time_zone: mapSeekerTimezone(seekerTimezone),
-            });
-            if (profileError) throw new Error(profileError.message);
-            const {error: userProfileError} = await supabase.from("user_profiles").insert({
-                profile_id: userId, status: mapSeekerStatus(seekerStatus),
-            });
-            if (userProfileError) throw new Error(userProfileError.message);
-            setSeekerSubmitSuccess("Registration complete. You can now log in.");
-            router.push("/login");
-        } catch (error) {
-            setSeekerSubmitError(error instanceof Error ? error.message : "Failed to register.");
-        } finally {
-            setSeekerSubmitting(false);
-        }
-    };
+    ;
 
     const handleProfessionalFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -246,9 +271,22 @@ export default function RegisterPage() {
             if (authError) throw new Error(authError.message);
             const userId = authData.user?.id;
             if (!userId) throw new Error("Account was created but user id is missing.");
+
+            // ✅ Upload photo — soft fail if it doesn't work
+            let photoUrl: string | null = null;
+            let photoWarning = false;
+
+            if (profilePhoto) {  // or profilePhoto for expert
+                photoUrl = await uploadProfilePhoto(userId, profilePhoto);
+                if (!photoUrl) photoWarning = true;  // upload silently failed
+            }
+
             const {error: profileError} = await supabase.from("profiles").insert({
-                id: userId, role: "professional", name: fullName.trim(),
-                bio: bio.trim() || null, profile_photo: null,
+                id: userId,
+                role: "professional",
+                name: fullName.trim(),
+                bio: bio.trim() || null,
+                profile_photo: photoUrl,
                 time_zone: mapProfessionalTimezone(timezone),
             });
             if (profileError) throw new Error(profileError.message);
@@ -273,8 +311,12 @@ export default function RegisterPage() {
             }));
             const {error: skillsError} = await supabase.from("professional_skills").insert(skillRows);
             if (skillsError) throw new Error(skillsError.message);
-            setExpertSubmitSuccess("Registration submitted. You can now log in.");
-            router.push("/login");
+            if (photoWarning) {
+                setExpertSubmitSuccess("Account created! Photo upload failed — you can add it later in settings.");
+            } else {
+                setExpertSubmitSuccess("Registration submitted. You can now log in.");
+            }
+            setTimeout(() => router.push("/login"), 2500);
         } catch (error) {
             setExpertSubmitError(error instanceof Error ? error.message : "Failed to register.");
         } finally {
@@ -292,7 +334,11 @@ export default function RegisterPage() {
             ? "bg-emerald-500/[0.12] border-emerald-500/55 shadow-[0_0_24px_rgba(16,185,129,0.1)]"
             : "bg-white/[0.04] border-white/[0.08]"
         }`;
-
+    const isStep3Valid =
+        expertUsername.trim() !== "" &&
+        expertEmail.trim() !== "" &&
+        expertPassword.length >= 6 &&
+        expertConfirmPassword === expertPassword;
 
     return (
         <div
@@ -394,7 +440,8 @@ export default function RegisterPage() {
                 <div className={`${CARD_BASE} max-w-3xl`}>
                     <StepHeader title="Join the Network" step={2} totalSteps={2} progressPct={100}/>
                     <p className={SECTION_INTRO}>
-                        Complete your <span className="text-emerald-400">Service Seeker</span> profile to get started.
+                        Complete your <span className="text-emerald-400">Service Seeker</span> profile to get
+                        started.
                     </p>
 
                     <form onSubmit={(e) => {
@@ -449,8 +496,10 @@ export default function RegisterPage() {
                                         className={SELECT_INPUT}>
                                     <option value="" className="bg-[#052e16]">Select status</option>
                                     <option value="undergraduate" className="bg-[#052e16]">Undergraduate</option>
-                                    <option value="postgraduate" className="bg-[#052e16]">Post-Graduate Student</option>
-                                    <option value="professional" className="bg-[#052e16]">Working Professional</option>
+                                    <option value="postgraduate" className="bg-[#052e16]">Post-Graduate Student
+                                    </option>
+                                    <option value="professional" className="bg-[#052e16]">Working Professional
+                                    </option>
                                     <option value="other" className="bg-[#052e16]">Other</option>
                                 </select>
                             </Field>
@@ -513,7 +562,8 @@ export default function RegisterPage() {
                                 <IoArrowBack size={16}/> Back
                             </button>
                             <button type="submit" disabled={seekerSubmitting} className={SUBMIT_BTN}>
-                                {seekerSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16}/></>}
+                                {seekerSubmitting ? "Registering..." : <>Register Now <IoArrowForward
+                                    size={16}/></>}
                             </button>
                         </div>
                     </form>
@@ -555,30 +605,54 @@ export default function RegisterPage() {
                             </Field>
 
                             {/* Password */}
-                            <PasswordField
-                                label="Password"
-                                value={expertPassword}
-                                onChange={setExpertPassword}
-                                show={showExpertPassword}
-                                onToggle={() => setShowExpertPassword((v) => !v)}
-                            />
+                            <div className="flex flex-col gap-1.5">
+                                <PasswordField
+                                    label="Password"
+                                    value={expertPassword}
+                                    onChange={setExpertPassword}
+                                    show={showExpertPassword}
+                                    onToggle={() => setShowExpertPassword((v) => !v)}
+                                />
+                                {expertPassword.length > 0 && (
+                                    <p className={`text-[12px] px-2 ${
+                                        expertPassword.length >= 6 ? "text-emerald-400" : "text-red-400"
+                                    }`}>
+                                        {expertPassword.length >= 6
+                                            ? "✓ Password looks good"
+                                            : `✗ Must be at least 6 characters (${expertPassword.length}/6)`}
+                                    </p>
+                                )}
+                            </div>
 
                             {/* Confirm Password */}
-                            <PasswordField
-                                label="Confirm Password"
-                                value={expertConfirmPassword}
-                                onChange={setExpertConfirmPassword}
-                                show={showExpertConfirmPassword}
-                                onToggle={() => setShowExpertConfirmPassword((v) => !v)}
-                                placeholder="Confirm password"
-                            />
+                            <div className="flex flex-col gap-1.5">
+                                <PasswordField
+                                    label="Confirm Password"
+                                    value={expertConfirmPassword}
+                                    onChange={setExpertConfirmPassword}
+                                    show={showExpertConfirmPassword}
+                                    onToggle={() => setShowExpertConfirmPassword((v) => !v)}
+                                    placeholder="Confirm password"
+                                />
+                                {expertConfirmPassword.length > 0 && (
+                                    <p className={`text-[12px] px-2 ${
+                                        expertPassword === expertConfirmPassword ? "text-emerald-400" : "text-red-400"
+                                    }`}>
+                                        {expertPassword === expertConfirmPassword
+                                            ? "✓ Passwords match"
+                                            : "✗ Passwords do not match"}
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         <div className={ACTION_ROW}>
                             <button type="button" onClick={() => setStep(1)} className={BACK_BTN}>
                                 <IoArrowBack size={16}/> Back
                             </button>
-                            <button type="submit" className={SUBMIT_BTN}>
+                            <button type="submit"
+                                    className={`${SUBMIT_BTN} ${!isStep3Valid ? "opacity-5 cursor-not-allowed" : "cursor-pointer"}`}
+                                    disabled={!isStep3Valid}>
                                 Continue <IoArrowForward size={16}/>
                             </button>
                         </div>
@@ -784,7 +858,8 @@ export default function RegisterPage() {
                                 <IoArrowBack size={16}/> Back
                             </button>
                             <button type="submit" disabled={expertSubmitting} className={SUBMIT_BTN}>
-                                {expertSubmitting ? "Registering..." : <>Register Now <IoArrowForward size={16}/></>}
+                                {expertSubmitting ? "Registering..." : <>Register Now <IoArrowForward
+                                    size={16}/></>}
                             </button>
                         </div>
                     </form>
