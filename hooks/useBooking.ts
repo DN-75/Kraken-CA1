@@ -102,6 +102,7 @@ export function useBookings(): UseBookingsReturn {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBookings()
   }, [fetchBookings])
 
