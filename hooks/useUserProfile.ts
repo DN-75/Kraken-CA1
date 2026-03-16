@@ -16,9 +16,9 @@ export interface FullUserProfile {
   bio:           string | null
   time_zone:     string
   role:          string
-  // from user_profiles table
-  user_profile_id: string
-  status:          'undergraduate' | 'school_student' | 'job'
+  // from user_profiles table (only present when role === 'user')
+  user_profile_id: string | null
+  status:          'undergraduate' | 'school_student' | 'job' | null
 }
 
 interface UseUserProfileReturn {
@@ -56,35 +56,45 @@ export function useUserProfile(): UseUserProfileReturn {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('Not authenticated')
 
-      // Step 2: fetch profiles + email view
+      // Step 2: fetch profile from profiles table (not the view)
+      // profiles_with_email view joins auth.users which may be blocked by
+      // security_invoker, so we read email from the auth user instead.
       const { data: profile, error: profileError } = await supabase
-        .from('profiles_with_email')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
 
       if (profileError) throw new Error(profileError.message)
 
-      // Step 3: fetch user_profiles row
-      const { data: userProfile, error: userProfileError } = await supabase
-        .from('user_profiles')
-        .select('id, status')
-        .eq('profile_id', user.id)
-        .single()
+      // Step 3: fetch user_profiles row (only exists for role = 'user')
+      let userProfileId: string | null = null
+      let userStatus: 'undergraduate' | 'school_student' | 'job' | null = null
 
-      if (userProfileError) throw new Error(userProfileError.message)
+      if (profile.role === 'user') {
+        const { data: userProfile, error: userProfileError } = await supabase
+          .from('user_profiles')
+          .select('id, status')
+          .eq('profile_id', user.id)
+          .single()
+
+        if (userProfileError) throw new Error(userProfileError.message)
+        userProfileId = userProfile.id
+        userStatus = userProfile.status
+      }
 
       // Step 4: merge into one flat object
+      // Email comes from auth user (step 1), not from the profiles table
       setData({
         id:              profile.id,
         name:            profile.name,
-        email:           profile.email,
+        email:           user.email ?? '',
         profile_photo:   profile.profile_photo,
         bio:             profile.bio,
         time_zone:       profile.time_zone,
         role:            profile.role,
-        user_profile_id: userProfile.id,
-        status:          userProfile.status,
+        user_profile_id: userProfileId,
+        status:          userStatus,
       })
 
     } catch (err: unknown) {
@@ -123,7 +133,7 @@ export function useUserProfile(): UseUserProfileReturn {
         )
       }
 
-      if (Object.keys(userProfileFields).length > 0) {
+      if (Object.keys(userProfileFields).length > 0 && data.user_profile_id) {
         updates.push(
           supabase
             .from('user_profiles')
