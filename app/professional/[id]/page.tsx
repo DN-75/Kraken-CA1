@@ -183,8 +183,8 @@ export default function ProfessionalProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#274f3e] via-[#12281e] to-[#0a1812] flex items-center justify-center">
-        <div className="animate-pulse text-[#467f61] text-xl font-medium">
+      <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] flex items-center justify-center">
+        <div className="animate-pulse text-[#467f61] text-xl font-medium drop-shadow-md">
           Loading profile…
         </div>
       </div>
@@ -193,11 +193,11 @@ export default function ProfessionalProfilePage() {
 
   if (error || !professional) {
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#274f3e] via-[#12281e] to-[#0a1812] flex flex-col items-center justify-center gap-4">
-        <p className="text-red-400 text-xl">
+      <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] flex flex-col items-center justify-center gap-4">
+        <p className="text-red-400 text-xl drop-shadow-md">
           {error ?? "Profile not found."}
         </p>
-        <Link href="/" className="text-[#87a996] hover:text-white transition-colors">
+        <Link href="/" className="text-white hover:text-gray-200 transition-colors drop-shadow-md">
           ← Back to Home
         </Link>
       </div>
@@ -208,10 +208,10 @@ export default function ProfessionalProfilePage() {
 
   /* ── Render ── */
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#274f3e] via-[#12281e] to-[#0a1812] text-white selection:bg-[#467f61] selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] text-white selection:bg-[#467f61] selection:text-white">
       
       {/* ─── Navbar ─── */}
-      <nav className="border-b border-[#234535] bg-[#122b20]/60 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b border-[#234535]/50 bg-[#122b20]/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-3">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#61c589] shadow-[0_0_15px_rgba(97,197,137,0.4)]">
@@ -224,12 +224,12 @@ export default function ProfessionalProfilePage() {
                  <circle cx="12" cy="12" r="2.5" />
               </svg>
             </span>
-            <span className="text-white font-bold text-lg tracking-wide">
+            <span className="text-white font-bold text-lg tracking-wide drop-shadow-sm">
               ExpertConnect
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8 text-sm text-[#87a996] font-medium">
+          <div className="hidden md:flex items-center gap-8 text-sm text-[#a3c4b2] font-medium">
             <Link href="/" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <FaHome /> Home
             </Link>
@@ -242,11 +242,11 @@ export default function ProfessionalProfilePage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="text-[#87a996] hover:text-white transition-colors">
+            <button className="text-[#a3c4b2] hover:text-white transition-colors">
               <FaSearch size={16} />
             </button>
-            <div className="flex items-center gap-3 border-l border-[#234535] pl-4">
-              <span className="text-sm text-[#87a996] hidden sm:inline font-medium">
+            <div className="flex items-center gap-3 border-l border-[#234535]/50 pl-4">
+              <span className="text-sm text-[#a3c4b2] hidden sm:inline font-medium">
                 {profile.name}
               </span>
               {profile.profile_photo ? (
@@ -256,7 +256,7 @@ export default function ProfessionalProfilePage() {
                   className="h-9 w-9 rounded-full object-cover border border-[#234535] shadow-sm"
                 />
               ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0a1812] border border-[#234535] text-xs font-bold text-[#87a996] shadow-inner">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0a1812] border border-[#234535] text-xs font-bold text-[#a3c4b2] shadow-inner">
                   {getInitials(profile.name)}
                 </span>
               )}
@@ -269,7 +269,7 @@ export default function ProfessionalProfilePage() {
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
         
         {/* ── Profile Hero Card ── */}
-        <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
+        <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
           {profile.profile_photo ? (
             <img
               src={profile.profile_photo}
@@ -277,35 +277,35 @@ export default function ProfessionalProfilePage() {
               className="h-36 w-36 rounded-2xl object-cover flex-shrink-0 shadow-lg border border-[#234535]"
             />
           ) : (
-            <div className="h-36 w-36 rounded-2xl bg-[#0a1812] border border-[#234535] flex items-center justify-center text-4xl font-bold text-[#467f61] flex-shrink-0 shadow-inner">
+            <div className="h-36 w-36 rounded-2xl bg-[#0a1812]/80 border border-[#234535] flex items-center justify-center text-4xl font-bold text-[#467f61] flex-shrink-0 shadow-inner">
               {getInitials(profile.name)}
             </div>
           )}
 
           <div className="flex-1 text-center md:text-left space-y-3">
-            <h1 className="text-3xl font-bold text-white tracking-tight">{profile.name}</h1>
-            <p className="text-[#61c589] font-medium text-lg">
+            <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-sm">{profile.name}</h1>
+            <p className="text-[#61c589] font-medium text-lg drop-shadow-sm">
               {professional.job_title ?? professional.field}
             </p>
             {professional.job && (
-              <p className="text-[#87a996] text-sm">at {professional.job}</p>
+              <p className="text-[#a3c4b2] text-sm drop-shadow-sm">at {professional.job}</p>
             )}
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {avgRating && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812] px-4 py-1.5 text-sm font-medium text-[#87a996] shadow-inner">
-                  <FaStar className="text-yellow-500" /> {avgRating} Stars
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
+                  <FaStar className="text-yellow-400 drop-shadow-sm" /> {avgRating} Stars
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812] px-4 py-1.5 text-sm font-medium text-[#87a996] shadow-inner">
-                <FaDollarSign className="text-[#61c589]" /> 
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
+                <FaDollarSign className="text-[#61c589] drop-shadow-sm" /> 
                 {professional.price_per_hour}/hr
               </span>
             </div>
           </div>
 
           <div className="flex-shrink-0 self-center md:mt-4">
-            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full bg-[#467f61] hover:bg-[#38664e] transition-all px-8 py-3.5 text-white font-semibold text-sm shadow-[0_4px_14px_0_rgba(70,127,97,0.39)] w-full md:w-auto">
+            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full bg-[#467f61] hover:bg-[#38664e] transition-all px-8 py-3.5 text-white font-semibold text-sm shadow-[0_4px_14px_0_rgba(70,127,97,0.4)] w-full md:w-auto">
               <FaCalendarAlt /> Book Session
             </button>
           </div>
@@ -313,26 +313,26 @@ export default function ProfessionalProfilePage() {
 
         {/* ── Bio ── */}
         {profile.bio && (
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4">
+          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4 drop-shadow-sm">
               <FaUser className="text-[#467f61]" /> Bio
             </h2>
-            <p className="text-[#87a996] leading-relaxed text-sm md:text-base">{profile.bio}</p>
+            <p className="text-[#a3c4b2] leading-relaxed text-sm md:text-base">{profile.bio}</p>
           </section>
         )}
 
         {/* ── Skills & Availability Row ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5">
+          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
               <FaLaptopCode className="text-[#467f61]" /> Skills
             </h2>
             <div className="flex flex-wrap gap-3">
               {skills.map((s, i) => (
                 <span
                   key={i}
-                  className="rounded-lg border border-[#234535] bg-[#0a1812] px-4 py-2 text-sm text-[#87a996] shadow-inner"
+                  className="rounded-lg border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-2 text-sm text-[#a3c4b2] shadow-inner"
                 >
                   {s.skill === "Other" ? s.skill_other_label : s.skill}
                 </span>
@@ -340,23 +340,23 @@ export default function ProfessionalProfilePage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5">
+          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
               <FaClock className="text-[#467f61]" /> Availability
             </h2>
 
             {sortedDays.length === 0 ? (
-              <p className="text-[#87a996] text-sm">No available slots right now.</p>
+              <p className="text-[#a3c4b2] text-sm">No available slots right now.</p>
             ) : (
               <div className="space-y-5">
                 {sortedDays.map((day) => (
                   <div key={day}>
-                    <p className="text-[#61c589] text-xs uppercase tracking-wider font-bold mb-2">{day}</p>
+                    <p className="text-[#61c589] text-xs uppercase tracking-wider font-bold mb-2 drop-shadow-sm">{day}</p>
                     <div className="flex flex-wrap gap-2">
                       {groupedSlots[day].map((slot) => (
                         <span
                           key={slot.id}
-                          className="rounded-lg border border-[#234535] bg-[#0a1812] px-3 py-1.5 text-sm text-[#87a996] shadow-inner"
+                          className="rounded-lg border border-[#234535]/80 bg-[#0a1812]/80 px-3 py-1.5 text-sm text-[#a3c4b2] shadow-inner"
                         >
                           {formatTime(slot.start_time)}
                         </span>
@@ -371,8 +371,8 @@ export default function ProfessionalProfilePage() {
 
         {/* ── User Reviews ── */}
         {reviews.length > 0 && (
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
+          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6 drop-shadow-sm">
               <FaCommentDots className="text-[#467f61]" /> User Reviews
             </h2>
 
@@ -382,7 +382,7 @@ export default function ProfessionalProfilePage() {
                 return (
                   <div
                     key={review.id}
-                    className="rounded-xl border border-[#234535] bg-[#0a1812] shadow-inner p-5 space-y-3"
+                    className="rounded-xl border border-[#234535]/80 bg-[#0a1812]/60 shadow-inner p-5 space-y-3 backdrop-blur-sm"
                   >
                     <div className="flex items-center gap-3">
                       {review.user_profiles?.profiles?.profile_photo ? (
@@ -392,13 +392,13 @@ export default function ProfessionalProfilePage() {
                           className="h-10 w-10 rounded-full object-cover border border-[#234535]"
                         />
                       ) : (
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#122b20] border border-[#234535] text-sm font-bold text-[#87a996]">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#122b20] border border-[#234535] text-sm font-bold text-[#a3c4b2]">
                           {getInitials(reviewerName)}
                         </span>
                       )}
 
                       <div>
-                        <p className="font-semibold text-white text-sm">
+                        <p className="font-semibold text-white text-sm drop-shadow-sm">
                           {reviewerName}
                         </p>
                         <div className="flex gap-0.5 mt-1">
@@ -406,7 +406,7 @@ export default function ProfessionalProfilePage() {
                             <FaStar
                               key={i}
                               size={12}
-                              className={i < review.rating ? "text-yellow-500" : "text-[#234535]"}
+                              className={i < review.rating ? "text-yellow-400" : "text-[#234535]"}
                             />
                           ))}
                         </div>
@@ -414,7 +414,7 @@ export default function ProfessionalProfilePage() {
                     </div>
 
                     {review.comment && (
-                      <p className="text-[#87a996] text-sm leading-relaxed">
+                      <p className="text-[#a3c4b2] text-sm leading-relaxed">
                         &ldquo;{review.comment}&rdquo;
                       </p>
                     )}
