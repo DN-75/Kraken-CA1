@@ -235,86 +235,137 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
-// ══════════════════════════════════════════════════════════════════════
-// API ROUTE DESCRIPTION — /api/reviews
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// END-TO-END FLOW: Reviews API
+// ══════════════════════════════════════════════════════════════
 //
-// Base URL:  /api/reviews
-// Auth:      Required (user must be logged in via Supabase session)
+// ┌─────────────────────────────────────────────────────────┐
+// │  POST /api/reviews                                      │
+// │  Submit a review for a completed session                │
+// │                                                         │
+// │  BODY: { booking_id, rating (1-5), comment? }           │
+// │  CALLER: Authenticated user who owns the booking        │
+// └────────────────────────┬────────────────────────────────┘
+//                          │
+//                          ▼
+// ┌─────────────────────────────────────────────────────────┐
+// │  FRONTEND (User Dashboard — Completed Sessions)         │
+// │                                                         │
+// │  1. User navigates to /user (account page)              │
+// │  2. Completed bookings shown with "Rate Session" button │
+// │  3. User clicks "Rate Session" → modal opens            │
+// │  4. User selects rating (1-5 stars) + optional comment  │
+// │  5. Frontend calls:                                     │
+// │     fetch('/api/reviews', {                             │
+// │       method: 'POST',                                   │
+// │       body: JSON.stringify({                            │
+// │         booking_id: '...',                              │
+// │         rating: 5,                                      │
+// │         comment: 'Great session!'                       │
+// │       })                                                │
+// │     })                                                  │
+// └────────────────────────┬────────────────────────────────┘
+//                          │
+//                          ▼
+// ┌─────────────────────────────────────────────────────────┐
+// │  POST HANDLER STEPS                                     │
+// │                                                         │
+// │  Step 1:  Auth check → supabase.auth.getUser()          │
+// │           └─ 401 if not logged in                       │
+// │                                                         │
+// │  Step 2:  Zod validates booking_id (uuid),              │
+// │           rating (int 1-5), comment (max 1000, optional)│
+// │           └─ 400 if invalid                             │
+// │                                                         │
+// │  Step 3:  Resolve user_profiles.id from auth.uid()      │
+// │           └─ 404 if no user profile                     │
+// │                                                         │
+// │  Step 4:  Fetch booking by booking_id                   │
+// │           └─ 404 if not found                           │
+// │                                                         │
+// │  Step 5:  Ownership check                               │
+// │           booking.user_profile_id === userProfile.id    │
+// │           └─ 403 if not owner                           │
+// │                                                         │
+// │  Step 6:  Status check → booking.status === 'completed' │
+// │           └─ 400 if not completed                       │
+// │                                                         │
+// │  Step 7:  INSERT into reviews table                     │
+// │           DB UNIQUE(booking_id) prevents duplicates     │
+// │           └─ 409 if already reviewed (code 23505)       │
+// │           └─ 500 if other DB error                      │
+// │                                                         │
+// │  Step 8:  Return 201                                    │
+// │           { success, review_id, message }               │
+// └─────────────────────────────────────────────────────────┘
 //
-// ── POST /api/reviews ───────────────────────────────────────────────
+// ┌─────────────────────────────────────────────────────────┐
+// │  GET /api/reviews?professional_profile_id=<uuid>        │
+// │  Fetch reviews for a professional                       │
+// │                                                         │
+// │  CALLER: Any authenticated user (with param)            │
+// │          Admin can omit param to fetch ALL reviews      │
+// └────────────────────────┬────────────────────────────────┘
+//                          │
+//                          ▼
+// ┌─────────────────────────────────────────────────────────┐
+// │  FRONTEND                                               │
+// │                                                         │
+// │  A) Professional Public Page (/experts/[id])            │
+// │     → GET /api/reviews?professional_profile_id=xxx      │
+// │     → Displays review cards with rating, comment,       │
+// │       reviewer name, photo, and avg_rating              │
+// │                                                         │
+// │  B) Admin Dashboard (/admin)                            │
+// │     → GET /api/reviews (no param)                       │
+// │     → Lists ALL reviews across the platform             │
+// └────────────────────────┬────────────────────────────────┘
+//                          │
+//                          ▼
+// ┌─────────────────────────────────────────────────────────┐
+// │  GET HANDLER STEPS                                      │
+// │                                                         │
+// │  Step 1:  Auth check                                    │
+// │           └─ 401 if not logged in                       │
+// │                                                         │
+// │  Step 2:  Check role + query param                      │
+// │           └─ 400 if non-admin omits param               │
+// │                                                         │
+// │  Step 3:  Build Supabase query                          │
+// │           SELECT reviews + user_profiles.profiles       │
+// │           (name, photo) + professional_profiles         │
+// │           (id, job_title, name)                         │
+// │           Optional .eq() filter by professional_id      │
+// │                                                         │
+// │  Step 4:  Compute avg_rating + total count              │
+// │           Return 200 { reviews[], total, avg_rating }   │
+// └─────────────────────────────────────────────────────────┘
 //
-//   Description:  Submits a review for a completed booking. Only the user
-//                 who made the booking can review it. The booking must be
-//                 in 'completed' status. A DB UNIQUE constraint on
-//                 booking_id prevents duplicate reviews.
+// DATABASE TABLES:
+//   READ:   profiles         → check role (admin or user)
+//   READ:   user_profiles    → resolve user_profile.id
+//   READ:   bookings         → verify status + ownership
+//   READ:   reviews          → fetch existing reviews
+//   WRITE:  reviews          → insert new review
 //
-//   Request body (JSON):
-//     {
-//       "booking_id": "uuid",             // required — the completed booking
-//       "rating":     4,                   // required — integer 1-5
-//       "comment":    "Great session!"     // optional — max 1000 chars
-//     }
+// DB CONSTRAINTS:
+//   UNIQUE(booking_id) on reviews → one review per booking
+//   CHECK(rating >= 1 AND rating <= 5) → rating range
+//   FK(booking_id) → bookings.id
+//   FK(user_profile_id) → user_profiles.id
+//   FK(professional_profile_id) → professional_profiles.id
 //
-//   Success response (201):
-//     {
-//       "success":   true,
-//       "review_id": "uuid",
-//       "message":   "Review submitted successfully"
-//     }
+// ERROR RESPONSES (POST):
+//   401 — Not authenticated
+//   400 — Invalid body OR booking not completed
+//   403 — Not the booking owner
+//   404 — User profile or booking not found
+//   409 — Already reviewed (DB unique violation)
+//   500 — DB error or internal error
 //
-//   Error responses:
-//     401 — Not logged in
-//     400 — Invalid body / booking is not 'completed'
-//     403 — User does not own this booking
-//     404 — User profile or booking not found
-//     409 — Already reviewed this booking
-//     500 — Failed to insert / Internal server error
+// ERROR RESPONSES (GET):
+//   401 — Not authenticated
+//   400 — Non-admin missing professional_profile_id param
+//   500 — DB error or internal error
 //
-//
-// ── GET /api/reviews?professional_profile_id=<uuid> ─────────────────
-//
-//   Description:  Returns all reviews for a given professional, ordered
-//                 by created_at descending. Includes the reviewer's name
-//                 and photo, plus the professional's name and job title.
-//                 Also computes and returns the average rating.
-//                 Admins can omit the query param to fetch ALL reviews.
-//
-//   Query params:
-//     professional_profile_id  — required for non-admin users (UUID)
-//
-//   Success response (200):
-//     {
-//       "reviews": [
-//         {
-//           "id":         "uuid",
-//           "rating":     5,
-//           "comment":    "Very helpful session!",
-//           "created_at": "ISO timestamp",
-//           "booking_id": "uuid",
-//           "user_profiles": {
-//             "profiles": {
-//               "name":          "Jane Smith",
-//               "profile_photo": "https://..."
-//             }
-//           },
-//           "professional_profiles": {
-//             "id":        "uuid",
-//             "job_title": "Software Engineer",
-//             "profiles": {
-//               "name": "John Doe"
-//             }
-//           }
-//         }
-//       ],
-//       "total":      3,
-//       "avg_rating": 4.3
-//     }
-//
-//   Error responses:
-//     401 — Not logged in
-//     400 — Missing professional_profile_id (non-admin)
-//     500 — Failed to fetch / Internal server error
-//
-// ══════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
