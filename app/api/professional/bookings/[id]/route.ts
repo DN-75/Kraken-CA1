@@ -147,7 +147,14 @@ export async function PATCH(
         }
 
         // ── Step 8: Get user email for notification ──────────
-        const userProfileId = (booking.user_profiles as any)?.profile_id
+        type BookingUserProfileRef = { profile_id: string | null } | null
+        type BookingSlotRef = {
+            day_of_week: string
+            start_time: string
+            end_time: string
+        } | null
+
+        const userProfileId = (booking.user_profiles as unknown as BookingUserProfileRef)?.profile_id
         const {data: userEmailData} = await supabase
             .from('profiles_with_email')
             .select('email, name')
@@ -161,7 +168,7 @@ export async function PATCH(
             .eq('id', user.id)
             .single()
 
-        const slotDetails = booking.time_slots as any
+        const slotDetails = booking.time_slots as unknown as BookingSlotRef
 
         // ══════════════════════════════════════════════════
         // APPROVE FLOW
@@ -287,7 +294,7 @@ export async function PATCH(
             )
         }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Unexpected error in PATCH /api/professional/bookings/[id]:', err)
         return NextResponse.json(
             {error: 'Internal server error'},
@@ -295,6 +302,104 @@ export async function PATCH(
         )
     }
 }
+
+
+// ══════════════════════════════════════════════════════════════════════
+// API ROUTE DESCRIPTION — /api/professional/bookings/[id]
+// ══════════════════════════════════════════════════════════════════════
+//
+// Base URL:  /api/professional/bookings/[id]
+// Auth:      Required (must be logged in as a professional)
+// Param:     id — the booking UUID (passed as a URL segment)
+//
+// ── PATCH /api/professional/bookings/[id] ───────────────────────────
+//
+//   Description:  Allows a professional to approve or reject a PENDING
+//                 booking. On approval, a payment link is generated
+//                 (or uses a custom one if provided) and an approval
+//                 email is sent to the user. On rejection, a DB trigger
+//                 (trg_booking_free_slot) frees the time slot and a
+//                 rejection email is sent. Emails are non-blocking —
+//                 the booking update succeeds even if email fails.
+//
+//   Request body (JSON):
+//     {
+//       "action":       "approve" | "reject",   // required
+//       "zoom_link":    "https://...",           // optional — Zoom meeting URL
+//       "payment_link": "https://..."            // optional — overrides auto-generated link
+//     }
+//
+//   Success response — Approve (200):
+//     {
+//       "success":      true,
+//       "action":       "approved",
+//       "booking_id":   "uuid",
+//       "payment_link": "https://...",
+//       "message":      "Booking approved. Payment link sent to user."
+//     }
+//
+//   Success response — Reject (200):
+//     {
+//       "success":    true,
+//       "action":     "rejected",
+//       "booking_id": "uuid",
+//       "message":    "Booking rejected. User has been notified. Time slot is now free."
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     400 — Invalid body / booking is not in 'pending' status
+//     403 — Caller is not a professional / does not own this booking
+//     404 — Profile, professional profile, or booking not found
+//     500 — Failed to update / Internal server error
+//
+//
+// ── GET /api/professional/bookings/[id] ─────────────────────────────
+//
+//   Description:  Returns full details of a single booking from the
+//                 professional's perspective. Includes the user's name,
+//                 profile photo, bio, timezone, and time slot info.
+//                 Only the professional who owns the booking can view it.
+//
+//   Request body: None
+//
+//   Success response (200):
+//     {
+//       "booking": {
+//         "id":                       "uuid",
+//         "status":                   "pending" | "approved" | "completed" | "rejected" | "cancelled",
+//         "is_paid":                  false,
+//         "payment_link":             "https://..." | null,
+//         "zoom_link":                "https://..." | null,
+//         "created_at":               "ISO timestamp",
+//         "updated_at":               "ISO timestamp",
+//         "professional_profile_id":  "uuid",
+//         "time_slots": {
+//           "id":          "uuid",
+//           "day_of_week": "Monday",
+//           "start_time":  "09:00:00",
+//           "end_time":    "10:00:00"
+//         },
+//         "user_profiles": {
+//           "id":     "uuid",
+//           "status": "active",
+//           "profiles": {
+//             "name":          "Jane Smith",
+//             "profile_photo": "https://...",
+//             "bio":           "Student looking for guidance...",
+//             "time_zone":     "Asia/Colombo"
+//           }
+//         }
+//       }
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     403 — Professional does not own this booking
+//     404 — Professional profile or booking not found
+//     500 — Internal server error
+//
+// ══════════════════════════════════════════════════════════════════════
 
 
 // ══════════════════════════════════════════════════════
@@ -382,7 +487,7 @@ export async function GET(
 
         return NextResponse.json({booking}, {status: 200})
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Unexpected error in GET /api/professional/bookings/[id]:', err)
         return NextResponse.json(
             {error: 'Internal server error'},

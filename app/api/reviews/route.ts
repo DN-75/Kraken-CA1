@@ -234,3 +234,87 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
+
+// ══════════════════════════════════════════════════════════════════════
+// API ROUTE DESCRIPTION — /api/reviews
+// ══════════════════════════════════════════════════════════════════════
+//
+// Base URL:  /api/reviews
+// Auth:      Required (user must be logged in via Supabase session)
+//
+// ── POST /api/reviews ───────────────────────────────────────────────
+//
+//   Description:  Submits a review for a completed booking. Only the user
+//                 who made the booking can review it. The booking must be
+//                 in 'completed' status. A DB UNIQUE constraint on
+//                 booking_id prevents duplicate reviews.
+//
+//   Request body (JSON):
+//     {
+//       "booking_id": "uuid",             // required — the completed booking
+//       "rating":     4,                   // required — integer 1-5
+//       "comment":    "Great session!"     // optional — max 1000 chars
+//     }
+//
+//   Success response (201):
+//     {
+//       "success":   true,
+//       "review_id": "uuid",
+//       "message":   "Review submitted successfully"
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     400 — Invalid body / booking is not 'completed'
+//     403 — User does not own this booking
+//     404 — User profile or booking not found
+//     409 — Already reviewed this booking
+//     500 — Failed to insert / Internal server error
+//
+//
+// ── GET /api/reviews?professional_profile_id=<uuid> ─────────────────
+//
+//   Description:  Returns all reviews for a given professional, ordered
+//                 by created_at descending. Includes the reviewer's name
+//                 and photo, plus the professional's name and job title.
+//                 Also computes and returns the average rating.
+//                 Admins can omit the query param to fetch ALL reviews.
+//
+//   Query params:
+//     professional_profile_id  — required for non-admin users (UUID)
+//
+//   Success response (200):
+//     {
+//       "reviews": [
+//         {
+//           "id":         "uuid",
+//           "rating":     5,
+//           "comment":    "Very helpful session!",
+//           "created_at": "ISO timestamp",
+//           "booking_id": "uuid",
+//           "user_profiles": {
+//             "profiles": {
+//               "name":          "Jane Smith",
+//               "profile_photo": "https://..."
+//             }
+//           },
+//           "professional_profiles": {
+//             "id":        "uuid",
+//             "job_title": "Software Engineer",
+//             "profiles": {
+//               "name": "John Doe"
+//             }
+//           }
+//         }
+//       ],
+//       "total":      3,
+//       "avg_rating": 4.3
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     400 — Missing professional_profile_id (non-admin)
+//     500 — Failed to fetch / Internal server error
+//
+// ══════════════════════════════════════════════════════════════════════
