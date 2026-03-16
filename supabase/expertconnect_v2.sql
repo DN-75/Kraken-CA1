@@ -128,7 +128,9 @@ CREATE TABLE profiles (
 
 -- ✅ Convenience view: join profiles with auth.users to expose email safely
 -- Use this instead of profiles.email everywhere in your app
-CREATE VIEW profiles_with_email AS
+CREATE VIEW profiles_with_email
+  WITH (security_invoker = false)
+  AS
   SELECT
     p.*,
     u.email
@@ -351,6 +353,10 @@ CREATE POLICY "Admins full access to reviews"
 CREATE POLICY "Admins full access to time_slots"
   ON time_slots FOR ALL
   USING (is_admin());
+
+CREATE POLICY "Users manage own user_profile"
+  ON user_profiles FOR ALL
+  USING (profile_id = auth.uid());
 
 CREATE POLICY "Admins full access to user_profiles"
   ON user_profiles FOR ALL
