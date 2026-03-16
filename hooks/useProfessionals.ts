@@ -65,12 +65,12 @@ export function useProfessionals({ search = '', limit }: UseProfessionalsOptions
 
         // ── Post-process: compute avg rating, skill labels ──
         let processed: ProfessionalWithDetails[] = (data || []).map(pro => {
-          const reviews    = pro.reviews ?? []
+          const reviews = (pro.reviews ?? []) as Pick<ReviewRow, 'rating'>[]
           const avg_rating = reviews.length > 0
-            ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
+            ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
             : 0
 
-          const skill_labels = (pro.professional_skills ?? []).map((s: any) =>
+          const skill_labels = ((pro.professional_skills ?? []) as Pick<SkillRow, 'skill' | 'skill_other_label'>[]).map((s) =>
             s.skill === 'Other' ? s.skill_other_label : s.skill
           )
 
@@ -96,8 +96,8 @@ export function useProfessionals({ search = '', limit }: UseProfessionalsOptions
 
         setProfessionals(processed)
 
-      } catch (err: any) {
-        if (!cancelled) setError(err.message)
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Unknown error')
       } finally {
         if (!cancelled) setLoading(false)
       }

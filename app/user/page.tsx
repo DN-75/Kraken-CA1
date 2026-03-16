@@ -4,7 +4,8 @@ import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserProfile, type FullUserProfile } from "@/hooks/useUserProfile";
-import { useBookings } from "@/hooks/useBooking";
+import { useBookings, type BookingWithDetails } from "@/hooks/useBooking";
+import type { Enums } from "@/types/database.types";
 import {
   IoPersonOutline,
   IoMailOutline,
@@ -60,6 +61,14 @@ const getStatusLabel = (value: 'undergraduate' | 'school_student' | 'job' | stri
   return "Undergraduate";
 };
 
+type FormDataState = {
+  name: string;
+  email: string;
+  bio: string;
+  time_zone: string;
+  status: string;
+};
+
 export default function UserProfilePage() {
   const router = useRouter();
   const { data: userProfile, loading: profileLoading, error: profileError, update } = useUserProfile();
@@ -72,7 +81,7 @@ export default function UserProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<Partial<FullUserProfile>>({
+  const [formData, setFormData] = useState<FormDataState>({
     name: "",
     email: "",
     bio: "",
@@ -88,7 +97,7 @@ export default function UserProfilePage() {
         email: userProfile.email,
         bio: userProfile.bio || "",
         time_zone: userProfile.time_zone,
-        status: mapStatusToForm(userProfile.status ?? '') as any,
+        status: mapStatusToForm(userProfile.status ?? ''),
       });
     }
   }, [userProfile]);
@@ -111,7 +120,7 @@ export default function UserProfilePage() {
       const success = await update({
         name: formData.name || "",
         bio: formData.bio || "",
-        time_zone: formData.time_zone as any,
+        time_zone: formData.time_zone as Enums<"time_zone">,
         profile_photo: userProfile?.profile_photo || "",
         status: mapStatusToDatabase(formData.status || "undergraduate"),
       });
@@ -570,7 +579,7 @@ export default function UserProfilePage() {
 
 // ─── Session Card Component ─────────────────────────────────────────────────
 interface SessionCardProps {
-  booking: any;
+  booking: BookingWithDetails;
   status: "pending" | "approved" | "completed";
   onCancel?: (bookingId: string) => void;
 }

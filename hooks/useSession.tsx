@@ -92,8 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError) throw new Error(profileError.message)
 
       applyProfile({ ...data, email: user.email ?? '' } as SessionProfile)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
       applyProfile(null)
     } finally {
       initialised.current = true
