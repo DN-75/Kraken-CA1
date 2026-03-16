@@ -1,0 +1,474 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import {
+  FaStar,
+  FaUser,
+  FaClock,
+  FaCommentDots,
+  FaDollarSign,
+  FaSearch,
+  FaHome,
+  FaInfoCircle,
+  FaEnvelope,
+  FaLaptopCode,
+  FaCalendarAlt,
+} from "react-icons/fa";
+
+/* ───────── Types ───────── */
+
+interface Professional {
+  id: string;
+  profile_id: string;
+  job_title: string | null;
+  job: string | null;
+  field: string;
+  price_per_hour: number;
+  profiles: {
+    id: string;
+    name: string;
+    profile_photo: string | null;
+    bio: string | null;
+    time_zone: string;
+  };
+}
+
+interface Skill {
+  skill: string;
+  skill_other_label: string | null;
+}
+
+interface TimeSlot {
+  id: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  user_profiles: {
+    profiles: {
+      name: string;
+      profile_photo: string | null;
+    };
+  };
+}
+
+/* ───────── Helpers ───────── */
+
+const DAY_ORDER = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function formatTime(timeStr: string): string {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const h = hours % 12 || 12;
+  return `${h.toString().padStart(2, "0")}:${minutes
+    .toString()
+    .padStart(2, "0")} ${period}`;
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/* ───────── Component ───────── */
+
+export default function ProfessionalProfilePage() {
+  const params = useParams();
+  const id = params.id as string;
+
+  const [professional, setProfessional] = useState<Professional | null>(null);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+
+    // Mock data for professional with id 1
+    if (id === "1") {
+      setProfessional({
+        id: "1",
+        profile_id: "1",
+        job_title: "Senior Full-Stack Developer",
+        job: "TechNova Inc.",
+        field: "Software Engineering",
+        price_per_hour: 85,
+        profiles: {
+          id: "1",
+          name: "Alex Johnson",
+          profile_photo: null,
+          bio: "Passionate full-stack developer with 10+ years of experience building scalable web applications. Specializing in React, Next.js, and Node.js. I love mentoring junior developers and helping teams adopt best practices.",
+          time_zone: "America/New_York",
+        },
+      });
+
+      setSkills([
+        { skill: "React", skill_other_label: null },
+        { skill: "Next.js", skill_other_label: null },
+        { skill: "TypeScript", skill_other_label: null },
+        { skill: "Node.js", skill_other_label: null },
+        { skill: "PostgreSQL", skill_other_label: null },
+        { skill: "Other", skill_other_label: "Supabase" },
+      ]);
+
+      setTimeSlots([
+        { id: "ts1", day_of_week: "Monday", start_time: "09:00:00", end_time: "10:00:00" },
+        { id: "ts2", day_of_week: "Monday", start_time: "10:00:00", end_time: "11:00:00" },
+        { id: "ts3", day_of_week: "Wednesday", start_time: "14:00:00", end_time: "15:00:00" },
+        { id: "ts4", day_of_week: "Wednesday", start_time: "15:00:00", end_time: "16:00:00" },
+        { id: "ts5", day_of_week: "Friday", start_time: "11:00:00", end_time: "12:00:00" },
+      ]);
+
+      setReviews([
+        {
+          id: "r1",
+          rating: 5,
+          comment: "Alex was incredibly helpful and explained complex concepts in a way that was easy to understand. Highly recommend!",
+          created_at: "2026-02-20T10:00:00Z",
+          user_profiles: { profiles: { name: "Sarah Miller", profile_photo: null } },
+        },
+        {
+          id: "r2",
+          rating: 4,
+          comment: "Great session on database optimization. Very knowledgeable and patient.",
+          created_at: "2026-01-15T14:30:00Z",
+          user_profiles: { profiles: { name: "David Chen", profile_photo: null } },
+        },
+        {
+          id: "r3",
+          rating: 5,
+          comment: "Helped me debug a tricky issue in under 30 minutes. Will book again!",
+          created_at: "2026-01-02T09:00:00Z",
+          user_profiles: { profiles: { name: "Emily Park", profile_photo: null } },
+        },
+      ]);
+    } else {
+      setError("Professional profile not found.");
+    }
+
+    setLoading(false);
+  }, [id]);
+
+  /* Derived */
+  const avgRating =
+    reviews.length > 0
+      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+
+  const groupedSlots = timeSlots.reduce<Record<string, TimeSlot[]>>(
+    (acc, slot) => {
+      if (!acc[slot.day_of_week]) acc[slot.day_of_week] = [];
+      acc[slot.day_of_week].push(slot);
+      return acc;
+    },
+    {}
+  );
+  const sortedDays = DAY_ORDER.filter((d) => groupedSlots[d]);
+
+  /* ── Loading / Error ── */
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#071a14] flex items-center justify-center">
+        <div className="animate-pulse text-emerald-400 text-xl font-medium">
+          Loading profile…
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !professional) {
+    return (
+      <div className="min-h-screen bg-[#071a14] flex flex-col items-center justify-center gap-4">
+        <p className="text-red-400 text-xl">
+          {error ?? "Profile not found."}
+        </p>
+        <Link href="/" className="text-emerald-400 hover:underline">
+          ← Back to Home
+        </Link>
+      </div>
+    );
+  }
+
+  const profile = professional.profiles;
+
+  /* ── Render ── */
+  return (
+    <div className="min-h-screen bg-[#071a14] text-gray-200">
+      {/* ─── Navbar ─── */}
+      <nav className="border-b border-[#1a4a3a] bg-[#0a1f17]">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
+          {/* Left – Brand */}
+          <Link href="/" className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500 rotate-45">
+              <svg
+                className="-rotate-45 h-4 w-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 3v18m9-9H3"
+                />
+              </svg>
+            </span>
+            <span className="text-white font-semibold text-lg">
+              ExpertConnect
+            </span>
+          </Link>
+
+          {/* Center – Links */}
+          <div className="hidden md:flex items-center gap-8 text-sm text-gray-300">
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 hover:text-emerald-400 transition"
+            >
+              <FaHome /> Home
+            </Link>
+            <Link
+              href="#"
+              className="flex items-center gap-1.5 hover:text-emerald-400 transition"
+            >
+              <FaInfoCircle /> About Us
+            </Link>
+            <Link
+              href="#"
+              className="flex items-center gap-1.5 hover:text-emerald-400 transition"
+            >
+              <FaEnvelope /> Contact Us
+            </Link>
+          </div>
+
+          {/* Right – Search & User */}
+          <div className="flex items-center gap-4">
+            <button className="text-gray-300 hover:text-emerald-400 transition">
+              <FaSearch size={16} />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-300 hidden sm:inline">
+                {profile.name}
+              </span>
+              {profile.profile_photo ? (
+                <img
+                  src={profile.profile_photo}
+                  alt={profile.name}
+                  className="h-8 w-8 rounded-full object-cover ring-2 ring-emerald-500"
+                />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white ring-2 ring-emerald-500">
+                  {getInitials(profile.name)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ─── Main Content ─── */}
+      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+        {/* ── Profile Hero Card ── */}
+        <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
+          {/* Photo */}
+          {profile.profile_photo ? (
+            <img
+              src={profile.profile_photo}
+              alt={profile.name}
+              className="h-36 w-36 rounded-2xl object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="h-36 w-36 rounded-2xl bg-[#163b2e] flex items-center justify-center text-4xl font-bold text-emerald-400 flex-shrink-0">
+              {getInitials(profile.name)}
+            </div>
+          )}
+
+          {/* Info */}
+          <div className="flex-1 text-center md:text-left space-y-3">
+            <h1 className="text-3xl font-bold text-white">{profile.name}</h1>
+
+            <p className="text-emerald-400 font-medium text-lg">
+              {professional.job_title ?? professional.field}
+            </p>
+
+            {professional.job && (
+              <p className="text-gray-400 text-sm">at {professional.job}</p>
+            )}
+
+            {/* Badges */}
+            <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1">
+              {avgRating && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#163b2e] px-4 py-1.5 text-sm font-medium text-white">
+                  <FaStar className="text-yellow-400" /> {avgRating} Stars
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#163b2e] px-4 py-1.5 text-sm font-medium text-white">
+                <FaDollarSign className="text-emerald-400" /> $
+                {professional.price_per_hour}/hr
+              </span>
+            </div>
+          </div>
+
+          {/* Book Button */}
+          <div className="flex-shrink-0 self-center md:mt-4">
+            <button className="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 transition px-6 py-3 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20">
+              <FaCalendarAlt /> Book Session
+            </button>
+          </div>
+        </section>
+
+        {/* ── Bio ── */}
+        {profile.bio && (
+          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4">
+              <FaUser className="text-emerald-400" /> Bio
+            </h2>
+            <p className="text-gray-300 leading-relaxed">{profile.bio}</p>
+          </section>
+        )}
+
+        {/* ── Skills & Availability Row ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Skills */}
+          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5">
+              <FaLaptopCode className="text-emerald-400" /> Skills
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {skills.map((s, i) => (
+                <span
+                  key={i}
+                  className="rounded-full border border-emerald-500/60 bg-emerald-500/10 px-4 py-1.5 text-sm text-white"
+                >
+                  {s.skill === "Other" ? s.skill_other_label : s.skill}
+                </span>
+              ))}
+              {skills.length === 0 && (
+                <p className="text-gray-500 text-sm">No skills listed.</p>
+              )}
+            </div>
+          </section>
+
+          {/* Availability */}
+          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5">
+              <FaClock className="text-emerald-400" /> Availability
+            </h2>
+
+            {sortedDays.length === 0 ? (
+              <p className="text-gray-500 text-sm">
+                No available slots right now.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {sortedDays.map((day) => (
+                  <div key={day}>
+                    <p className="text-emerald-400 font-semibold mb-2">{day}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {groupedSlots[day].map((slot) => (
+                        <span
+                          key={slot.id}
+                          className="rounded-lg border border-[#1a4a3a] bg-[#163b2e] px-3 py-1 text-sm text-gray-200"
+                        >
+                          {formatTime(slot.start_time)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* ── User Reviews ── */}
+        {reviews.length > 0 && (
+          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
+              <FaCommentDots className="text-emerald-400" /> User Reviews
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {reviews.map((review) => {
+                const reviewerName =
+                  review.user_profiles?.profiles?.name ?? "Anonymous";
+                return (
+                  <div
+                    key={review.id}
+                    className="rounded-xl border border-[#1a4a3a] bg-[#112e23] p-5 space-y-3"
+                  >
+                    {/* Reviewer Header */}
+                    <div className="flex items-center gap-3">
+                      {review.user_profiles?.profiles?.profile_photo ? (
+                        <img
+                          src={
+                            review.user_profiles.profiles.profile_photo
+                          }
+                          alt={reviewerName}
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+                          {getInitials(reviewerName)}
+                        </span>
+                      )}
+
+                      <div>
+                        <p className="font-semibold text-white">
+                          {reviewerName}
+                        </p>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <FaStar
+                              key={i}
+                              size={12}
+                              className={
+                                i < review.rating
+                                  ? "text-yellow-400"
+                                  : "text-gray-600"
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Comment */}
+                    {review.comment && (
+                      <p className="text-gray-300 text-sm leading-relaxed">
+                        &ldquo;{review.comment}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
