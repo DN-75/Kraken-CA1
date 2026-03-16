@@ -52,7 +52,8 @@ const mapStatusToForm = (value: 'undergraduate' | 'school_student' | 'job' | str
 };
 
 // Map database values to display labels
-const getStatusLabel = (value: 'undergraduate' | 'school_student' | 'job' | string): string => {
+const getStatusLabel = (value: 'undergraduate' | 'school_student' | 'job' | string | null): string => {
+  if (!value) return "N/A";
   if (value === "undergraduate") return "Undergraduate";
   if (value === "postgraduate") return "Post-Graduate Student";
   if (value === "professional") return "Working Professional";
@@ -90,7 +91,7 @@ export default function UserProfilePage() {
         email: userProfile.email,
         bio: userProfile.bio || "",
         time_zone: userProfile.time_zone,
-        status: mapStatusToForm(userProfile.status) as any,
+        status: mapStatusToForm(userProfile.status ?? '') as any,
       });
     }
   }, [userProfile]);
