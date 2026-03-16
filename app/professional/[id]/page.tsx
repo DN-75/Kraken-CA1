@@ -106,7 +106,6 @@ export default function ProfessionalProfilePage() {
   useEffect(() => {
     if (!id) return;
 
-    // Mock data for professional with id 1
     if (id === "1") {
       setProfessional({
         id: "1",
@@ -156,13 +155,6 @@ export default function ProfessionalProfilePage() {
           created_at: "2026-01-15T14:30:00Z",
           user_profiles: { profiles: { name: "David Chen", profile_photo: null } },
         },
-        {
-          id: "r3",
-          rating: 5,
-          comment: "Helped me debug a tricky issue in under 30 minutes. Will book again!",
-          created_at: "2026-01-02T09:00:00Z",
-          user_profiles: { profiles: { name: "Emily Park", profile_photo: null } },
-        },
       ]);
     } else {
       setError("Professional profile not found.");
@@ -191,8 +183,8 @@ export default function ProfessionalProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#071a14] flex items-center justify-center">
-        <div className="animate-pulse text-emerald-400 text-xl font-medium">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#274f3e] via-[#12281e] to-[#0a1812] flex items-center justify-center">
+        <div className="animate-pulse text-[#467f61] text-xl font-medium">
           Loading profile…
         </div>
       </div>
@@ -201,11 +193,11 @@ export default function ProfessionalProfilePage() {
 
   if (error || !professional) {
     return (
-      <div className="min-h-screen bg-[#071a14] flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#274f3e] via-[#12281e] to-[#0a1812] flex flex-col items-center justify-center gap-4">
         <p className="text-red-400 text-xl">
           {error ?? "Profile not found."}
         </p>
-        <Link href="/" className="text-emerald-400 hover:underline">
+        <Link href="/" className="text-[#87a996] hover:text-white transition-colors">
           ← Back to Home
         </Link>
       </div>
@@ -216,71 +208,55 @@ export default function ProfessionalProfilePage() {
 
   /* ── Render ── */
   return (
-    <div className="min-h-screen bg-[#071a14] text-gray-200">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#274f3e] via-[#12281e] to-[#0a1812] text-white selection:bg-[#467f61] selection:text-white">
+      
       {/* ─── Navbar ─── */}
-      <nav className="border-b border-[#1a4a3a] bg-[#0a1f17]">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
-          {/* Left – Brand */}
-          <Link href="/" className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500 rotate-45">
-              <svg
-                className="-rotate-45 h-4 w-4 text-white"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 3v18m9-9H3"
-                />
+      <nav className="border-b border-[#234535] bg-[#122b20]/60 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#61c589] shadow-[0_0_15px_rgba(97,197,137,0.4)]">
+              {/* Icon from your image */}
+              <svg className="h-4 w-4 text-[#0a1812]" viewBox="0 0 24 24" fill="currentColor">
+                 <circle cx="12" cy="6" r="2.5" />
+                 <circle cx="6" cy="12" r="2.5" />
+                 <circle cx="12" cy="18" r="2.5" />
+                 <circle cx="18" cy="12" r="2.5" />
+                 <circle cx="12" cy="12" r="2.5" />
               </svg>
             </span>
-            <span className="text-white font-semibold text-lg">
+            <span className="text-white font-bold text-lg tracking-wide">
               ExpertConnect
             </span>
           </Link>
 
-          {/* Center – Links */}
-          <div className="hidden md:flex items-center gap-8 text-sm text-gray-300">
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 hover:text-emerald-400 transition"
-            >
+          <div className="hidden md:flex items-center gap-8 text-sm text-[#87a996] font-medium">
+            <Link href="/" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <FaHome /> Home
             </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-1.5 hover:text-emerald-400 transition"
-            >
+            <Link href="#" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <FaInfoCircle /> About Us
             </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-1.5 hover:text-emerald-400 transition"
-            >
+            <Link href="#" className="flex items-center gap-1.5 hover:text-white transition-colors">
               <FaEnvelope /> Contact Us
             </Link>
           </div>
 
-          {/* Right – Search & User */}
           <div className="flex items-center gap-4">
-            <button className="text-gray-300 hover:text-emerald-400 transition">
+            <button className="text-[#87a996] hover:text-white transition-colors">
               <FaSearch size={16} />
             </button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-300 hidden sm:inline">
+            <div className="flex items-center gap-3 border-l border-[#234535] pl-4">
+              <span className="text-sm text-[#87a996] hidden sm:inline font-medium">
                 {profile.name}
               </span>
               {profile.profile_photo ? (
                 <img
                   src={profile.profile_photo}
                   alt={profile.name}
-                  className="h-8 w-8 rounded-full object-cover ring-2 ring-emerald-500"
+                  className="h-9 w-9 rounded-full object-cover border border-[#234535] shadow-sm"
                 />
               ) : (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white ring-2 ring-emerald-500">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0a1812] border border-[#234535] text-xs font-bold text-[#87a996] shadow-inner">
                   {getInitials(profile.name)}
                 </span>
               )}
@@ -290,51 +266,46 @@ export default function ProfessionalProfilePage() {
       </nav>
 
       {/* ─── Main Content ─── */}
-      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
+        
         {/* ── Profile Hero Card ── */}
-        <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
-          {/* Photo */}
+        <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
           {profile.profile_photo ? (
             <img
               src={profile.profile_photo}
               alt={profile.name}
-              className="h-36 w-36 rounded-2xl object-cover flex-shrink-0"
+              className="h-36 w-36 rounded-2xl object-cover flex-shrink-0 shadow-lg border border-[#234535]"
             />
           ) : (
-            <div className="h-36 w-36 rounded-2xl bg-[#163b2e] flex items-center justify-center text-4xl font-bold text-emerald-400 flex-shrink-0">
+            <div className="h-36 w-36 rounded-2xl bg-[#0a1812] border border-[#234535] flex items-center justify-center text-4xl font-bold text-[#467f61] flex-shrink-0 shadow-inner">
               {getInitials(profile.name)}
             </div>
           )}
 
-          {/* Info */}
           <div className="flex-1 text-center md:text-left space-y-3">
-            <h1 className="text-3xl font-bold text-white">{profile.name}</h1>
-
-            <p className="text-emerald-400 font-medium text-lg">
+            <h1 className="text-3xl font-bold text-white tracking-tight">{profile.name}</h1>
+            <p className="text-[#61c589] font-medium text-lg">
               {professional.job_title ?? professional.field}
             </p>
-
             {professional.job && (
-              <p className="text-gray-400 text-sm">at {professional.job}</p>
+              <p className="text-[#87a996] text-sm">at {professional.job}</p>
             )}
 
-            {/* Badges */}
-            <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1">
+            <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {avgRating && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#163b2e] px-4 py-1.5 text-sm font-medium text-white">
-                  <FaStar className="text-yellow-400" /> {avgRating} Stars
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812] px-4 py-1.5 text-sm font-medium text-[#87a996] shadow-inner">
+                  <FaStar className="text-yellow-500" /> {avgRating} Stars
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#163b2e] px-4 py-1.5 text-sm font-medium text-white">
-                <FaDollarSign className="text-emerald-400" /> $
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812] px-4 py-1.5 text-sm font-medium text-[#87a996] shadow-inner">
+                <FaDollarSign className="text-[#61c589]" /> 
                 {professional.price_per_hour}/hr
               </span>
             </div>
           </div>
 
-          {/* Book Button */}
           <div className="flex-shrink-0 self-center md:mt-4">
-            <button className="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 transition px-6 py-3 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20">
+            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full bg-[#467f61] hover:bg-[#38664e] transition-all px-8 py-3.5 text-white font-semibold text-sm shadow-[0_4px_14px_0_rgba(70,127,97,0.39)] w-full md:w-auto">
               <FaCalendarAlt /> Book Session
             </button>
           </div>
@@ -342,56 +313,50 @@ export default function ProfessionalProfilePage() {
 
         {/* ── Bio ── */}
         {profile.bio && (
-          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4">
-              <FaUser className="text-emerald-400" /> Bio
+              <FaUser className="text-[#467f61]" /> Bio
             </h2>
-            <p className="text-gray-300 leading-relaxed">{profile.bio}</p>
+            <p className="text-[#87a996] leading-relaxed text-sm md:text-base">{profile.bio}</p>
           </section>
         )}
 
         {/* ── Skills & Availability Row ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Skills */}
-          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+          
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5">
-              <FaLaptopCode className="text-emerald-400" /> Skills
+              <FaLaptopCode className="text-[#467f61]" /> Skills
             </h2>
             <div className="flex flex-wrap gap-3">
               {skills.map((s, i) => (
                 <span
                   key={i}
-                  className="rounded-full border border-emerald-500/60 bg-emerald-500/10 px-4 py-1.5 text-sm text-white"
+                  className="rounded-lg border border-[#234535] bg-[#0a1812] px-4 py-2 text-sm text-[#87a996] shadow-inner"
                 >
                   {s.skill === "Other" ? s.skill_other_label : s.skill}
                 </span>
               ))}
-              {skills.length === 0 && (
-                <p className="text-gray-500 text-sm">No skills listed.</p>
-              )}
             </div>
           </section>
 
-          {/* Availability */}
-          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5">
-              <FaClock className="text-emerald-400" /> Availability
+              <FaClock className="text-[#467f61]" /> Availability
             </h2>
 
             {sortedDays.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                No available slots right now.
-              </p>
+              <p className="text-[#87a996] text-sm">No available slots right now.</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {sortedDays.map((day) => (
                   <div key={day}>
-                    <p className="text-emerald-400 font-semibold mb-2">{day}</p>
+                    <p className="text-[#61c589] text-xs uppercase tracking-wider font-bold mb-2">{day}</p>
                     <div className="flex flex-wrap gap-2">
                       {groupedSlots[day].map((slot) => (
                         <span
                           key={slot.id}
-                          className="rounded-lg border border-[#1a4a3a] bg-[#163b2e] px-3 py-1 text-sm text-gray-200"
+                          className="rounded-lg border border-[#234535] bg-[#0a1812] px-3 py-1.5 text-sm text-[#87a996] shadow-inner"
                         >
                           {formatTime(slot.start_time)}
                         </span>
@@ -406,59 +371,50 @@ export default function ProfessionalProfilePage() {
 
         {/* ── User Reviews ── */}
         {reviews.length > 0 && (
-          <section className="rounded-2xl border border-[#1a4a3a] bg-[#0d2a1f] p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
-              <FaCommentDots className="text-emerald-400" /> User Reviews
+              <FaCommentDots className="text-[#467f61]" /> User Reviews
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {reviews.map((review) => {
-                const reviewerName =
-                  review.user_profiles?.profiles?.name ?? "Anonymous";
+                const reviewerName = review.user_profiles?.profiles?.name ?? "Anonymous";
                 return (
                   <div
                     key={review.id}
-                    className="rounded-xl border border-[#1a4a3a] bg-[#112e23] p-5 space-y-3"
+                    className="rounded-xl border border-[#234535] bg-[#0a1812] shadow-inner p-5 space-y-3"
                   >
-                    {/* Reviewer Header */}
                     <div className="flex items-center gap-3">
                       {review.user_profiles?.profiles?.profile_photo ? (
                         <img
-                          src={
-                            review.user_profiles.profiles.profile_photo
-                          }
+                          src={review.user_profiles.profiles.profile_photo}
                           alt={reviewerName}
-                          className="h-10 w-10 rounded-full object-cover"
+                          className="h-10 w-10 rounded-full object-cover border border-[#234535]"
                         />
                       ) : (
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#122b20] border border-[#234535] text-sm font-bold text-[#87a996]">
                           {getInitials(reviewerName)}
                         </span>
                       )}
 
                       <div>
-                        <p className="font-semibold text-white">
+                        <p className="font-semibold text-white text-sm">
                           {reviewerName}
                         </p>
-                        <div className="flex gap-0.5">
+                        <div className="flex gap-0.5 mt-1">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <FaStar
                               key={i}
                               size={12}
-                              className={
-                                i < review.rating
-                                  ? "text-yellow-400"
-                                  : "text-gray-600"
-                              }
+                              className={i < review.rating ? "text-yellow-500" : "text-[#234535]"}
                             />
                           ))}
                         </div>
                       </div>
                     </div>
 
-                    {/* Comment */}
                     {review.comment && (
-                      <p className="text-gray-300 text-sm leading-relaxed">
+                      <p className="text-[#87a996] text-sm leading-relaxed">
                         &ldquo;{review.comment}&rdquo;
                       </p>
                     )}
