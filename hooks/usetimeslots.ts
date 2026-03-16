@@ -21,6 +21,7 @@ export function useTimeSlots(professionalId: string): UseTimeSlotsReturn {
 
   useEffect(() => {
     if (!professionalId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false)
       return
     }

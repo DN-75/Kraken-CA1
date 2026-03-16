@@ -149,6 +149,90 @@ export async function PATCH(
 }
 
 
+// ══════════════════════════════════════════════════════════════════════
+// API ROUTE DESCRIPTION — /api/bookings/[id]
+// ══════════════════════════════════════════════════════════════════════
+//
+// Base URL:  /api/bookings/[id]
+// Auth:      Required (user must be logged in via Supabase session)
+// Param:     id — the booking UUID (passed as a URL segment)
+//
+// ── PATCH /api/bookings/[id] ────────────────────────────────────────
+//
+//   Description:  Allows a user to cancel their own PENDING booking.
+//                 Only the booking owner can cancel. Only pending bookings
+//                 can be cancelled. A DB trigger (trg_booking_free_slot)
+//                 automatically frees the time slot when status changes
+//                 to 'cancelled'.
+//
+//   Request body (JSON):
+//     {
+//       "action": "cancel"   // required — only "cancel" is accepted
+//     }
+//
+//   Success response (200):
+//     {
+//       "success":    true,
+//       "booking_id": "uuid",
+//       "message":    "Booking cancelled successfully. The time slot is now available again."
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     400 — Invalid body / booking is not in 'pending' status
+//     403 — User does not own this booking
+//     404 — User profile or booking not found
+//     500 — Failed to cancel / Internal server error
+//
+//
+// ── GET /api/bookings/[id] ──────────────────────────────────────────
+//
+//   Description:  Returns full details of a single booking for the user.
+//                 Includes time slot info and professional profile with
+//                 name, photo, bio, job title, and price. Only the
+//                 booking owner can view it.
+//
+//   Request body: None
+//
+//   Success response (200):
+//     {
+//       "booking": {
+//         "id":              "uuid",
+//         "status":          "pending" | "approved" | "completed" | "rejected" | "cancelled",
+//         "is_paid":         false,
+//         "payment_link":    "https://..." | null,
+//         "zoom_link":       "https://..." | null,
+//         "created_at":      "ISO timestamp",
+//         "updated_at":      "ISO timestamp",
+//         "user_profile_id": "uuid",
+//         "time_slots": {
+//           "id":          "uuid",
+//           "day_of_week": "Monday",
+//           "start_time":  "09:00:00",
+//           "end_time":    "10:00:00"
+//         },
+//         "professional_profiles": {
+//           "id":             "uuid",
+//           "job_title":      "Software Engineer",
+//           "price_per_hour": 50.00,
+//           "profiles": {
+//             "name":          "John Doe",
+//             "profile_photo": "https://...",
+//             "bio":           "Experienced developer..."
+//           }
+//         }
+//       }
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     403 — User does not own this booking
+//     404 — User profile or booking not found
+//     500 — Internal server error
+//
+// ══════════════════════════════════════════════════════════════════════
+
+
 // ══════════════════════════════════════════════════════
 // GET /api/bookings/[id]
 // Get a single booking's full details

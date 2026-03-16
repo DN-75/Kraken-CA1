@@ -67,7 +67,10 @@ export default function Navbar() {
 
   // Close mobile menu on route change
   useEffect(() => {
+    // This is an intentional UI reset on navigation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDropdownOpen(false);
   }, [pathname]);
 
