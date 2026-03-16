@@ -17,11 +17,11 @@ const updateBookingSchema = z.object({
 // ══════════════════════════════════════════════════════
 export async function PATCH(
   req:     NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // const supabase = await createClient()
-    const bookingId = params.id
+    const { id: bookingId } = await params
 
     // ── Step 1: Verify authentication ───────────────────
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -155,11 +155,11 @@ export async function PATCH(
 // ══════════════════════════════════════════════════════
 export async function GET(
   _req:    NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // const supabase  = await createClient()
-    const bookingId = params.id
+    const { id: bookingId } = await params
 
     // ── Step 1: Verify authentication ───────────────────
     const { data: { user }, error: authError } = await supabase.auth.getUser()
