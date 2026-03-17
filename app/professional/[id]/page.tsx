@@ -65,6 +65,137 @@ interface Professional {
   reviews: Review[];
 }
 
+/* ───────── Mock Data ───────── */
+
+const MOCK_PROFESSIONAL: Professional = {
+  id: "mock-001",
+  job_title: "Senior Full-Stack Developer",
+  job: null,
+  field: "Web Development",
+  price_per_hour: 85,
+  profiles: {
+    name: "Sarah Anderson",
+    profile_photo: "https://i.pravatar.cc/500?img=1",
+    bio: "Passionate full-stack developer with 8+ years of experience building scalable web applications. Specialized in React, Node.js, and cloud technologies. I love mentoring junior developers and helping them grow their skills.",
+    time_zone: "America/New_York",
+  },
+  professional_skills: [
+    { skill: "Web Development", skill_other_label: null },
+    { skill: "Mobile Development", skill_other_label: null },
+    { skill: "UI/UX Design", skill_other_label: null },
+    { skill: "Cloud Computing", skill_other_label: null },
+    { skill: "DevOps", skill_other_label: null },
+  ],
+  time_slots: [
+    {
+      id: "slot-1",
+      day_of_week: "Monday",
+      start_time: "09:00:00",
+      end_time: "10:00:00",
+      is_booked: false,
+    },
+    {
+      id: "slot-2",
+      day_of_week: "Monday",
+      start_time: "14:00:00",
+      end_time: "15:00:00",
+      is_booked: false,
+    },
+    {
+      id: "slot-3",
+      day_of_week: "Tuesday",
+      start_time: "10:00:00",
+      end_time: "11:00:00",
+      is_booked: true,
+    },
+    {
+      id: "slot-4",
+      day_of_week: "Tuesday",
+      start_time: "15:00:00",
+      end_time: "16:00:00",
+      is_booked: false,
+    },
+    {
+      id: "slot-5",
+      day_of_week: "Wednesday",
+      start_time: "09:00:00",
+      end_time: "10:00:00",
+      is_booked: false,
+    },
+    {
+      id: "slot-6",
+      day_of_week: "Thursday",
+      start_time: "13:00:00",
+      end_time: "14:00:00",
+      is_booked: false,
+    },
+    {
+      id: "slot-7",
+      day_of_week: "Friday",
+      start_time: "10:00:00",
+      end_time: "11:00:00",
+      is_booked: false,
+    },
+    {
+      id: "slot-8",
+      day_of_week: "Saturday",
+      start_time: "11:00:00",
+      end_time: "12:00:00",
+      is_booked: false,
+    },
+  ],
+  reviews: [
+    {
+      id: "review-1",
+      rating: 5,
+      comment: "Sarah is an amazing mentor! She explained complex concepts in a very clear and understandable way. Highly recommended!",
+      created_at: "2026-03-10T12:30:00Z",
+      user_profiles: {
+        profiles: {
+          name: "John Martinez",
+          profile_photo: "https://i.pravatar.cc/500?img=2",
+        },
+      },
+    },
+    {
+      id: "review-2",
+      rating: 5,
+      comment: "Excellent guidance on React best practices. Sarah has deep knowledge and great teaching skills.",
+      created_at: "2026-03-05T09:15:00Z",
+      user_profiles: {
+        profiles: {
+          name: "Emily Chen",
+          profile_photo: "https://i.pravatar.cc/500?img=3",
+        },
+      },
+    },
+    {
+      id: "review-3",
+      rating: 4,
+      comment: "Very knowledgeable and patient. Helped me understand cloud deployment concepts better.",
+      created_at: "2026-02-28T16:45:00Z",
+      user_profiles: {
+        profiles: {
+          name: "Alex Kumar",
+          profile_photo: "https://i.pravatar.cc/500?img=4",
+        },
+      },
+    },
+    {
+      id: "review-4",
+      rating: 5,
+      comment: "Outstanding session! Sarah provided practical examples and real-world insights. Worth every penny!",
+      created_at: "2026-02-20T14:20:00Z",
+      user_profiles: {
+        profiles: {
+          name: "Jessica Wong",
+          profile_photo: "https://i.pravatar.cc/500?img=5",
+        },
+      },
+    },
+  ],
+};
+
 /* ───────── Helpers ───────── */
 
 const DAY_ORDER = [
@@ -102,12 +233,13 @@ export default function ProfessionalProfilePage() {
   const params = useParams();
   const id = params.id as string;
 
-  const [professional, setProfessional] = useState<Professional | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [professional, setProfessional] = useState<Professional | null>(MOCK_PROFESSIONAL);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useMockData, setUseMockData] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || useMockData) return;
 
     const fetchProfessional = async () => {
       try {
@@ -169,7 +301,7 @@ export default function ProfessionalProfilePage() {
     };
 
     fetchProfessional();
-  }, [id]);
+  }, [id, useMockData]);
 
   /* ── Derived Data Calculations ── */
 
@@ -228,6 +360,21 @@ export default function ProfessionalProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] text-white selection:bg-emerald-400 selection:text-white">
       
+      {/* ─── Mock Data Toggle (Development Only) ─── */}
+      {useMockData && (
+        <div className="sticky top-0 z-50 bg-yellow-900/30 border-b border-yellow-500/30 px-4 py-3 text-center">
+          <p className="text-yellow-200 text-sm">
+            Currently viewing mock data. 
+            <button
+              onClick={() => setUseMockData(false)}
+              className="ml-2 underline hover:text-yellow-100 font-semibold"
+            >
+              Load Real Data
+            </button>
+          </p>
+        </div>
+      )}
+
       {/* ─── Main Content ─── */}
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
         
