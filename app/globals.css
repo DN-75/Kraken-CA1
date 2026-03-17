@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #021C14;
+  --foreground: #ededed;
+  --emerald-primary: #10B981;
+  --emerald-glow: #34D399;
+  --card-bg: rgba(6, 60, 40, 0.5);
+  --card-border: rgba(16, 185, 129, 0.15);
 }
 
 @theme inline {
@@ -12,18 +16,44 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Inter, Helvetica, sans-serif;
 }
-button{
+
+button {
   font-family: Plus Jakarta Sans, Helvetica, sans-serif;
 }
+
+/* ── Hero background overlay (pseudo-element, not possible in Tailwind) ── */
+.hero-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 28, 20, 0.3) 0%,
+    rgba(2, 28, 20, 0.6) 60%,
+    rgba(2, 28, 20, 1) 100%
+  );
+}
+
+/* ── About bento card top-line hover effect (pseudo-element) ── */
+.about-bento-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--emerald-primary), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.about-bento-card:hover::before {
+  opacity: 1;
+}
+
+
