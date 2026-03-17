@@ -9,31 +9,18 @@ import {
   FaClock,
   FaCommentDots,
   FaDollarSign,
-  FaSearch,
-  FaHome,
-  FaInfoCircle,
-  FaEnvelope,
   FaLaptopCode,
   FaCalendarAlt,
 } from "react-icons/fa";
 
-/* ───────── Types ───────── */
+// 🟢 IMPORTANT: Import your Supabase client here.
+// Adjust the path to match your project's setup.
+import { createClient } from "@supabase/supabase-js";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-interface Professional {
-  id: string;
-  profile_id: string;
-  job_title: string | null;
-  job: string | null;
-  field: string;
-  price_per_hour: number;
-  profiles: {
-    id: string;
-    name: string;
-    profile_photo: string | null;
-    bio: string | null;
-    time_zone: string;
-  };
-}
+/* ───────── Types (Matched to Supabase Schema) ───────── */
 
 interface Skill {
   skill: string;
@@ -45,6 +32,7 @@ interface TimeSlot {
   day_of_week: string;
   start_time: string;
   end_time: string;
+  is_booked: boolean;
 }
 
 interface Review {
@@ -60,6 +48,23 @@ interface Review {
   };
 }
 
+interface Professional {
+  id: string;
+  job_title: string | null;
+  job: string | null;
+  field: string;
+  price_per_hour: number;
+  profiles: {
+    name: string;
+    profile_photo: string | null;
+    bio: string | null;
+    time_zone: string;
+  };
+  professional_skills: Skill[];
+  time_slots: TimeSlot[];
+  reviews: Review[];
+}
+
 /* ───────── Helpers ───────── */
 
 const DAY_ORDER = [
@@ -72,6 +77,7 @@ const DAY_ORDER = [
   "Sunday",
 ];
 
+// Formats SQL TIME (e.g. "18:00:00") to "06:00 PM"
 function formatTime(timeStr: string): string {
   const [hours, minutes] = timeStr.split(":").map(Number);
   const period = hours >= 12 ? "PM" : "AM";
@@ -97,79 +103,89 @@ export default function ProfessionalProfilePage() {
   const id = params.id as string;
 
   const [professional, setProfessional] = useState<Professional | null>(null);
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
 
-    if (id === "1") {
-      setProfessional({
-        id: "1",
-        profile_id: "1",
-        job_title: "Senior Full-Stack Developer",
-        job: "TechNova Inc.",
-        field: "Software Engineering",
-        price_per_hour: 85,
-        profiles: {
-          id: "1",
-          name: "Alex Johnson",
-          profile_photo: null,
-          bio: "Passionate full-stack developer with 10+ years of experience building scalable web applications. Specializing in React, Next.js, and Node.js. I love mentoring junior developers and helping teams adopt best practices.",
-          time_zone: "America/New_York",
-        },
-      });
+    const fetchProfessional = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      setSkills([
-        { skill: "React", skill_other_label: null },
-        { skill: "Next.js", skill_other_label: null },
-        { skill: "TypeScript", skill_other_label: null },
-        { skill: "Node.js", skill_other_label: null },
-        { skill: "PostgreSQL", skill_other_label: null },
-        { skill: "Other", skill_other_label: "Supabase" },
-      ]);
+        // Fetching all related data in a single Supabase query
+        const { data, error: fetchError } = await supabase
+          .from("professional_profiles")
+          .select(`
+            id,
+            job_title,
+            job,
+            field,
+            price_per_hour,
+            profiles (
+              name,
+              profile_photo,
+              bio,
+              time_zone
+            ),
+            professional_skills (
+              skill,
+              skill_other_label
+            ),
+            time_slots (
+              id,
+              day_of_week,
+              start_time,
+              end_time,
+              is_booked
+            ),
+            reviews (
+              id,
+              rating,
+              comment,
+              created_at,
+              user_profiles (
+                profiles (
+                  name,
+                  profile_photo
+                )
+              )
+            )
+          `)
+          .eq("id", id)
+          .single();
 
-      setTimeSlots([
-        { id: "ts1", day_of_week: "Monday", start_time: "09:00:00", end_time: "10:00:00" },
-        { id: "ts2", day_of_week: "Monday", start_time: "10:00:00", end_time: "11:00:00" },
-        { id: "ts3", day_of_week: "Wednesday", start_time: "14:00:00", end_time: "15:00:00" },
-        { id: "ts4", day_of_week: "Wednesday", start_time: "15:00:00", end_time: "16:00:00" },
-        { id: "ts5", day_of_week: "Friday", start_time: "11:00:00", end_time: "12:00:00" },
-      ]);
+        if (fetchError) throw fetchError;
+        if (!data) throw new Error("Professional not found.");
 
-      setReviews([
-        {
-          id: "r1",
-          rating: 5,
-          comment: "Alex was incredibly helpful and explained complex concepts in a way that was easy to understand. Highly recommend!",
-          created_at: "2026-02-20T10:00:00Z",
-          user_profiles: { profiles: { name: "Sarah Miller", profile_photo: null } },
-        },
-        {
-          id: "r2",
-          rating: 4,
-          comment: "Great session on database optimization. Very knowledgeable and patient.",
-          created_at: "2026-01-15T14:30:00Z",
-          user_profiles: { profiles: { name: "David Chen", profile_photo: null } },
-        },
-      ]);
-    } else {
-      setError("Professional profile not found.");
-    }
+        setProfessional(data as unknown as Professional);
+      } catch (err: any) {
+        console.error("Error fetching professional:", err);
+        setError(err.message || "Failed to load profile.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setLoading(false);
+    fetchProfessional();
   }, [id]);
 
-  /* Derived */
+  /* ── Derived Data Calculations ── */
+
+  // Safely extract arrays (default to empty if undefined)
+  const skills = professional?.professional_skills || [];
+  const allTimeSlots = professional?.time_slots || [];
+  const reviews = professional?.reviews || [];
+
   const avgRating =
     reviews.length > 0
       ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
       : null;
 
-  const groupedSlots = timeSlots.reduce<Record<string, TimeSlot[]>>(
+  // Filter out booked slots, then group by day
+  const availableSlots = allTimeSlots.filter((slot) => !slot.is_booked);
+  const groupedSlots = availableSlots.reduce<Record<string, TimeSlot[]>>(
     (acc, slot) => {
       if (!acc[slot.day_of_week]) acc[slot.day_of_week] = [];
       acc[slot.day_of_week].push(slot);
@@ -177,9 +193,11 @@ export default function ProfessionalProfilePage() {
     },
     {}
   );
+  
+  // Sort days logically based on DAY_ORDER
   const sortedDays = DAY_ORDER.filter((d) => groupedSlots[d]);
 
-  /* ── Loading / Error ── */
+  /* ── Loading / Error States ── */
 
   if (loading) {
     return (
@@ -210,61 +228,6 @@ export default function ProfessionalProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] text-white selection:bg-[#467f61] selection:text-white">
       
-      {/* ─── Navbar ─── */}
-      <nav className="border-b border-[#234535]/50 bg-[#122b20]/40 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#61c589] shadow-[0_0_15px_rgba(97,197,137,0.4)]">
-              {/* Icon from your image */}
-              <svg className="h-4 w-4 text-[#0a1812]" viewBox="0 0 24 24" fill="currentColor">
-                 <circle cx="12" cy="6" r="2.5" />
-                 <circle cx="6" cy="12" r="2.5" />
-                 <circle cx="12" cy="18" r="2.5" />
-                 <circle cx="18" cy="12" r="2.5" />
-                 <circle cx="12" cy="12" r="2.5" />
-              </svg>
-            </span>
-            <span className="text-white font-bold text-lg tracking-wide drop-shadow-sm">
-              ExpertConnect
-            </span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-8 text-sm text-[#a3c4b2] font-medium">
-            <Link href="/" className="flex items-center gap-1.5 hover:text-white transition-colors">
-              <FaHome /> Home
-            </Link>
-            <Link href="#" className="flex items-center gap-1.5 hover:text-white transition-colors">
-              <FaInfoCircle /> About Us
-            </Link>
-            <Link href="#" className="flex items-center gap-1.5 hover:text-white transition-colors">
-              <FaEnvelope /> Contact Us
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="text-[#a3c4b2] hover:text-white transition-colors">
-              <FaSearch size={16} />
-            </button>
-            <div className="flex items-center gap-3 border-l border-[#234535]/50 pl-4">
-              <span className="text-sm text-[#a3c4b2] hidden sm:inline font-medium">
-                {profile.name}
-              </span>
-              {profile.profile_photo ? (
-                <img
-                  src={profile.profile_photo}
-                  alt={profile.name}
-                  className="h-9 w-9 rounded-full object-cover border border-[#234535] shadow-sm"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0a1812] border border-[#234535] text-xs font-bold text-[#a3c4b2] shadow-inner">
-                  {getInitials(profile.name)}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* ─── Main Content ─── */}
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
         
@@ -287,9 +250,6 @@ export default function ProfessionalProfilePage() {
             <p className="text-[#61c589] font-medium text-lg drop-shadow-sm">
               {professional.job_title ?? professional.field}
             </p>
-            {professional.job && (
-              <p className="text-[#a3c4b2] text-sm drop-shadow-sm">at {professional.job}</p>
-            )}
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {avgRating && (
@@ -329,14 +289,18 @@ export default function ProfessionalProfilePage() {
               <FaLaptopCode className="text-[#467f61]" /> Skills
             </h2>
             <div className="flex flex-wrap gap-3">
-              {skills.map((s, i) => (
-                <span
-                  key={i}
-                  className="rounded-lg border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-2 text-sm text-[#a3c4b2] shadow-inner"
-                >
-                  {s.skill === "Other" ? s.skill_other_label : s.skill}
-                </span>
-              ))}
+              {skills.length > 0 ? (
+                skills.map((s, i) => (
+                  <span
+                    key={i}
+                    className="rounded-lg border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-2 text-sm text-[#a3c4b2] shadow-inner"
+                  >
+                    {s.skill === "Other" ? s.skill_other_label : s.skill}
+                  </span>
+                ))
+              ) : (
+                <p className="text-[#a3c4b2] text-sm">No skills listed.</p>
+              )}
             </div>
           </section>
 
