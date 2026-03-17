@@ -2,12 +2,14 @@
 
 import { AuthProvider } from "@/hooks/useSession";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <Navbar />
       {children}
+      <Footer />
     </AuthProvider>
   );
 }
