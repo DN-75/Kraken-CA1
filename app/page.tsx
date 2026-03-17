@@ -11,6 +11,9 @@ import {
   IoMailOutline,
   IoCallOutline,
   IoLocationOutline,
+  IoCheckmarkCircleOutline,
+  IoRocketOutline,
+  IoPeopleOutline,
 } from "react-icons/io5";
 
 /* ── Data ─────────────────────────────────────────────── */
@@ -71,9 +74,21 @@ const MENTORS = [
 ];
 
 const ABOUT_HIGHLIGHTS = [
-  "Handpicked and verified mentors from top industries",
-  "Fast booking for one-to-one video consultations",
-  "Guidance tailored to your goals and career stage",
+  {
+    icon: <IoShieldCheckmarkOutline size={20} />,
+    title: "Verified Mentors",
+    desc: "Handpicked experts from top industries, rigorously vetted for quality.",
+  },
+  {
+    icon: <IoVideocamOutline size={20} />,
+    title: "1-on-1 Sessions",
+    desc: "Fast booking for private video consultations tailored to you.",
+  },
+  {
+    icon: <IoRocketOutline size={20} />,
+    title: "Career Growth",
+    desc: "Guidance matched to your goals, career stage, and ambitions.",
+  },
 ];
 
 const CONTACT_ITEMS = [
@@ -203,28 +218,42 @@ export default function Home() {
 
       {/* ═══ About Us ════════════════════════════════════ */}
       <section id="about" className="about-section">
-        <div className="about-card">
-          <div className="about-card-glow" />
-          <div className="about-header">
-            <p className="section-title">Who We Are</p>
-            <h2 className="section-heading">
-              About <span>Us</span>
-            </h2>
-          </div>
-          <p className="about-desc">
-            ExpertConnect bridges the gap between ambitious individuals and
-            world-class professionals. We connect you with verified industry
-            leaders for personalized, one-on-one guidance.
+        <div className="about-top">
+          <p className="section-title">Who We Are</p>
+          <h2 className="section-heading">
+            About <span>Us</span>
+          </h2>
+          <p className="about-tagline">
+            Bridging ambition with expertise — one conversation at a time.
           </p>
-          <div className="about-highlights">
-            {ABOUT_HIGHLIGHTS.map((item) => (
-              <div key={item} className="about-highlight-item">
-                <span className="about-highlight-dot" />
-                <p>{item}</p>
-              </div>
-            ))}
+        </div>
+
+        <div className="about-bento">
+          {/* Mission card - large */}
+          <div className="about-bento-mission">
+            <div className="about-mission-glow" />
+            <span className="about-mission-badge">
+              <IoPeopleOutline size={14} /> Our Mission
+            </span>
+            <p className="about-mission-text">
+              ExpertConnect was built to democratize mentorship. We connect
+              ambitious individuals with verified, world-class professionals
+              for personalized one-on-one guidance that accelerates careers
+              and transforms potential into achievement.
+            </p>
           </div>
-          <div className="about-stats-row">
+
+          {/* Highlight cards */}
+          {ABOUT_HIGHLIGHTS.map((item) => (
+            <div key={item.title} className="about-bento-card">
+              <span className="about-bento-icon">{item.icon}</span>
+              <h3 className="about-bento-title">{item.title}</h3>
+              <p className="about-bento-desc">{item.desc}</p>
+            </div>
+          ))}
+
+          {/* Stats strip */}
+          <div className="about-bento-stats">
             <div className="about-stat">
               <span className="about-stat-number">500+</span>
               <span className="about-stat-label">Verified Experts</span>
@@ -232,12 +261,17 @@ export default function Home() {
             <div className="about-stat-divider" />
             <div className="about-stat">
               <span className="about-stat-number">10K+</span>
-              <span className="about-stat-label">Sessions Completed</span>
+              <span className="about-stat-label">Sessions</span>
             </div>
             <div className="about-stat-divider" />
             <div className="about-stat">
               <span className="about-stat-number">4.9</span>
-              <span className="about-stat-label">Average Rating</span>
+              <span className="about-stat-label">Avg Rating</span>
+            </div>
+            <div className="about-stat-divider" />
+            <div className="about-stat">
+              <span className="about-stat-number">98%</span>
+              <span className="about-stat-label">Satisfaction</span>
             </div>
           </div>
         </div>

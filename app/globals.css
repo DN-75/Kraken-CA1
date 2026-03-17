@@ -367,111 +367,171 @@ button {
 
 /* ── About Section ─────────────────────── */
 .about-section {
-  padding: 48px 20px;
+  padding: 56px 20px;
 }
 
-.about-card {
-  position: relative;
-  max-width: 680px;
-  margin: 0 auto;
-  border-radius: 20px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  padding: 32px 28px 28px;
-  overflow: hidden;
+.about-top {
   text-align: center;
+  margin-bottom: 32px;
 }
 
-.about-card-glow {
+.about-tagline {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Bento Grid ── */
+.about-bento {
+  max-width: 820px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 14px;
+}
+
+/* Mission card spans full width */
+.about-bento-mission {
+  grid-column: 1 / -1;
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: linear-gradient(135deg, rgba(6, 60, 40, 0.7) 0%, rgba(2, 28, 20, 0.9) 100%);
+  padding: 28px 28px 24px;
+  overflow: hidden;
+}
+
+.about-mission-glow {
   position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 180px;
-  height: 180px;
+  top: -40px;
+  left: -40px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
   pointer-events: none;
 }
 
-.about-header {
-  margin-bottom: 10px;
-}
-
-.about-header .section-heading {
-  font-size: 1.6rem;
-  margin-bottom: 0;
-}
-
-.about-desc {
-  font-size: 0.84rem;
-  color: rgba(255, 255, 255, 0.65);
-  line-height: 1.7;
-  max-width: 520px;
-  margin: 0 auto 16px;
-}
-
-.about-highlights {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.about-highlight-item {
-  display: flex;
+.about-mission-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--emerald-primary);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 20px;
+  padding: 5px 14px;
+  margin-bottom: 14px;
 }
 
-.about-highlight-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--emerald-primary);
-  flex-shrink: 0;
+.about-mission-text {
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 640px;
 }
 
-.about-highlight-item p {
-  color: rgba(255, 255, 255, 0.78);
+/* Highlight cards */
+.about-bento-card {
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  padding: 22px 20px;
+  transition: border-color 0.3s, transform 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.about-bento-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--emerald-primary), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.about-bento-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  transform: translateY(-3px);
+}
+
+.about-bento-card:hover::before {
+  opacity: 1;
+}
+
+.about-bento-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  color: var(--emerald-primary);
+  margin-bottom: 12px;
+}
+
+.about-bento-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.about-bento-desc {
   font-size: 0.78rem;
-  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
 }
 
-.about-stats-row {
+/* Stats strip spans full width */
+.about-bento-stats {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  border-top: 1px solid rgba(16, 185, 129, 0.12);
-  padding-top: 18px;
+  gap: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: linear-gradient(90deg, rgba(6, 60, 40, 0.4), rgba(16, 185, 129, 0.06), rgba(6, 60, 40, 0.4));
+  padding: 20px 24px;
 }
 
 .about-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .about-stat-number {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--emerald-primary);
   line-height: 1;
 }
 
 .about-stat-label {
-  font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.45);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
 .about-stat-divider {
   width: 1px;
-  height: 32px;
+  height: 30px;
   background: rgba(16, 185, 129, 0.18);
 }
 
@@ -713,7 +773,7 @@ button {
     max-width: 700px;
   }
 
-  .about-card,
+  .about-bento,
   .contact-card {
     max-width: 100%;
   }
@@ -777,25 +837,24 @@ button {
     padding: 40px 20px;
   }
 
-  .about-card,
+  .about-bento {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .about-bento-mission {
+    padding: 22px;
+  }
+
   .contact-card {
     padding: 24px 20px;
   }
 
-  .about-header .section-heading,
   .contact-header .section-heading {
     font-size: 1.5rem;
   }
 
-  .about-highlights {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding-left: 12px;
-  }
-
-  .about-stats-row {
-    gap: 16px;
+  .about-bento-stats {
+    gap: 18px;
   }
 
   .contact-info-row {
@@ -909,16 +968,37 @@ button {
     padding: 36px 16px;
   }
 
-  .about-card,
-  .contact-card {
-    padding: 20px 16px;
+  .about-bento {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .about-bento-mission {
+    padding: 18px;
+  }
+
+  .about-mission-text {
+    font-size: 0.82rem;
+  }
+
+  .about-bento-card {
+    padding: 18px 16px;
+  }
+
+  .about-bento-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
   }
 
   .about-stat-number {
     font-size: 1.2rem;
   }
 
-  .about-header .section-heading,
+  .contact-card {
+    padding: 20px 16px;
+  }
+
   .contact-header .section-heading {
     font-size: 1.35rem;
   }
