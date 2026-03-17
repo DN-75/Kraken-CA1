@@ -114,16 +114,21 @@ export default function Home() {
   return (
     <main>
       {/* ═══ Hero ═══════════════════════════════════════ */}
-      <section className="hero-section">
+      <section className="hero-section" >
+
         <div
-          className="hero-bg"
-          style={{ backgroundImage: "url(/images/hero-bg.png)" }}
+            className="hero-bg"
+            style={{
+              backgroundImage: "url(/images/hero-bg4.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center 30%",
+            }}
         />
 
         <div className="hero-content">
           <h1 className="hero-title">
             1-on-1 Experts Guidance
-            <br />
+            <br/>
             for Your <span>Growth</span>
           </h1>
 
