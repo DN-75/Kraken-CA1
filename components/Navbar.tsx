@@ -11,6 +11,7 @@ import {
 } from "react-icons/io5";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabaseClient";
+import Image from "next/image";
 
 // ── Nav links ────────────────────────────────────────────
 const NAV_LINKS = [
@@ -37,7 +38,7 @@ function Logo() {
 // ── Profile menu button ──────────────────────────────────
 function getProfileRoute(role: string | undefined) {
   if (role === "professional") return "/professional";
-  if (role === "admin") return "/admin";
+  if (role === "admin") return "/user";
   return "/user";
 }
 
@@ -77,7 +78,7 @@ export default function Navbar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setDropdownOpen(false);
-    router.push("/login");
+    router.push("/");
   };
 
   const isLoggedIn = !loading && !!profile;
@@ -138,17 +139,26 @@ export default function Navbar() {
                   onClick={() => setDropdownOpen((v) => !v)}
                   className="flex items-center gap-3 cursor-pointer bg-transparent border-none outline-none"
                 >
-                  <span className="hidden sm:block text-white text-sm font-medium text-right max-w-[140px] truncate">
-                    {profile.name}
-                  </span>
+                  <div className="hidden sm:flex items-center gap-2">
+                    <span className="text-white text-sm font-medium text-right max-w-[140px] truncate">
+                      {profile.name}
+                    </span>
+                    {profile.role === "admin" && (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                        Admin
+                      </span>
+                    )}
+                  </div>
                   <div
                     className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border border-emerald-500/30"
                     style={{ background: "rgba(16, 185, 129, 0.1)" }}
                   >
                     {profile.profile_photo ? (
-                      <img
+                      <Image
                         src={profile.profile_photo}
                         alt={profile.name}
+                        width={36}
+                        height={36}
                         className="w-9 h-9 rounded-full object-cover"
                       />
                     ) : (
@@ -180,7 +190,12 @@ export default function Navbar() {
                     </Link>
                     <div className="border-t border-emerald-500/10 mx-2" />
                     <button
-                      onClick={handleLogout}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleLogout();
+                      }}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full cursor-pointer bg-transparent border-none"
                     >
                       <IoLogOutOutline size={16} />
@@ -286,7 +301,12 @@ export default function Navbar() {
                   My Profile
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleLogout();
+                  }}
                   className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full cursor-pointer bg-transparent border-none text-left"
                 >
                   <IoLogOutOutline size={16} />

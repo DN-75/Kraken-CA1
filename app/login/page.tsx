@@ -28,7 +28,7 @@ export default function LoginPage() {
                 email: email.trim(),
                 password,
             });
-            // console.log(data.user);
+            console.log(data.user);
 
             if (error || !data?.user) {
                 setAuthError(error?.message || "Login failed")
@@ -39,7 +39,7 @@ export default function LoginPage() {
                 .select('role')
                 .eq('id', data.user.id)
                 .single()
-            // console.log(profile);
+            console.log(profile);
             if (profileError || !profile) {
                 console.error(profileError)
                 setAuthError("Could not fetch user role")
@@ -47,11 +47,11 @@ export default function LoginPage() {
             }
             if (profile) {
                 if (profile.role === "admin") {
-                    router.push("/")
+                    router.push("/admin")
                 } else if (profile.role === "user") {
                     router.push("/")
                 } else if (profile.role === "professional") {
-                    router.push("/")
+                    router.push(`/professional`)
                 }
 
             }
