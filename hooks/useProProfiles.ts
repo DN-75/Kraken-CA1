@@ -436,6 +436,114 @@ export function useProProfileById(professionalProfileId: string | null): UseProP
   return { data, loading, error, refetch: fetchProfile }
 }
 
+// ── Hook for fetching multiple professionals (home page) ──────────────
+export interface ProfessionalCardData {
+  id: string
+  name: string
+  profile_photo: string | null
+  job_title: string | null
+  job: string | null
+  price_per_hour: number
+  avg_rating: number | null
+  session_count: number
+}
+
+interface UseProfessionalsReturn {
+  data: ProfessionalCardData[]
+  loading: boolean
+  error: string | null
+  refetch: () => Promise<void>
+}
+
+export function useProfessionals(limit: number = 3): UseProfessionalsReturn {
+  const [data, setData] = useState<ProfessionalCardData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  async function fetchProfessionals() {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Fetch approved professionals ordered by created_at DESC, limited
+      const { data: professionals, error: proError } = await supabase
+        .from('professional_profiles')
+        .select(`
+          id,
+          job_title,
+          job,
+          price_per_hour,
+          created_at,
+          profiles (
+            name,
+            profile_photo
+          ),
+          reviews (
+            rating
+          ),
+          bookings (
+            id
+          )
+        `)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (proError) {
+        console.error('[useProfessionals] Supabase error:', proError)
+        throw new Error(proError.message)
+      }
+
+      if (!professionals) {
+        setData([])
+        return
+      }
+
+      // Transform data
+      const transformedData: ProfessionalCardData[] = professionals.map((pro) => {
+        // Type assertions for nested data
+        const profiles = pro.profiles as unknown as { name: string; profile_photo: string | null } | null
+        const reviews = (pro.reviews ?? []) as unknown as { rating: number }[]
+        const bookings = (pro.bookings ?? []) as unknown as { id: string }[]
+
+        // Calculate average rating
+        const avgRating = reviews.length > 0
+          ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10
+          : null
+
+        return {
+          id: pro.id,
+          name: profiles?.name ?? 'Unknown',
+          profile_photo: profiles?.profile_photo ?? null,
+          job_title: pro.job_title,
+          job: pro.job,
+          price_per_hour: pro.price_per_hour,
+          avg_rating: avgRating,
+          session_count: bookings.length
+        }
+      })
+
+      setData(transformedData)
+
+    } catch (err: unknown) {
+      console.error('[useProfessionals] Error:', err)
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Unknown error')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProfessionals()
+  }, [limit])
+
+  return { data, loading, error, refetch: fetchProfessionals }
+}
+
 /*
  * ── useProProfile() Return Values ───────────────────────────────
  *
