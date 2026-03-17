@@ -342,24 +342,9 @@ export default function RegisterPage() {
 
     return (
         <div
-            className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#022c22] to-[#126449] px-4 py-20 md:py-10">
+            className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#021C14] to-[#021C14] px-4 py-20 md:py-10">
 
-            {/* ── Logo ─────────────────────────────────────────────────────── */}
-            <div className="absolute left-5 top-5 z-10 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400">
-                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                        <circle cx="12" cy="8" r="2.5"/>
-                        <circle cx="7" cy="13" r="2.5"/>
-                        <circle cx="17" cy="13" r="2.5"/>
-                        <circle cx="12" cy="18" r="2.5"/>
-                        <circle cx="7" cy="8" r="1.5" opacity="0.6"/>
-                        <circle cx="17" cy="8" r="1.5" opacity="0.6"/>
-                    </svg>
-                </div>
-                <span className="hidden text-[18px] font-bold text-white sm:inline">
-                    Expert<span className="text-emerald-400">Connect</span>
-                </span>
-            </div>
+
 
             {/* ════════════════ STEP 1 — Role Selection ════════════════ */}
             {step === 1 && (
@@ -873,10 +858,7 @@ export default function RegisterPage() {
                 </div>
             )}
 
-            {/* Footer */}
-            <footer className="mt-8 text-center text-[13px] text-white/30">
-                <p>© 2024 ExpertConnect Professional Network. Secure SSL Encrypted.</p>
-            </footer>
+
         </div>
     );
 }

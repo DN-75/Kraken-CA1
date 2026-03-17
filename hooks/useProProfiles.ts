@@ -455,12 +455,54 @@ interface UseProfessionalsReturn {
   refetch: () => Promise<void>
 }
 
+// Simple in-memory cache for professionals data
+interface ProfessionalsCache {
+  data: ProfessionalCardData[]
+  timestamp: number
+  limit: number
+}
+
+let professionalsCache: ProfessionalsCache | null = null
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
 export function useProfessionals(limit: number = 3): UseProfessionalsReturn {
-  const [data, setData] = useState<ProfessionalCardData[]>([])
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<ProfessionalCardData[]>(() => {
+    // Initialize from cache if valid
+    if (
+      professionalsCache &&
+      professionalsCache.limit === limit &&
+      Date.now() - professionalsCache.timestamp < CACHE_DURATION
+    ) {
+      return professionalsCache.data
+    }
+    return []
+  })
+  const [loading, setLoading] = useState(() => {
+    // Don't show loading if we have valid cached data
+    if (
+      professionalsCache &&
+      professionalsCache.limit === limit &&
+      Date.now() - professionalsCache.timestamp < CACHE_DURATION
+    ) {
+      return false
+    }
+    return true
+  })
   const [error, setError] = useState<string | null>(null)
 
-  async function fetchProfessionals() {
+  async function fetchProfessionals(bypassCache: boolean = false) {
+    // Check cache first (unless bypassing)
+    if (
+      !bypassCache &&
+      professionalsCache &&
+      professionalsCache.limit === limit &&
+      Date.now() - professionalsCache.timestamp < CACHE_DURATION
+    ) {
+      setData(professionalsCache.data)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -496,6 +538,7 @@ export function useProfessionals(limit: number = 3): UseProfessionalsReturn {
 
       if (!professionals) {
         setData([])
+        professionalsCache = { data: [], timestamp: Date.now(), limit }
         return
       }
 
@@ -523,6 +566,13 @@ export function useProfessionals(limit: number = 3): UseProfessionalsReturn {
         }
       })
 
+      // Update cache
+      professionalsCache = {
+        data: transformedData,
+        timestamp: Date.now(),
+        limit
+      }
+
       setData(transformedData)
 
     } catch (err: unknown) {
@@ -541,7 +591,7 @@ export function useProfessionals(limit: number = 3): UseProfessionalsReturn {
     fetchProfessionals()
   }, [limit])
 
-  return { data, loading, error, refetch: fetchProfessionals }
+  return { data, loading, error, refetch: () => fetchProfessionals(true) }
 }
 
 /*

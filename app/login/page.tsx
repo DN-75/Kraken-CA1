@@ -65,7 +65,7 @@ export default function LoginPage() {
             className="min-h-screen flex flex-col items-center justify-center px-4 relative"
             style={{
                 background:
-                    "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+                    "linear-gradient(0deg, #021C14 0%, #021C14 50%, #021C14 100%)",
             }}
             //main tile
         >
