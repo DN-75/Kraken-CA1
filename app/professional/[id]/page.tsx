@@ -201,8 +201,8 @@ export default function ProfessionalProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#1c3325] via-[#416b54] to-[#182e21] flex items-center justify-center">
-        <div className="animate-pulse text-[#61c589] text-xl font-medium drop-shadow-md">
+      <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] flex items-center justify-center">
+        <div className="animate-pulse text-emerald-400 text-xl font-medium drop-shadow-md">
           Loading profile…
         </div>
       </div>
@@ -211,7 +211,7 @@ export default function ProfessionalProfilePage() {
 
   if (error || !professional) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#1c3325] via-[#416b54] to-[#182e21] flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] flex flex-col items-center justify-center gap-4">
         <p className="text-red-400 text-xl drop-shadow-md">
           {error ?? "Profile not found."}
         </p>
@@ -226,46 +226,46 @@ export default function ProfessionalProfilePage() {
 
   /* ── Render ── */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1c3325] via-[#416b54] to-[#182e21] text-white selection:bg-[#61c589] selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] text-white selection:bg-emerald-400 selection:text-white">
       
       {/* ─── Main Content ─── */}
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
         
         {/* ── Profile Hero Card ── */}
-        <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
+        <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6">
           {profile.profile_photo ? (
             <img
               src={profile.profile_photo}
               alt={profile.name}
-              className="h-36 w-36 rounded-2xl object-cover flex-shrink-0 shadow-lg border border-[#234535]"
+              className="h-36 w-36 rounded-2xl object-cover flex-shrink-0 shadow-lg border border-emerald-500/15"
             />
           ) : (
-            <div className="h-36 w-36 rounded-2xl bg-[#0a1812]/80 border border-[#234535] flex items-center justify-center text-4xl font-bold text-[#61c589] flex-shrink-0 shadow-inner">
+            <div className="h-36 w-36 rounded-2xl bg-[rgba(2,44,34,0.45)] border border-emerald-500/15 flex items-center justify-center text-4xl font-bold text-emerald-400 flex-shrink-0 shadow-inner">
               {getInitials(profile.name)}
             </div>
           )}
 
           <div className="flex-1 text-center md:text-left space-y-3">
             <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-sm">{profile.name}</h1>
-            <p className="text-[#61c589] font-medium text-lg drop-shadow-sm">
+            <p className="text-emerald-400 font-medium text-lg drop-shadow-sm">
               {professional.job_title ?? professional.field}
             </p>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {avgRating && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-4 py-1.5 text-sm font-medium text-[#649c8c] shadow-inner">
                   <FaStar className="text-yellow-400 drop-shadow-sm" /> {avgRating} Stars
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
-                <FaDollarSign className="text-[#61c589] drop-shadow-sm" /> 
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-4 py-1.5 text-sm font-medium text-[#649c8c] shadow-inner">
+                <FaDollarSign className="text-emerald-400 drop-shadow-sm" /> 
                 {professional.price_per_hour}/hr
               </span>
             </div>
           </div>
 
           <div className="flex-shrink-0 self-center md:mt-4">
-            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full bg-[#467f61] hover:bg-[#38664e] transition-all px-8 py-3.5 text-white font-semibold text-sm shadow-[0_4px_14px_0_rgba(70,127,97,0.39)] w-full md:w-auto">
+            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 px-8 text-white font-semibold text-sm shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 hover:shadow-[0_8px_24px_rgba(16,185,129,0.45)] w-full md:w-auto">
               <FaCalendarAlt /> Book Session
             </button>
           </div>
@@ -273,9 +273,9 @@ export default function ProfessionalProfilePage() {
 
         {/* ── Bio ── */}
         {profile.bio && (
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4 drop-shadow-sm">
-              <FaUser className="text-[#61c589]" /> Bio
+              <FaUser className="text-emerald-400" /> Bio
             </h2>
             <p className="text-white/90 leading-relaxed text-sm md:text-base">{profile.bio}</p>
           </section>
@@ -284,43 +284,43 @@ export default function ProfessionalProfilePage() {
         {/* ── Skills & Availability Row ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
-              <FaLaptopCode className="text-[#61c589]" /> Skills
+              <FaLaptopCode className="text-emerald-400" /> Skills
             </h2>
             <div className="flex flex-wrap gap-3">
               {skills.length > 0 ? (
                 skills.map((s, i) => (
                   <span
                     key={i}
-                    className="rounded-lg border border-[#a3c4b2] bg-[#a3c4b2]/10 px-4 py-2 text-sm text-[#a3c4b2] shadow-sm transition-colors hover:bg-[#a3c4b2]/20 cursor-default"
+                    className="rounded-lg border border-emerald-500/15 bg-emerald-400/10 px-4 py-2 text-sm text-[#649c8c] shadow-sm transition-colors hover:bg-emerald-400/20 cursor-default"
                   >
                     {s.skill === "Other" ? s.skill_other_label : s.skill}
                   </span>
                 ))
               ) : (
-                <p className="text-[#a3c4b2] text-sm">No skills listed.</p>
+                <p className="text-[#649c8c] text-sm">No skills listed.</p>
               )}
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
-              <FaClock className="text-[#61c589]" /> Availability
+              <FaClock className="text-emerald-400" /> Availability
             </h2>
 
             {sortedDays.length === 0 ? (
-              <p className="text-[#a3c4b2] text-sm">No available slots right now.</p>
+              <p className="text-[#649c8c] text-sm">No available slots right now.</p>
             ) : (
               <div className="space-y-5">
                 {sortedDays.map((day) => (
                   <div key={day}>
-                    <p className="text-[#61c589] text-xs uppercase tracking-wider font-bold mb-2 drop-shadow-sm">{day}</p>
+                    <p className="text-emerald-400 text-xs uppercase tracking-wider font-bold mb-2 drop-shadow-sm">{day}</p>
                     <div className="flex flex-wrap gap-2">
                       {groupedSlots[day].map((slot) => (
                         <span
                           key={slot.id}
-                          className="rounded-lg border border-[#a3c4b2] bg-[#0a1812] px-3 py-1.5 text-sm text-[#a3c4b2] shadow-sm"
+                          className="rounded-lg border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] shadow-sm"
                         >
                           {formatTime(slot.start_time)}
                         </span>
@@ -335,9 +335,9 @@ export default function ProfessionalProfilePage() {
 
         {/* ── User Reviews ── */}
         {reviews.length > 0 && (
-          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6 drop-shadow-sm">
-              <FaCommentDots className="text-[#61c589]" /> User Reviews
+              <FaCommentDots className="text-emerald-400" /> User Reviews
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -346,17 +346,17 @@ export default function ProfessionalProfilePage() {
                 return (
                   <div
                     key={review.id}
-                    className="rounded-xl border border-[#234535] bg-[#0a1812]/60 shadow-inner p-5 space-y-3 backdrop-blur-sm"
+                    className="rounded-xl border border-emerald-500/10 bg-[rgba(2,44,34,0.45)] shadow-inner p-5 space-y-3 backdrop-blur-sm"
                   >
                     <div className="flex items-center gap-3">
                       {review.user_profiles?.profiles?.profile_photo ? (
                         <img
                           src={review.user_profiles.profiles.profile_photo}
                           alt={reviewerName}
-                          className="h-10 w-10 rounded-full object-cover border border-[#234535]"
+                          className="h-10 w-10 rounded-full object-cover border border-emerald-500/15"
                         />
                       ) : (
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#122b20] border border-[#234535] text-sm font-bold text-[#a3c4b2]">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(17,49,39,0.55)] border border-emerald-500/15 text-sm font-bold text-[#649c8c]">
                           {getInitials(reviewerName)}
                         </span>
                       )}
@@ -370,7 +370,7 @@ export default function ProfessionalProfilePage() {
                             <FaStar
                               key={i}
                               size={12}
-                              className={i < review.rating ? "text-yellow-500" : "text-[#234535]"}
+                              className={i < review.rating ? "text-yellow-500" : "text-emerald-500/20"}
                             />
                           ))}
                         </div>
@@ -391,11 +391,11 @@ export default function ProfessionalProfilePage() {
       </main>
 
       {/* ─── Footer ─── */}
-      <footer className="border-t border-[#234535] bg-[#0a1812] text-center px-4 py-8 mt-12 relative z-10">
-          <p className="text-sm text-[#a3c4b2]">
+      <footer className="border-t border-emerald-500/10 bg-[rgba(2,34,24,0.35)] text-center px-4 py-8 mt-12 relative z-10">
+          <p className="text-sm text-[#649c8c]">
             © {new Date().getFullYear()} ExpertConnect. All rights reserved. Secure Cloud Mentorship.
           </p>
-          <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#87a996]">
+          <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#649c8c]">
             <Link href="#" className="hover:text-white transition">Privacy Policy</Link>
             <Link href="#" className="hover:text-white transition">Terms of Service</Link>
           </div>
