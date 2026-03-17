@@ -29,6 +29,7 @@ interface SessionContextValue {
   isProfessional: boolean
   isAdmin: boolean
   refetch: () => Promise<void>
+  patchProfile: (fields: Partial<SessionProfile>) => void
 }
 
 // ── Session‑storage helpers ────────────────────────────
@@ -66,6 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function applyProfile(p: SessionProfile | null) {
     setProfile(p)
     setCachedProfile(p)
+  }
+
+  function patchProfile(fields: Partial<SessionProfile>) {
+    setProfile((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...fields }
+      setCachedProfile(next)
+      return next
+    })
   }
 
   async function fetchProfile() {
@@ -140,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isProfessional: profile?.role === 'professional',
     isAdmin:        profile?.role === 'admin',
     refetch:        fetchProfile,
+    patchProfile,
   }
 
   return (
