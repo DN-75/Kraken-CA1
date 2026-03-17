@@ -333,7 +333,12 @@ export default function ProfessionalProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+        }}
+      >
         <div className="animate-pulse text-emerald-400 text-xl font-medium drop-shadow-md">
           Loading profile…
         </div>
@@ -343,7 +348,12 @@ export default function ProfessionalProfilePage() {
 
   if (error || !professional) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] flex flex-col items-center justify-center gap-4">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4"
+        style={{
+          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+        }}
+      >
         <p className="text-red-400 text-xl drop-shadow-md">
           {error ?? "Profile not found."}
         </p>
@@ -358,7 +368,12 @@ export default function ProfessionalProfilePage() {
 
   /* ── Render ── */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[rgba(17,49,39,0.55)] via-[rgba(5,65,50,0.6)] to-[rgba(2,34,24,0.55)] text-white selection:bg-emerald-400 selection:text-white">
+    <div
+      className="min-h-screen text-white selection:bg-emerald-400 selection:text-white"
+      style={{
+        background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+      }}
+    >
       
       {/* ─── Mock Data Toggle (Development Only) ─── */}
       {useMockData && (
