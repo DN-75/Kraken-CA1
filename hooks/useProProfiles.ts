@@ -240,6 +240,202 @@ export function useProProfile(): UseProProfileReturn {
   return { data, loading, error, update, refetch: fetchProfile }
 }
 
+// ── Public Profile Hook (fetch by ID) ──────────────────────────
+export interface PublicProfessionalProfile {
+  // professional_profiles fields
+  id: string
+  job_title: string | null
+  job: string | null
+  field: string
+  price_per_hour: number
+  linkedin: string | null
+  instagram: string | null
+  facebook: string | null
+  portfolio: string | null
+  // from profiles
+  profile_id: string
+  name: string
+  profile_photo: string | null
+  bio: string | null
+  time_zone: string
+  // from professional_skills
+  skills: {
+    skill: string
+    skill_other_label: string | null
+  }[]
+  // from time_slots
+  time_slots: {
+    id: string
+    day_of_week: string
+    start_time: string
+    end_time: string
+    is_booked: boolean
+  }[]
+  // from reviews
+  reviews: {
+    id: string
+    rating: number
+    comment: string | null
+    created_at: string
+    reviewer_name: string
+    reviewer_photo: string | null
+  }[]
+  // computed
+  avg_rating: number | null
+  review_count: number
+}
+
+interface UseProProfileByIdReturn {
+  data: PublicProfessionalProfile | null
+  loading: boolean
+  error: string | null
+  refetch: () => Promise<void>
+}
+
+export function useProProfileById(professionalProfileId: string | null): UseProProfileByIdReturn {
+  const [data, setData] = useState<PublicProfessionalProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  async function fetchProfile() {
+    if (!professionalProfileId) {
+      setLoading(false)
+      setError('No professional ID provided')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Fetching all related data in a single Supabase query
+      // Using maybeSingle() to avoid error when no rows found
+      const { data: proData, error: proError } = await supabase
+        .from('professional_profiles')
+        .select(`
+          id,
+          job_title,
+          job,
+          field,
+          price_per_hour,
+          linkedin,
+          instagram,
+          facebook,
+          portfolio,
+          profile_id,
+          profiles (
+            name,
+            profile_photo,
+            bio,
+            time_zone
+          ),
+          professional_skills (
+            skill,
+            skill_other_label
+          ),
+          time_slots (
+            id,
+            day_of_week,
+            start_time,
+            end_time,
+            is_booked
+          ),
+          reviews (
+            id,
+            rating,
+            comment,
+            created_at,
+            user_profiles (
+              profiles (
+                name,
+                profile_photo
+              )
+            )
+          )
+        `)
+        .eq('id', professionalProfileId)
+        .maybeSingle()
+
+      if (proError) {
+        console.error('[useProProfileById] Supabase error:', proError)
+        throw new Error(proError.message)
+      }
+      
+      if (!proData) {
+        console.error('[useProProfileById] No data found for ID:', professionalProfileId)
+        throw new Error('Professional not found')
+      }
+
+      // Type assertions for nested data - using unknown first for safe casting
+      const profiles = proData.profiles as unknown as { name: string; profile_photo: string | null; bio: string | null; time_zone: string } | null
+      const skills = (proData.professional_skills ?? []) as unknown as { skill: string; skill_other_label: string | null }[]
+      const timeSlots = (proData.time_slots ?? []) as unknown as { id: string; day_of_week: string; start_time: string; end_time: string; is_booked: boolean }[]
+      const reviews = (proData.reviews ?? []) as unknown as { 
+        id: string; 
+        rating: number; 
+        comment: string | null; 
+        created_at: string;
+        user_profiles: { profiles: { name: string; profile_photo: string | null } | null } | null
+      }[]
+
+      // Calculate average rating
+      const avgRating = reviews.length > 0
+        ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10
+        : null
+
+      // Transform reviews to include reviewer info
+      const transformedReviews = reviews.map(r => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        created_at: r.created_at,
+        reviewer_name: r.user_profiles?.profiles?.name ?? 'Anonymous',
+        reviewer_photo: r.user_profiles?.profiles?.profile_photo ?? null
+      }))
+
+      setData({
+        id: proData.id,
+        job_title: proData.job_title,
+        job: proData.job,
+        field: proData.field,
+        price_per_hour: proData.price_per_hour,
+        linkedin: proData.linkedin,
+        instagram: proData.instagram,
+        facebook: proData.facebook,
+        portfolio: proData.portfolio,
+        profile_id: proData.profile_id,
+        name: profiles?.name ?? 'Unknown',
+        profile_photo: profiles?.profile_photo ?? null,
+        bio: profiles?.bio ?? null,
+        time_zone: profiles?.time_zone ?? 'Asia/Colombo',
+        skills,
+        time_slots: timeSlots,
+        reviews: transformedReviews,
+        avg_rating: avgRating,
+        review_count: reviews.length
+      })
+
+    } catch (err: unknown) {
+      console.error('[useProProfileById] Error:', err)
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError(String(err.message))
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Unknown error')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProfile()
+  }, [professionalProfileId])
+
+  return { data, loading, error, refetch: fetchProfile }
+}
+
 /*
  * ── useProProfile() Return Values ───────────────────────────────
  *

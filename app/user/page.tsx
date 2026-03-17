@@ -86,8 +86,15 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 
 export default function UserProfilePage() {
   const router = useRouter();
-  const { patchProfile } = useSession();
+  const { patchProfile, isProfessional, loading: sessionLoading } = useSession();
   const { data: userProfile, loading: profileLoading, error: profileError, update } = useUserProfile();
+
+  // Redirect professional users to the professional dashboard
+  useEffect(() => {
+    if (!sessionLoading && isProfessional) {
+      router.replace("/professional");
+    }
+  }, [sessionLoading, isProfessional, router]);
   const { pending, approved, completed, loading: bookingsLoading, cancelBooking } = useBookings();
 
   const [activeTab, setActiveTab] = useState<"profile" | "sessions">("profile");
@@ -206,7 +213,7 @@ export default function UserProfilePage() {
     }
   };
 
-  if (profileLoading || bookingsLoading) {
+  if (profileLoading || bookingsLoading || (!sessionLoading && isProfessional)) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
