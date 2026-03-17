@@ -129,7 +129,6 @@ export function useUserProfile(): UseUserProfileReturn {
             .from('profiles')
             .update(profileFields)
             .eq('id', data.id)
-            .select()
         )
       }
 
@@ -139,7 +138,6 @@ export function useUserProfile(): UseUserProfileReturn {
             .from('user_profiles')
             .update(userProfileFields)
             .eq('id', data.user_profile_id)
-            .select()
         )
       }
 
@@ -147,8 +145,20 @@ export function useUserProfile(): UseUserProfileReturn {
       const failed  = results.find(r => r.error)
       if (failed?.error) throw new Error(failed.error.message)
 
-      // Refresh local state after save
-      await fetchProfile()
+      // Apply updates locally so UI responds immediately even on slower networks.
+      setData((prev) => {
+        if (!prev) return prev
+
+        return {
+          ...prev,
+          ...(fields.name !== undefined ? { name: fields.name } : {}),
+          ...(fields.bio !== undefined ? { bio: fields.bio } : {}),
+          ...(fields.time_zone !== undefined ? { time_zone: fields.time_zone } : {}),
+          ...(fields.profile_photo !== undefined ? { profile_photo: fields.profile_photo } : {}),
+          ...(fields.status !== undefined ? { status: fields.status } : {}),
+        }
+      })
+
       return true
 
     } catch (err: unknown) {
