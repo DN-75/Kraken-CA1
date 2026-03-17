@@ -201,8 +201,8 @@ export default function ProfessionalProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] flex items-center justify-center">
-        <div className="animate-pulse text-[#467f61] text-xl font-medium drop-shadow-md">
+      <div className="min-h-screen bg-gradient-to-b from-[#1c3325] via-[#416b54] to-[#182e21] flex items-center justify-center">
+        <div className="animate-pulse text-[#61c589] text-xl font-medium drop-shadow-md">
           Loading profile…
         </div>
       </div>
@@ -211,7 +211,7 @@ export default function ProfessionalProfilePage() {
 
   if (error || !professional) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-gradient-to-b from-[#1c3325] via-[#416b54] to-[#182e21] flex flex-col items-center justify-center gap-4">
         <p className="text-red-400 text-xl drop-shadow-md">
           {error ?? "Profile not found."}
         </p>
@@ -226,13 +226,13 @@ export default function ProfessionalProfilePage() {
 
   /* ── Render ── */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1c3226] via-[#3d6c53] to-[#15271d] text-white selection:bg-[#467f61] selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-[#1c3325] via-[#416b54] to-[#182e21] text-white selection:bg-[#61c589] selection:text-white">
       
       {/* ─── Main Content ─── */}
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
         
         {/* ── Profile Hero Card ── */}
-        <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
+        <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6">
           {profile.profile_photo ? (
             <img
               src={profile.profile_photo}
@@ -240,7 +240,7 @@ export default function ProfessionalProfilePage() {
               className="h-36 w-36 rounded-2xl object-cover flex-shrink-0 shadow-lg border border-[#234535]"
             />
           ) : (
-            <div className="h-36 w-36 rounded-2xl bg-[#0a1812]/80 border border-[#234535] flex items-center justify-center text-4xl font-bold text-[#467f61] flex-shrink-0 shadow-inner">
+            <div className="h-36 w-36 rounded-2xl bg-[#0a1812]/80 border border-[#234535] flex items-center justify-center text-4xl font-bold text-[#61c589] flex-shrink-0 shadow-inner">
               {getInitials(profile.name)}
             </div>
           )}
@@ -253,11 +253,11 @@ export default function ProfessionalProfilePage() {
 
             <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
               {avgRating && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
                   <FaStar className="text-yellow-400 drop-shadow-sm" /> {avgRating} Stars
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#234535] bg-[#0a1812]/80 px-4 py-1.5 text-sm font-medium text-[#a3c4b2] shadow-inner">
                 <FaDollarSign className="text-[#61c589] drop-shadow-sm" /> 
                 {professional.price_per_hour}/hr
               </span>
@@ -265,7 +265,7 @@ export default function ProfessionalProfilePage() {
           </div>
 
           <div className="flex-shrink-0 self-center md:mt-4">
-            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full bg-[#467f61] hover:bg-[#38664e] transition-all px-8 py-3.5 text-white font-semibold text-sm shadow-[0_4px_14px_0_rgba(70,127,97,0.4)] w-full md:w-auto">
+            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full bg-[#467f61] hover:bg-[#38664e] transition-all px-8 py-3.5 text-white font-semibold text-sm shadow-[0_4px_14px_0_rgba(70,127,97,0.39)] w-full md:w-auto">
               <FaCalendarAlt /> Book Session
             </button>
           </div>
@@ -273,27 +273,27 @@ export default function ProfessionalProfilePage() {
 
         {/* ── Bio ── */}
         {profile.bio && (
-          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4 drop-shadow-sm">
-              <FaUser className="text-[#467f61]" /> Bio
+              <FaUser className="text-[#61c589]" /> Bio
             </h2>
-            <p className="text-[#a3c4b2] leading-relaxed text-sm md:text-base">{profile.bio}</p>
+            <p className="text-white/90 leading-relaxed text-sm md:text-base">{profile.bio}</p>
           </section>
         )}
 
         {/* ── Skills & Availability Row ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
-              <FaLaptopCode className="text-[#467f61]" /> Skills
+              <FaLaptopCode className="text-[#61c589]" /> Skills
             </h2>
             <div className="flex flex-wrap gap-3">
               {skills.length > 0 ? (
                 skills.map((s, i) => (
                   <span
                     key={i}
-                    className="rounded-lg border border-[#234535]/80 bg-[#0a1812]/80 px-4 py-2 text-sm text-[#a3c4b2] shadow-inner"
+                    className="rounded-lg border border-[#a3c4b2] bg-[#a3c4b2]/10 px-4 py-2 text-sm text-[#a3c4b2] shadow-sm transition-colors hover:bg-[#a3c4b2]/20 cursor-default"
                   >
                     {s.skill === "Other" ? s.skill_other_label : s.skill}
                   </span>
@@ -304,9 +304,9 @@ export default function ProfessionalProfilePage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
-              <FaClock className="text-[#467f61]" /> Availability
+              <FaClock className="text-[#61c589]" /> Availability
             </h2>
 
             {sortedDays.length === 0 ? (
@@ -320,7 +320,7 @@ export default function ProfessionalProfilePage() {
                       {groupedSlots[day].map((slot) => (
                         <span
                           key={slot.id}
-                          className="rounded-lg border border-[#234535]/80 bg-[#0a1812]/80 px-3 py-1.5 text-sm text-[#a3c4b2] shadow-inner"
+                          className="rounded-lg border border-[#a3c4b2] bg-[#0a1812] px-3 py-1.5 text-sm text-[#a3c4b2] shadow-sm"
                         >
                           {formatTime(slot.start_time)}
                         </span>
@@ -335,9 +335,9 @@ export default function ProfessionalProfilePage() {
 
         {/* ── User Reviews ── */}
         {reviews.length > 0 && (
-          <section className="rounded-2xl border border-[#234535]/50 bg-[#122b20]/60 backdrop-blur-xl shadow-xl p-6 md:p-8">
+          <section className="rounded-2xl border border-[#234535] bg-[#122b20]/80 backdrop-blur-xl shadow-xl p-6 md:p-8">
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6 drop-shadow-sm">
-              <FaCommentDots className="text-[#467f61]" /> User Reviews
+              <FaCommentDots className="text-[#61c589]" /> User Reviews
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -346,7 +346,7 @@ export default function ProfessionalProfilePage() {
                 return (
                   <div
                     key={review.id}
-                    className="rounded-xl border border-[#234535]/80 bg-[#0a1812]/60 shadow-inner p-5 space-y-3 backdrop-blur-sm"
+                    className="rounded-xl border border-[#234535] bg-[#0a1812]/60 shadow-inner p-5 space-y-3 backdrop-blur-sm"
                   >
                     <div className="flex items-center gap-3">
                       {review.user_profiles?.profiles?.profile_photo ? (
@@ -370,7 +370,7 @@ export default function ProfessionalProfilePage() {
                             <FaStar
                               key={i}
                               size={12}
-                              className={i < review.rating ? "text-yellow-400" : "text-[#234535]"}
+                              className={i < review.rating ? "text-yellow-500" : "text-[#234535]"}
                             />
                           ))}
                         </div>
@@ -378,7 +378,7 @@ export default function ProfessionalProfilePage() {
                     </div>
 
                     {review.comment && (
-                      <p className="text-[#a3c4b2] text-sm leading-relaxed">
+                      <p className="text-white/80 text-sm leading-relaxed">
                         &ldquo;{review.comment}&rdquo;
                       </p>
                     )}
@@ -389,6 +389,17 @@ export default function ProfessionalProfilePage() {
           </section>
         )}
       </main>
+
+      {/* ─── Footer ─── */}
+      <footer className="border-t border-[#234535] bg-[#0a1812] text-center px-4 py-8 mt-12 relative z-10">
+          <p className="text-sm text-[#a3c4b2]">
+            © {new Date().getFullYear()} ExpertConnect. All rights reserved. Secure Cloud Mentorship.
+          </p>
+          <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#87a996]">
+            <Link href="#" className="hover:text-white transition">Privacy Policy</Link>
+            <Link href="#" className="hover:text-white transition">Terms of Service</Link>
+          </div>
+      </footer>
     </div>
   );
 }
