@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import {
   FaStar,
@@ -17,6 +16,7 @@ import {
   FaGlobe,
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
+import Image from "next/image";
 
 /* ───────── Types ───────── */
 
@@ -99,16 +99,22 @@ function getInitials(name: string): string {
 
 /* ───────── Component ───────── */
 
-export default function ProfessionalProfilePage() {
-  const params = useParams();
-  const id = params.id as string;
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function ProfessionalProfilePage({ params }: PageProps) {
+  // Use React.use() to unwrap the params promise (Next.js 15+ pattern)
+  const { id } = use(params);
 
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    // Prevent double fetching and ensure id is available
+    if (!id || hasFetched) return;
 
     const fetchProfessional = async () => {
       try {
@@ -179,16 +185,18 @@ export default function ProfessionalProfilePage() {
         if (!data) throw new Error("Professional not found.");
 
         setProfessional(data as unknown as Professional);
+        setHasFetched(true);
       } catch (err: any) {
         console.error("Error fetching professional:", err);
         setError(err.message || "Failed to load profile.");
+        setHasFetched(true);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfessional();
-  }, [id]);
+  }, [id, hasFetched]);
 
   /* ── Derived Data ── */
   const skills = professional?.professional_skills || [];
@@ -217,7 +225,7 @@ export default function ProfessionalProfilePage() {
       <div
         className="min-h-screen flex items-center justify-center"
         style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+          background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
         }}
       >
         <div className="animate-pulse text-emerald-400 text-xl font-medium drop-shadow-md">
@@ -233,7 +241,7 @@ export default function ProfessionalProfilePage() {
       <div
         className="min-h-screen flex flex-col items-center justify-center gap-4"
         style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+          background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
         }}
       >
         <p className="text-red-400 text-xl drop-shadow-md">
@@ -259,7 +267,7 @@ export default function ProfessionalProfilePage() {
     <div
       className="min-h-screen text-white selection:bg-emerald-400 selection:text-white"
       style={{
-        background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+        background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
       }}
     >
       <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
@@ -267,13 +275,15 @@ export default function ProfessionalProfilePage() {
         {/* ── Profile Hero Card ── */}
         <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6">
           {profile.profile_photo ? (
-            <img
+            <Image
               src={profile.profile_photo}
               alt={profile.name}
-              className="h-36 w-36 rounded-2xl object-cover flex-shrink-0 shadow-lg border border-emerald-500/15"
+              height={145}
+              width={145}
+              className=" rounded-full object-cover w-[145px] h-[145px] overflow-hidden border-3 border-green-500 shadow-lg"
             />
           ) : (
-            <div className="h-36 w-36 rounded-2xl bg-[rgba(2,44,34,0.45)] border border-emerald-500/15 flex items-center justify-center text-4xl font-bold text-emerald-400 flex-shrink-0 shadow-inner">
+            <div className="h-36 w-36 rounded-full bg-[rgba(28,144,74,0.45)] border border-emerald-500/15 flex items-center justify-center text-4xl font-bold text-emerald-400 flex-shrink-0 shadow-inner">
               {getInitials(profile.name)}
             </div>
           )}
@@ -295,9 +305,8 @@ export default function ProfessionalProfilePage() {
                   <FaStar className="text-yellow-400 drop-shadow-sm" /> {avgRating} Stars
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-4 py-1.5 text-sm font-medium text-[#649c8c] shadow-inner">
-                <FaDollarSign className="text-emerald-400 drop-shadow-sm" /> 
-                {professional.price_per_hour}/hr
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-green-800 px-8 py-1.5 text-lg font-bold text-white shadow-inner">
+                Rs.{professional.price_per_hour}/hr
               </span>
             </div>
 
@@ -474,16 +483,8 @@ export default function ProfessionalProfilePage() {
         )}
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-emerald-500/10 bg-[rgba(2,34,24,0.35)] text-center px-4 py-8 mt-12 relative z-10">
-        <p className="text-sm text-[#649c8c]">
-          &copy; {new Date().getFullYear()} ExpertConnect. All rights reserved.
-        </p>
-        <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#649c8c]">
-          <Link href="#" className="hover:text-white transition">Privacy Policy</Link>
-          <Link href="#" className="hover:text-white transition">Terms of Service</Link>
-        </div>
-      </footer>
+
+
     </div>
   );
 }
