@@ -4,17 +4,15 @@ import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserProfile, type FullUserProfile } from "@/hooks/useUserProfile";
-import { useBookings } from "@/hooks/useBooking";
+import { useBookings, type BookingWithDetails } from "@/hooks/useBooking";
+import type { Enums } from "@/types/database.types";
 import {
   IoPersonOutline,
   IoMailOutline,
-  IoLogOutOutline,
   IoCheckmarkCircle,
   IoWarningOutline,
-  IoPlayCircleOutline,
   IoTimeOutline,
 } from "react-icons/io5";
-import Image from "next/image";
 
 const TIMEZONES = [
   "Asia/Colombo (UTC+05:30)",
@@ -63,6 +61,14 @@ const getStatusLabel = (value: 'undergraduate' | 'school_student' | 'job' | stri
   return "Undergraduate";
 };
 
+type FormDataState = {
+  name: string;
+  email: string;
+  bio: string;
+  time_zone: string;
+  status: string;
+};
+
 export default function UserProfilePage() {
   const router = useRouter();
   const { data: userProfile, loading: profileLoading, error: profileError, update } = useUserProfile();
@@ -75,7 +81,7 @@ export default function UserProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<Partial<FullUserProfile>>({
+  const [formData, setFormData] = useState<FormDataState>({
     name: "",
     email: "",
     bio: "",
@@ -91,7 +97,7 @@ export default function UserProfilePage() {
         email: userProfile.email,
         bio: userProfile.bio || "",
         time_zone: userProfile.time_zone,
-        status: mapStatusToForm(userProfile.status ?? '') as any,
+        status: mapStatusToForm(userProfile.status ?? ''),
       });
     }
   }, [userProfile]);
@@ -114,7 +120,7 @@ export default function UserProfilePage() {
       const success = await update({
         name: formData.name || "",
         bio: formData.bio || "",
-        time_zone: formData.time_zone as any,
+        time_zone: formData.time_zone as Enums<"time_zone">,
         profile_photo: userProfile?.profile_photo || "",
         status: mapStatusToDatabase(formData.status || "undergraduate"),
       });
@@ -131,11 +137,6 @@ export default function UserProfilePage() {
     } finally {
       setSaveLoading(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
   };
 
   if (profileLoading || bookingsLoading) {
@@ -161,7 +162,10 @@ export default function UserProfilePage() {
       >
         <div className="text-white text-lg">{profileError || "Failed to load profile"}</div>
         <button
-          onClick={handleLogout}
+          onClick={async () => {
+            await supabase.auth.signOut();
+            router.push("/login");
+          }}
           className="px-6 py-2 rounded-full text-white"
           style={{
             background: "linear-gradient(135deg, rgba(28,196,133,0.45), rgba(20,150,100,0.45))",
@@ -181,88 +185,6 @@ export default function UserProfilePage() {
         background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
       }}
     >
-      {/* Header/Navbar */}
-      <nav
-        className="sticky top-0 z-50 w-full border-b border-emerald-500/15"
-        style={{
-          background: "rgba(2, 44, 34, 0.7)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}
-      >
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left Section - Logo & Navigation Links */}
-            <div className="flex items-center gap-12">
-              {/* Logo */}
-              <div className="flex items-center gap-2.5 shrink-0">
-                <div
-                  className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: "#10B981" }}
-                >
-                  <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                    <circle cx="12" cy="8" r="2.5" />
-                    <circle cx="7" cy="13" r="2.5" />
-                    <circle cx="17" cy="13" r="2.5" />
-                    <circle cx="12" cy="18" r="2.5" />
-                    <circle cx="7" cy="8" r="1.5" opacity="0.6" />
-                    <circle cx="17" cy="8" r="1.5" opacity="0.6" />
-                  </svg>
-                </div>
-                <span className="hidden text-[18px] font-bold text-white sm:inline">
-                  Expert<span style={{ color: "#10B981" }}>Connect</span>
-                </span>
-              </div>
-
-              {/* Navigation Links */}
-              <div className="hidden md:flex items-center gap-8">
-                <a href="/" className="text-white text-sm hover:text-emerald-400 transition-colors">
-                  Home
-                </a>
-                <a href="/browse" className="text-white text-sm hover:text-emerald-400 transition-colors">
-                  Browse Mentors
-                </a>
-                <a href="/contact" className="text-white text-sm hover:text-emerald-400 transition-colors">
-                  Contact Us
-                </a>
-                <a href="/about" className="text-white text-sm hover:text-emerald-400 transition-colors">
-                  About Us
-                </a>
-              </div>
-            </div>
-
-            {/* Right Side - Search & User */}
-            <div className="flex items-center gap-4">
-              <button className="p-2 hover:text-emerald-400 transition-colors" style={{ color: "#649c8c" }}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-              
-              <div className="flex items-center gap-3 pl-4 border-l border-emerald-500/15">
-                <div className="text-right">
-                  <p className="text-white text-sm font-medium">{userProfile.name}</p>
-                </div>
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border border-emerald-500/30"
-                  style={{ background: "rgba(16, 185, 129, 0.1)" }}
-                >
-                  {userProfile.profile_photo ? (
-                    <img
-                      src={userProfile.profile_photo}
-                      alt={userProfile.name}
-                      className="w-9 h-9 rounded-full object-cover"
-                    />
-                  ) : (
-                    <IoPersonOutline size={18} className="text-emerald-400" />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
@@ -657,7 +579,7 @@ export default function UserProfilePage() {
 
 // ─── Session Card Component ─────────────────────────────────────────────────
 interface SessionCardProps {
-  booking: any;
+  booking: BookingWithDetails;
   status: "pending" | "approved" | "completed";
   onCancel?: (bookingId: string) => void;
 }
