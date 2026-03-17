@@ -16,8 +16,8 @@ import { supabase } from "@/lib/supabaseClient";
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/browse", label: "Browse Mentors" },
-  { href: "/contact", label: "Contact Us" },
-  { href: "/about", label: "About Us" },
+  { href: "#contact", label: "Contact Us" },
+  { href: "#about", label: "About Us" },
 ];
 
 // ── Logo SVG (reusable) ─────────────────────────────────
