@@ -1,0 +1,227 @@
+"use client";
+
+import React, { useState } from "react";
+import { IoCheckmarkDone, IoClose } from "react-icons/io5";
+
+/* ── Mock Data ──────────────────────────────────── */
+const EXPERT_DATA = {
+  id: 1,
+  name: "Dr. Sarah Jenkins",
+  status: "Expert Review Queue",
+  fullName: "Dr. Sarah Jenkins",
+  jobTitle: "Senior AI Research Lead",
+  employer: "Google LLC",
+  nationalId: "ID9*******",
+  phone: "+94 00 000 0000",
+  expertise: "Artificial Intelligence",
+  university: "Stanford University",
+  degree: "Ph.D. Computer Science",
+  portfolio: "https://portfolio.com",
+  linkedin: "linkedin.com/in/username",
+  instagram: "instagram.com/username",
+  facebook: "facebook.com/username",
+  timezone: "Asia/Colombo (UTC+05:30)",
+  skills: [
+    "Web Development",
+    "UI/UX Design",
+    "Machine Learning",
+    "Python",
+    "Data Science",
+    "TensorFlow",
+    "Cloud Computing",
+  ],
+  bio: "With over 12 years of experience in artificial intelligence and machine learning, I have led multiple cross-functional teams at top-tier tech companies. My research focuses on neural network optimization and ethical AI frameworks. I'm passionate about mentoring the next generation of engineers and helping scale innovative solutions in the health-tech sector.",
+};
+
+function InfoField({ label, value }: { label: string; value: string }) {
+  const isLink = 
+    value.includes("http") || 
+    value.includes("linkedin.com") || 
+    value.includes("instagram.com") || 
+    value.includes("facebook.com");
+
+  const getFullUrl = (val: string) => {
+    if (val.includes("http")) return val;
+    if (val.includes("linkedin.com")) return `https://${val}`;
+    if (val.includes("instagram.com")) return `https://${val}`;
+    if (val.includes("facebook.com")) return `https://${val}`;
+    return val;
+  };
+
+  return (
+    <div>
+      <p className="text-emerald-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+        {label}
+      </p>
+      {isLink ? (
+        <a
+          href={getFullUrl(value)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full rounded-full border border-[rgba(16,185,129,0.15)] py-3 px-4 text-sm text-emerald-400 hover:text-emerald-300 bg-[rgba(6,60,40,0.7)] hover:underline transition-colors block"
+        >
+          {value}
+        </a>
+      ) : (
+        <div className="w-full rounded-full border border-[rgba(16,185,129,0.15)] py-3 px-4 text-sm text-white bg-[rgba(6,60,40,0.7)]">
+          {value}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ExpertReviewPage() {
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  return (
+    <main className="min-h-screen bg-[#021C14] text-white py-8 px-6">
+      <div className="max-w-4xl mx-auto">
+        {/* ═══ Photo Modal ════════════════════════════╗ */}
+        {showPhotoModal && (
+          <div
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+            onClick={() => setShowPhotoModal(false)}
+          >
+            <div
+              className="relative bg-[rgba(17,49,39,0.95)] border border-emerald-500/20 rounded-2xl p-4 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src="/images/expert-profile.jpg"
+                alt={EXPERT_DATA.name}
+                className="w-full h-auto rounded-xl"
+              />
+              <button
+                onClick={() => setShowPhotoModal(false)}
+                className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+              >
+                <IoClose size={24} className="text-white" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ Header ════════════════════════════════╗ */}
+        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8 flex items-center gap-6">
+          <button
+            onClick={() => setShowPhotoModal(true)}
+            className="w-20 h-20 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shrink-0 bg-[rgba(16,185,129,0.1)] hover:border-emerald-400/60 hover:bg-[rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer group"
+          >
+            <svg
+              className="w-6 h-6 text-emerald-400 group-hover:text-emerald-300 transition-colors"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold">{EXPERT_DATA.name}</h1>
+          </div>
+        </div>
+
+        {/* ═══ Information Grid ══════════════════════ */}
+        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8">
+          {/* Row 1 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <InfoField label="Full Name" value={EXPERT_DATA.fullName} />
+            <InfoField label="Current Job Title" value={EXPERT_DATA.jobTitle} />
+          </div>
+
+          {/* Row 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <InfoField label="Employer" value={EXPERT_DATA.employer} />
+            <InfoField label="National ID" value={EXPERT_DATA.nationalId} />
+          </div>
+
+          {/* Row 3 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <InfoField label="Phone Number" value={EXPERT_DATA.phone} />
+            <InfoField label="Field of Expertise" value={EXPERT_DATA.expertise} />
+          </div>
+
+          {/* Row 4 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <InfoField label="University" value={EXPERT_DATA.university} />
+            <InfoField label="Degree" value={EXPERT_DATA.degree} />
+          </div>
+
+          {/* Row 5 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <InfoField label="Portfolio Link" value={EXPERT_DATA.portfolio} />
+            <InfoField label="LinkedIn" value={EXPERT_DATA.linkedin} />
+          </div>
+
+          {/* Row 6 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <InfoField label="Instagram" value={EXPERT_DATA.instagram} />
+            <InfoField label="Facebook" value={EXPERT_DATA.facebook} />
+          </div>
+
+          {/* Row 7 */}
+          <div className="mb-8">
+            <InfoField label="Time Zone" value={EXPERT_DATA.timezone} />
+          </div>
+
+          {/* Skills & Technologies */}
+          <div>
+            <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
+              Skills & Technologies
+            </p>
+            <div className="flex flex-wrap gap-2 rounded-xl border border-[rgba(16,185,129,0.15)] bg-[rgba(6,60,40,0.5)] p-3.5">
+              {EXPERT_DATA.skills.map((skill, idx) => (
+                <div
+                  key={idx}
+                  className="bg-emerald-500/8 border border-white/10 rounded-full px-3.5 py-1 text-sm text-white flex items-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4 text-emerald-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {skill}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ Professional Bio ══════════════════════ */}
+        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8">
+          <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
+            Professional Bio
+          </p>
+          <p className="text-[#649c8c] leading-relaxed text-sm">
+            "{EXPERT_DATA.bio}"
+          </p>
+        </div>
+
+        {/* ═══ Action Buttons ════════════════════════ */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button className="flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)]">
+            <IoClose size={18} />
+            Reject
+          </button>
+          <button className="flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            Approve
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
