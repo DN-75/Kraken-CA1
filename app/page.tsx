@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   IoSearchOutline,
@@ -11,10 +10,11 @@ import {
   IoMailOutline,
   IoCallOutline,
   IoLocationOutline,
-  IoCheckmarkCircleOutline,
   IoRocketOutline,
   IoPeopleOutline,
 } from "react-icons/io5";
+import { useProfessionals } from "@/hooks/useProProfiles";
+import ProfessionalCard from "@/components/ProfessionalCard";
 
 /* ── Data ─────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -40,36 +40,6 @@ const FEATURES = [
     icon: <IoVideocamOutline size={22} />,
     title: "Video Consultations",
     desc: "Every Mentor is Automatically & Manually vetted for their expertise and experience. We ensure top-tier guidance from industry leaders.",
-  },
-];
-
-const MENTORS = [
-  {
-    name: "Ashinthya",
-    surname: "Jayakody",
-    role: "CEO at the Almighty Cafe",
-    rating: 4.9,
-    sessions: 250,
-    price: 150,
-    image: "/images/mentor-1.png",
-  },
-  {
-    name: "Ashinthya",
-    surname: "Jayakody",
-    role: "CEO at the Almighty Cafe",
-    rating: 4.9,
-    sessions: 250,
-    price: 150,
-    image: "/images/mentor-2.png",
-  },
-  {
-    name: "Ashinthya",
-    surname: "Jayakody",
-    role: "CEO at the Almighty Cafe",
-    rating: 4.9,
-    sessions: 250,
-    price: 150,
-    image: "/images/mentor-3.png",
   },
 ];
 
@@ -111,6 +81,8 @@ const CONTACT_ITEMS = [
 
 /* ── Page ─────────────────────────────────────────────── */
 export default function Home() {
+  const { data: professionals, loading, error } = useProfessionals(3);
+  console.log(professionals)
   return (
     <main>
       {/* ═══ Hero ═══════════════════════════════════════ */}
@@ -200,45 +172,48 @@ export default function Home() {
             Meet Top Rated Mentors
           </h2>
           <p className="text-sm text-white/50">
-            Book a session with mighty Ashinthya Jayakody today
+            Book a session with our verified professionals today
           </p>
         </div>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto">
-          {MENTORS.map((m, i) => (
-            <div
-              key={i}
-              className="relative rounded-2xl overflow-hidden bg-[var(--card-bg)] border border-[var(--card-border)] transition-all duration-[250ms] hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(16,185,129,0.08)]"
-            >
-              <Image
-                src={m.image}
-                alt={`${m.name} ${m.surname}`}
-                width={400}
-                height={200}
-                className="w-full h-[200px] object-cover"
-              />
-              <div className="p-5 max-sm:p-4">
-                <p className="text-[1.05rem] font-bold text-white">
-                  {m.name} <span className="font-normal text-white/60">{m.surname}</span>
-                </p>
-                <p className="text-xs text-white/45 mt-0.5">{m.role}</p>
-                <p className="text-[0.8rem] text-white/50 mt-1.5">
-                  <span className="text-yellow-400">★</span> Stars {m.rating} ({m.sessions} sessions)
-                </p>
-              </div>
-              <div className="flex items-center justify-between py-3.5 px-5 max-sm:py-3 max-sm:px-4 border-t border-[var(--card-border)]">
-                <span className="text-base font-bold text-white">
-                  ${m.price}/<span className="text-xs font-normal text-white/45">hr</span>
-                </span>
-                <Link
-                  href={`/mentor/${i + 1}`}
-                  className="text-[0.8rem] text-[var(--emerald-primary)] hover:text-[var(--emerald-glow)] bg-none border-none cursor-pointer font-semibold transition-colors duration-200"
+          {loading ? (
+            // Loading skeleton
+            <>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="relative rounded-2xl overflow-hidden bg-[var(--card-bg)] border border-[var(--card-border)] animate-pulse"
                 >
-                  View profile
-                </Link>
-              </div>
+                  <div className="w-full h-[200px] bg-white/5" />
+                  <div className="p-5 max-sm:p-4">
+                    <div className="h-5 w-32 bg-white/10 rounded mb-2" />
+                    <div className="h-3 w-24 bg-white/5 rounded mb-2" />
+                    <div className="h-3 w-28 bg-white/5 rounded" />
+                  </div>
+                  <div className="flex items-center justify-between py-3.5 px-5 max-sm:py-3 max-sm:px-4 border-t border-[var(--card-border)]">
+                    <div className="h-5 w-16 bg-white/10 rounded" />
+                    <div className="h-4 w-20 bg-white/5 rounded" />
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : error ? (
+            // Error state
+            <div className="col-span-full text-center py-8">
+              <p className="text-white/50">Unable to load professionals</p>
             </div>
-          ))}
+          ) : professionals.length === 0 ? (
+            // Empty state
+            <div className="col-span-full text-center py-8">
+              <p className="text-white/50">No professionals available yet</p>
+            </div>
+          ) : (
+            // Render professional cards
+            professionals.map((professional) => (
+              <ProfessionalCard key={professional.id} professional={professional} />
+            ))
+          )}
         </div>
       </section>
 

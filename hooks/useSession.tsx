@@ -29,6 +29,7 @@ interface SessionContextValue {
   isProfessional: boolean
   isAdmin: boolean
   refetch: () => Promise<void>
+  patchProfile: (fields: Partial<SessionProfile>) => void
 }
 
 // ── Session‑storage helpers ────────────────────────────
@@ -66,6 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function applyProfile(p: SessionProfile | null) {
     setProfile(p)
     setCachedProfile(p)
+  }
+
+  function patchProfile(fields: Partial<SessionProfile>) {
+    setProfile((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...fields }
+      setCachedProfile(next)
+      return next
+    })
   }
 
   async function fetchProfile() {
@@ -113,18 +123,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // ── Subscribe to auth changes ──
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        applyProfile(null)
+        initialised.current = true
+        setLoading(false)
+        return
+      }
+
       if (
         event === 'INITIAL_SESSION' ||
         event === 'SIGNED_IN' ||
         event === 'TOKEN_REFRESHED'
       ) {
+        // If we already have a cached profile for this user, skip refetch on INITIAL_SESSION
+        // This prevents unnecessary re-renders that can break event handlers
+        const cached = getCachedProfile()
+        if (event === 'INITIAL_SESSION' && cached && session?.user?.id === cached.id) {
+          // Profile already loaded from cache for the same user, no need to refetch
+          initialised.current = true
+          setLoading(false)
+          return
+        }
         await fetchProfile()
-      }
-      if (event === 'SIGNED_OUT') {
-        applyProfile(null)
-        initialised.current = true
-        setLoading(false)
       }
     })
 
@@ -140,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isProfessional: profile?.role === 'professional',
     isAdmin:        profile?.role === 'admin',
     refetch:        fetchProfile,
+    patchProfile,
   }
 
   return (

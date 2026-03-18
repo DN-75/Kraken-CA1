@@ -28,7 +28,7 @@ export default function LoginPage() {
                 email: email.trim(),
                 password,
             });
-            // console.log(data.user);
+            console.log(data.user);
 
             if (error || !data?.user) {
                 setAuthError(error?.message || "Login failed")
@@ -39,7 +39,7 @@ export default function LoginPage() {
                 .select('role')
                 .eq('id', data.user.id)
                 .single()
-            // console.log(profile);
+            console.log(profile);
             if (profileError || !profile) {
                 console.error(profileError)
                 setAuthError("Could not fetch user role")
@@ -47,11 +47,11 @@ export default function LoginPage() {
             }
             if (profile) {
                 if (profile.role === "admin") {
-                    router.push("/")
+                    router.push("/admin")
                 } else if (profile.role === "user") {
                     router.push("/")
                 } else if (profile.role === "professional") {
-                    router.push("/")
+                    router.push(`/professional`)
                 }
 
             }
@@ -65,7 +65,7 @@ export default function LoginPage() {
             className="min-h-screen flex flex-col items-center justify-center px-4 relative"
             style={{
                 background:
-                    "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+                    "linear-gradient(0deg, #021C14 0%, #021C14 50%, #021C14 100%)",
             }}
             //main tile
         >

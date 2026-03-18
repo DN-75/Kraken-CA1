@@ -3,8 +3,11 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { useUserProfile, type FullUserProfile } from "@/hooks/useUserProfile";
+import { useSession } from "@/hooks/useSession";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useBookings, type BookingWithDetails } from "@/hooks/useBooking";
+import { uploadProfilePhoto } from "@/utils/uploadProfilePhoto";
+import ProfilePhotoModal from "./ProfilePhotoModal";
 import type { Enums } from "@/types/database.types";
 import {
   IoPersonOutline,
@@ -30,8 +33,6 @@ const TIMEZONES = [
   "Pacific/Auckland (UTC+12:00)",
   "Australia/Sydney (UTC+10:00)",
 ];
-
-const STATUS_OPTIONS = ["undergraduate", "postgraduate", "professional", "other"];
 
 // Map form values to database values
 const mapStatusToDatabase = (value: string): 'undergraduate' | 'school_student' | 'job' => {
@@ -69,14 +70,38 @@ type FormDataState = {
   status: string;
 };
 
+async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export default function UserProfilePage() {
   const router = useRouter();
+  const { patchProfile, isProfessional, loading: sessionLoading } = useSession();
   const { data: userProfile, loading: profileLoading, error: profileError, update } = useUserProfile();
+
+  // Redirect professional users to the professional dashboard
+  useEffect(() => {
+    if (!sessionLoading && isProfessional) {
+      router.replace("/professional");
+    }
+  }, [sessionLoading, isProfessional, router]);
   const { pending, approved, completed, loading: bookingsLoading, cancelBooking } = useBookings();
 
   const [activeTab, setActiveTab] = useState<"profile" | "sessions">("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [photoSaveLoading, setPhotoSaveLoading] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -117,15 +142,24 @@ export default function UserProfilePage() {
     setSuccessMessage(null);
 
     try {
-      const success = await update({
+      const success = await withTimeout(
+        update({
         name: formData.name || "",
         bio: formData.bio || "",
         time_zone: formData.time_zone as Enums<"time_zone">,
         profile_photo: userProfile?.profile_photo || "",
         status: mapStatusToDatabase(formData.status || "undergraduate"),
-      });
+      }),
+        15000,
+        "Profile save took too long. Please try again.",
+      );
 
       if (success) {
+        patchProfile({
+          name: formData.name || userProfile?.name || "",
+          bio: formData.bio || "",
+          time_zone: formData.time_zone as Enums<"time_zone">,
+        });
         setSuccessMessage("Profile updated successfully!");
         setIsEditing(false);
         setTimeout(() => setSuccessMessage(null), 3000);
@@ -139,7 +173,47 @@ export default function UserProfilePage() {
     }
   };
 
-  if (profileLoading || bookingsLoading) {
+  const handleSavePhoto = async (blob: Blob) => {
+    if (!userProfile) return;
+
+    setPhotoSaveLoading(true);
+    setSaveError(null);
+    setSuccessMessage(null);
+
+    try {
+      const photoUrl = await withTimeout(
+        uploadProfilePhoto(userProfile.id, blob),
+        20000,
+        "Photo upload took too long. Please try again.",
+      );
+      if (!photoUrl) {
+        setSaveError("Failed to upload profile photo. Please try again.");
+        return;
+      }
+
+      const success = await withTimeout(
+        update({ profile_photo: photoUrl }),
+        15000,
+        "Saving profile photo took too long. Please try again.",
+      );
+      if (!success) {
+        setSaveError("Failed to save profile photo. Please try again.");
+        return;
+      }
+
+      patchProfile({ profile_photo: photoUrl });
+
+      setIsPhotoModalOpen(false);
+      setSuccessMessage("Profile photo updated successfully!");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "An error occurred while uploading photo");
+    } finally {
+      setPhotoSaveLoading(false);
+    }
+  };
+
+  if (profileLoading || bookingsLoading || (!sessionLoading && isProfessional)) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -185,6 +259,16 @@ export default function UserProfilePage() {
         background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
       }}
     >
+      {isPhotoModalOpen && (
+        <ProfilePhotoModal
+          isOpen={isPhotoModalOpen}
+          currentPhoto={userProfile.profile_photo}
+          saving={photoSaveLoading}
+          onClose={() => setIsPhotoModalOpen(false)}
+          onSave={handleSavePhoto}
+        />
+      )}
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
@@ -263,15 +347,26 @@ export default function UserProfilePage() {
                   </div>
                 )}
                 <div className="absolute bottom-0 right-0">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer hover:brightness-110 transition-all"
-                    style={{ backgroundColor: "#10B981" }}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isEditing) return;
+                      setIsPhotoModalOpen(true);
+                    }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                    style={{
+                      backgroundColor: "#10B981",
+                      cursor: isEditing ? "pointer" : "not-allowed",
+                      opacity: isEditing ? 1 : 0.6,
+                    }}
+                    title={isEditing ? "Change profile photo" : "Click Edit Profile first"}
+                    aria-label="Change profile photo"
                   >
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                  </div>
+                  </button>
                 </div>
               </div>
 

@@ -41,37 +41,57 @@ export function useBookings(): UseBookingsReturn {
     setLoading(true)
     setError(null)
 
-    // const supabase = createClient()
+    try {
+      // Read from local auth session first to avoid an extra auth round-trip.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
-    // Step 1 — get auth UID from the session cookie
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      const user = session?.user
 
-    if (!user) {
-      setError('Not authenticated')
-      setLoading(false)
-      return
-    }
+      if (!user) {
+        setError('Not authenticated')
+        setAllBookings([])
+        return
+      }
 
-    // Step 2 — resolve auth UID → user_profiles.id
-    // bookings.user_profile_id references user_profiles.id, not auth.users.id
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('profile_id', user.id)
-      .single()
+      // Step 2 — Check if user is admin (admins don't have user_profiles)
+      const { data: profile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-    if (profileError || !userProfile) {
-      setError('Could not load user profile')
-      setLoading(false)
-      return
-    }
+      if (profileCheckError) {
+        setError('Could not load profile')
+        setAllBookings([])
+        return
+      }
 
-    // Step 3 — fetch bookings with all joined relations in one query
-    const { data, error: bookingError } = await supabase
-      .from('bookings')
-      .select(`
+      // Admin users don't have bookings - return empty arrays
+      if (profile.role === 'admin') {
+        setAllBookings([])
+        return
+      }
+
+      // Step 3 — resolve auth UID → user_profiles.id
+      // bookings.user_profile_id references user_profiles.id, not auth.users.id
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single()
+
+      if (profileError || !userProfile) {
+        setError('Could not load user profile')
+        setAllBookings([])
+        return
+      }
+
+      // Step 3 — fetch bookings with all joined relations in one query
+      const { data, error: bookingError } = await supabase
+        .from('bookings')
+        .select(`
         *,
         time_slots (
           id,
@@ -89,16 +109,22 @@ export function useBookings(): UseBookingsReturn {
           )
         )
       `)
-      .eq('user_profile_id', userProfile.id)
-      .order('created_at', { ascending: false })
+        .eq('user_profile_id', userProfile.id)
+        .order('created_at', { ascending: false })
 
-    if (bookingError) {
-      setError(bookingError.message)
-    } else {
+      if (bookingError) {
+        setError(bookingError.message)
+        setAllBookings([])
+        return
+      }
+
       setAllBookings((data as BookingWithDetails[]) ?? [])
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+      setAllBookings([])
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [])
 
   useEffect(() => {
