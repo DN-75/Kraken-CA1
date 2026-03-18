@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import {
   IoSearchOutline,
   IoShieldCheckmarkOutline,
@@ -13,7 +14,7 @@ import {
   IoRocketOutline,
   IoPeopleOutline,
 } from "react-icons/io5";
-import { useProfessionals } from "@/hooks/useProProfiles";
+import { useCachedProfessionals } from "@/hooks/useProfessionalsContext";
 import ProfessionalCard from "@/components/ProfessionalCard";
 
 /* ── Data ─────────────────────────────────────────────── */
@@ -81,8 +82,22 @@ const CONTACT_ITEMS = [
 
 /* ── Page ─────────────────────────────────────────────── */
 export default function Home() {
-  const { data: professionals, loading, error } = useProfessionals(3);
-  console.log(professionals)
+  const { professionals, loading, error } = useCachedProfessionals();
+  
+  // Get top 3 professionals for the home page and adapt to ProfessionalCardData format
+  const topProfessionals = useMemo(() => 
+    professionals.slice(0, 3).map(pro => ({
+      id: pro.id,
+      name: pro.profiles?.name ?? 'Unknown',
+      profile_photo: pro.profiles?.profile_photo ?? null,
+      job_title: pro.job_title,
+      job: pro.job,
+      price_per_hour: pro.price_per_hour,
+      avg_rating: pro.avg_rating > 0 ? pro.avg_rating : null,
+      session_count: pro.review_count, // Use review_count as session indicator
+    })),
+    [professionals]
+  );
   return (
     <main>
       {/* ═══ Hero ═══════════════════════════════════════ */}
@@ -203,14 +218,14 @@ export default function Home() {
             <div className="col-span-full text-center py-8">
               <p className="text-white/50">Unable to load professionals</p>
             </div>
-          ) : professionals.length === 0 ? (
+          ) : topProfessionals.length === 0 ? (
             // Empty state
             <div className="col-span-full text-center py-8">
               <p className="text-white/50">No professionals available yet</p>
             </div>
           ) : (
             // Render professional cards
-            professionals.map((professional) => (
+            topProfessionals.map((professional) => (
               <ProfessionalCard key={professional.id} professional={professional} />
             ))
           )}

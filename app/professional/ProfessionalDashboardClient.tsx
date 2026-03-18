@@ -15,6 +15,8 @@ import {
   IoCashOutline,
   IoCalendarOutline,
   IoCloseOutline,
+  IoAddOutline,
+  IoTrashOutline,
 } from "react-icons/io5";
 import { supabase } from "@/lib/supabaseClient";
 import { useSession } from "@/hooks/useSession";
@@ -50,6 +52,16 @@ const TIMEZONES: Enums<"time_zone">[] = [
   "Asia/Hong_Kong",
   "Asia/Seoul",
   "Asia/Tokyo",
+];
+
+const DAYS_OF_WEEK: Enums<"day_of_week">[] = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
 ];
 
 const SKILL_OPTIONS: Enums<"skill_tag">[] = [
@@ -96,6 +108,17 @@ type FormDataState = {
   selectedSkills: Enums<"skill_tag">[];
   otherSkillLabel: string;
 };
+
+type TimeSlotData = {
+  id: string;
+  day_of_week: Enums<"day_of_week">;
+  start_time: string;
+  end_time: string;
+  is_booked: boolean;
+  created_at: string;
+};
+
+type GroupedTimeSlots = Partial<Record<Enums<"day_of_week">, TimeSlotData[]>>;
 
 type BookingForProfessional = Pick<
   Tables<"bookings">,
@@ -154,7 +177,7 @@ export default function ProfessionalDashboardClient() {
   const { profile, patchProfile, isProfessional, loading: sessionLoading } = useSession();
   const { data: proProfile, loading: profileLoading, error: profileError, update } = useProProfile();
 
-  const [activeTab, setActiveTab] = useState<"profile" | "requests" | "upcoming">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "availability" | "requests" | "upcoming">("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [photoSaveLoading, setPhotoSaveLoading] = useState(false);
@@ -168,6 +191,19 @@ export default function ProfessionalDashboardClient() {
   const [upcomingSessions, setUpcomingSessions] = useState<BookingForProfessional[]>([]);
   const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
   const [selectedRequestProfile, setSelectedRequestProfile] = useState<BookingForProfessional | null>(null);
+
+  // Time slots state
+  const [timeSlots, setTimeSlots] = useState<TimeSlotData[]>([]);
+  const [groupedSlots, setGroupedSlots] = useState<GroupedTimeSlots>({});
+  const [timeSlotsLoading, setTimeSlotsLoading] = useState(true);
+  const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null);
+  const [addingSlot, setAddingSlot] = useState(false);
+  const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
+  const [newSlot, setNewSlot] = useState({
+    day_of_week: "Monday" as Enums<"day_of_week">,
+    start_time: "09:00",
+    end_time: "10:00",
+  });
 
   const [formData, setFormData] = useState<FormDataState>({
     name: "",
@@ -534,7 +570,7 @@ export default function ProfessionalDashboardClient() {
       <div
         className="min-h-screen flex items-center justify-center"
         style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+          background: "linear-gradient(0deg, #021711 0%, #021711 50%, #021711 100%)",
         }}
       >
         <div className="text-white text-lg">Loading...</div>
@@ -1021,7 +1057,7 @@ export default function ProfessionalDashboardClient() {
 
             {bookingsLoading ? (
               <div
-                className="w-full rounded-2xl p-12 text-center"
+                className="w-full rounded-2xl p-12 flex items-center justify-center"
                 style={{
                   background: "rgba(17, 49, 39, 0.40)",
                   backdropFilter: "blur(20px)",
@@ -1029,7 +1065,7 @@ export default function ProfessionalDashboardClient() {
                   border: "1px solid rgba(16, 185, 129, 0.15)",
                 }}
               >
-                <p className="text-white/70 text-lg">Loading session requests...</p>
+                <div className="text-white/70 text-lg">Loading session requests...</div>
               </div>
             ) : pendingRequests.length === 0 ? (
               <div
@@ -1078,7 +1114,7 @@ export default function ProfessionalDashboardClient() {
 
             {bookingsLoading ? (
               <div
-                className="w-full rounded-2xl p-12 text-center"
+                className="w-full rounded-2xl p-12 flex items-center justify-center"
                 style={{
                   background: "rgba(17, 49, 39, 0.40)",
                   backdropFilter: "blur(20px)",
@@ -1086,7 +1122,7 @@ export default function ProfessionalDashboardClient() {
                   border: "1px solid rgba(16, 185, 129, 0.15)",
                 }}
               >
-                <p className="text-white/70 text-lg">Loading upcoming sessions...</p>
+                <div className="text-white/70 text-lg">Loading upcoming sessions...</div>
               </div>
             ) : upcomingSessions.length === 0 ? (
               <div

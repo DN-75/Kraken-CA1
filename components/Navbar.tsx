@@ -8,6 +8,7 @@ import {
   IoLogOutOutline,
   IoMenuOutline,
   IoCloseOutline,
+  IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabaseClient";
@@ -188,6 +189,18 @@ export default function Navbar() {
                       <IoPersonOutline size={16} className="text-emerald-400" />
                       My Profile
                     </Link>
+                    {profile.role === "admin" && (
+                      <>
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white hover:bg-emerald-500/10 transition-colors"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <IoShieldCheckmarkOutline size={16} className="text-amber-400" />
+                          Admin Dashboard
+                        </Link>
+                      </>
+                    )}
                     <div className="border-t border-emerald-500/10 mx-2" />
                     <button
                       type="button"
@@ -300,6 +313,15 @@ export default function Navbar() {
                   <IoPersonOutline size={16} className="text-emerald-400" />
                   My Profile
                 </Link>
+                {profile?.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-white hover:bg-emerald-500/10 transition-colors"
+                  >
+                    <IoShieldCheckmarkOutline size={16} className="text-amber-400" />
+                    Admin Dashboard
+                  </Link>
+                )}
                 <button
                   type="button"
                   onMouseDown={(e) => {

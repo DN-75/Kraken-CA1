@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { IoSearchOutline, IoStar, IoCheckmarkCircle } from "react-icons/io5";
-import { useProfessionals } from "@/hooks/useProfessionals";
+import { useCachedProfessionals } from "@/hooks/useProfessionalsContext";
 
 const FILTER_SKILLS = [
 	"UI/UX Design",
@@ -33,7 +33,7 @@ function getInitials(name: string) {
 }
 
 export default function BrowsePage() {
-	const { professionals, loading, error } = useProfessionals();
+	const { professionals, loading, error } = useCachedProfessionals();
 
 	const [search, setSearch] = useState("");
 	const [selectedSkills, setSelectedSkills] = useState<string[]>([]);

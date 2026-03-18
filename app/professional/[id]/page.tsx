@@ -110,16 +110,23 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    // Prevent double fetching and ensure id is available
-    if (!id || hasFetched) return;
+    // Early return if no id, but still ensure loading is false
+    if (!id) {
+      setLoading(false);
+      setError("No professional ID provided");
+      return;
+    }
+
+    let cancelled = false;
 
     const fetchProfessional = async () => {
       try {
+        if (cancelled) return;
         setLoading(true);
         setError(null);
+        setProfessional(null);
 
         const selectQuery = `
           id,
@@ -181,22 +188,29 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
           fetchError = result.error;
         }
 
+        if (cancelled) return;
+
         if (fetchError) throw fetchError;
         if (!data) throw new Error("Professional not found.");
 
         setProfessional(data as unknown as Professional);
-        setHasFetched(true);
       } catch (err: any) {
+        if (cancelled) return;
         console.error("Error fetching professional:", err);
         setError(err.message || "Failed to load profile.");
-        setHasFetched(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProfessional();
-  }, [id, hasFetched]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   /* ── Derived Data ── */
   const skills = professional?.professional_skills || [];

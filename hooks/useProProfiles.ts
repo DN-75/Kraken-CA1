@@ -82,7 +82,8 @@ export function useProProfile(): UseProProfileReturn {
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
 
-  async function fetchProfile() {
+  // Refetch function that can be called externally
+  async function refetch() {
     setLoading(true)
     setError(null)
 
@@ -151,6 +152,95 @@ export function useProProfile(): UseProProfileReturn {
       setLoading(false)
     }
   }
+
+  // Initial fetch with cancellation support for React Strict Mode
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetchProfile() {
+      if (cancelled) return
+      setLoading(true)
+      setError(null)
+
+      try {
+        // Step 1: get auth user
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (cancelled) return
+        if (authError || !user) throw new Error('Not authenticated')
+
+        // Step 2: fetch profiles + email
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles_with_email')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (cancelled) return
+        if (profileError) throw new Error(profileError.message)
+
+        // Step 3: fetch professional_profiles + skills in one query
+        const { data: proProfile, error: proError } = await supabase
+          .from('professional_profiles')
+          .select(`
+            *,
+            professional_skills (
+              id,
+              skill,
+              skill_other_label
+            )
+          `)
+          .eq('profile_id', user.id)
+          .single()
+
+        if (cancelled) return
+        if (proError) throw new Error(proError.message)
+
+        // Step 4: merge into one flat object
+        setData({
+          // profiles fields
+          id:            profile.id,
+          name:          profile.name,
+          email:         profile.email,
+          profile_photo: profile.profile_photo,
+          bio:           profile.bio,
+          time_zone:     profile.time_zone,
+          // professional_profiles fields
+          professional_profile_id: proProfile.id,
+          national_id:    proProfile.national_id,
+          linkedin:       proProfile.linkedin,
+          instagram:      proProfile.instagram,
+          facebook:       proProfile.facebook,
+          field:          proProfile.field,
+          university:     proProfile.university,
+          degree:         proProfile.degree,
+          job:            proProfile.job,
+          job_title:      proProfile.job_title,
+          phone_number:   proProfile.phone_number,
+          portfolio:      proProfile.portfolio,
+          price_per_hour: proProfile.price_per_hour,
+          status:         proProfile.status,
+          verify_time_id: proProfile.verify_time_id,
+          // skills array
+          skills: proProfile.professional_skills ?? [],
+        })
+
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchProfile()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // ── Update function ─────────────────────────────────
   async function update(fields: UpdateProPayload): Promise<boolean> {
@@ -226,7 +316,7 @@ export function useProProfile(): UseProProfileReturn {
       if (failed?.error) throw new Error(failed.error.message)
 
       // Refresh data after save
-      await fetchProfile()
+      await refetch()
       return true
 
     } catch (err: unknown) {
@@ -235,9 +325,7 @@ export function useProProfile(): UseProProfileReturn {
     }
   }
 
-  useEffect(() => { fetchProfile() }, [])
-
-  return { data, loading, error, update, refetch: fetchProfile }
+  return { data, loading, error, update, refetch }
 }
 
 // ── Public Profile Hook (fetch by ID) ──────────────────────────
