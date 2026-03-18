@@ -58,12 +58,12 @@ function InfoField({ label, value }: { label: string; value: string }) {
           href={getFullUrl(value)}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full rounded-full border-none py-3 px-4 text-sm text-emerald-400 hover:text-emerald-300 bg-linear-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] hover:underline transition-colors block"
+          className="w-full rounded-full border border-[rgba(16,185,129,0.15)] py-3 px-4 text-sm text-emerald-400 hover:text-emerald-300 bg-[rgba(6,60,40,0.7)] hover:underline transition-colors block"
         >
           {value}
         </a>
       ) : (
-        <div className="w-full rounded-full border-none py-3 px-4 text-sm text-white bg-linear-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)]">
+        <div className="w-full rounded-full border border-[rgba(16,185,129,0.15)] py-3 px-4 text-sm text-white bg-[rgba(6,60,40,0.7)]">
           {value}
         </div>
       )}
@@ -102,26 +102,24 @@ export default function ExpertReviewPage() {
         )}
 
         {/* ═══ Header ════════════════════════════════╗ */}
-        <div className="bg-[rgba(17,49,39,0.55)] border border-emerald-500/15 rounded-2xl p-8 mb-8 flex items-center gap-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)]">
+        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8 flex items-center gap-6">
           <button
             onClick={() => setShowPhotoModal(true)}
             className="w-20 h-20 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shrink-0 bg-[rgba(16,185,129,0.1)] hover:border-emerald-400/60 hover:bg-[rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer group"
           >
-            <div className="w-12 h-12 rounded-full border-2 border-emerald-500/60 flex items-center justify-center group-hover:border-emerald-400/80 transition-colors">
-              <svg
-                className="w-6 h-6 text-emerald-400 group-hover:text-emerald-300 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </div>
+            <svg
+              className="w-6 h-6 text-emerald-400 group-hover:text-emerald-300 transition-colors"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
           </button>
           <div>
             <h1 className="text-3xl font-bold">{EXPERT_DATA.name}</h1>
@@ -129,7 +127,7 @@ export default function ExpertReviewPage() {
         </div>
 
         {/* ═══ Information Grid ══════════════════════ */}
-        <div className="bg-[rgba(17,49,39,0.55)] border border-emerald-500/15 rounded-2xl p-8 mb-8 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)]">
+        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8">
           {/* Row 1 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <InfoField label="Full Name" value={EXPERT_DATA.fullName} />
@@ -176,7 +174,7 @@ export default function ExpertReviewPage() {
             <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
               Skills & Technologies
             </p>
-            <div className="flex flex-wrap gap-2 rounded-2xl border border-emerald-500/15 bg-linear-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] p-3.5">
+            <div className="flex flex-wrap gap-2 rounded-xl border border-[rgba(16,185,129,0.15)] bg-[rgba(6,60,40,0.5)] p-3.5">
               {EXPERT_DATA.skills.map((skill, idx) => (
                 <div
                   key={idx}
@@ -201,7 +199,7 @@ export default function ExpertReviewPage() {
         </div>
 
         {/* ═══ Professional Bio ══════════════════════ */}
-        <div className="bg-[rgba(17,49,39,0.55)] border border-emerald-500/15 rounded-2xl p-8 mb-8 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)]">
+        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8">
           <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
             Professional Bio
           </p>
