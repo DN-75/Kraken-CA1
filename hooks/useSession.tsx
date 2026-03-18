@@ -34,7 +34,6 @@ interface SessionContextValue {
 
 // ── Session‑storage helpers ────────────────────────────
 const CACHE_KEY = 'ec_session_profile'
-const ACCESS_TOKEN_COOKIE = 'ec_access_token'
 
 function getCachedProfile(): SessionProfile | null {
   if (typeof window === 'undefined') return null
@@ -51,17 +50,6 @@ function setCachedProfile(p: SessionProfile | null) {
     if (p) sessionStorage.setItem(CACHE_KEY, JSON.stringify(p))
     else sessionStorage.removeItem(CACHE_KEY)
   } catch { /* ignore */ }
-}
-
-function setAccessTokenCookie(token: string | null) {
-  if (typeof document === 'undefined') return
-
-  if (!token) {
-    document.cookie = `${ACCESS_TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`
-    return
-  }
-
-  document.cookie = `${ACCESS_TOKEN_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=3600; SameSite=Lax`
 }
 
 // ── Context ────────────────────────────────────────────
@@ -97,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      setAccessTokenCookie(session?.access_token ?? null)
 
       if (!session?.user) {
         applyProfile(null)
@@ -138,7 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
-        setAccessTokenCookie(null)
         applyProfile(null)
         initialised.current = true
         setLoading(false)
@@ -154,13 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // This prevents unnecessary re-renders that can break event handlers
         const cached = getCachedProfile()
         if (event === 'INITIAL_SESSION' && cached && session?.user?.id === cached.id) {
-          setAccessTokenCookie(session?.access_token ?? null)
           // Profile already loaded from cache for the same user, no need to refetch
           initialised.current = true
           setLoading(false)
           return
         }
-        setAccessTokenCookie(session?.access_token ?? null)
         await fetchProfile()
       }
     })

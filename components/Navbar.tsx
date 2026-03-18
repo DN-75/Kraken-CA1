@@ -77,9 +77,25 @@ export default function Navbar() {
   }, [pathname]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
     setDropdownOpen(false);
-    router.push("/");
+    setMenuOpen(false);
+    try {
+      // Clear all cached session data first
+      sessionStorage.removeItem("ec_session_profile");
+      sessionStorage.removeItem("ec_professionals_cache");
+      // Clear the access token cookie
+      document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      // Navigate and refresh
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Force navigation even if signOut fails
+      router.push("/");
+      router.refresh();
+    }
   };
 
   const isLoggedIn = !loading && !!profile;
@@ -204,11 +220,7 @@ export default function Navbar() {
                     <div className="border-t border-emerald-500/10 mx-2" />
                     <button
                       type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleLogout();
-                      }}
+                      onClick={handleLogout}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full cursor-pointer bg-transparent border-none"
                     >
                       <IoLogOutOutline size={16} />
@@ -324,11 +336,7 @@ export default function Navbar() {
                 )}
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleLogout();
-                  }}
+                  onClick={handleLogout}
                   className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full cursor-pointer bg-transparent border-none text-left"
                 >
                   <IoLogOutOutline size={16} />

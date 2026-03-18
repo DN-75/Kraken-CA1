@@ -30,10 +30,14 @@ export default function LoginPage() {
             });
             console.log(data.user);
 
-            if (error || !data?.user) {
+            if (error || !data?.user || !data?.session) {
                 setAuthError(error?.message || "Login failed")
                 return
             }
+
+            // Set the access token cookie for middleware authentication
+            document.cookie = `ec_access_token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+
             const {data: profile, error: profileError} = await supabase
                 .from('profiles')
                 .select('role')
