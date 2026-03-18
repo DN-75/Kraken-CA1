@@ -304,10 +304,20 @@ ALTER TABLE professional_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE time_slots            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE professional_skills   ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users manage own profile"
   ON profiles FOR ALL
   USING (auth.uid() = id);
+
+-- Public can read profiles of approved professionals (for browse page)
+CREATE POLICY "Public read professional profiles"
+  ON profiles FOR SELECT
+  USING (
+    role = 'professional' AND id IN (
+      SELECT profile_id FROM professional_profiles WHERE status = 'approved'
+    )
+  );
 
 -- ✅ FIX 2: Simplified — profile_id IS the auth uid, no subquery needed
 CREATE POLICY "Professionals manage own professional profile"
@@ -317,6 +327,33 @@ CREATE POLICY "Professionals manage own professional profile"
 CREATE POLICY "Public read approved professionals"
   ON professional_profiles FOR SELECT
   USING (status = 'approved');
+
+-- Public can read skills of approved professionals (for browse page)
+CREATE POLICY "Public read professional skills"
+  ON professional_skills FOR SELECT
+  USING (
+    professional_profile_id IN (
+      SELECT id FROM professional_profiles WHERE status = 'approved'
+    )
+  );
+
+-- Professionals manage their own skills
+CREATE POLICY "Professionals manage own skills"
+  ON professional_skills FOR ALL
+  USING (
+    professional_profile_id IN (
+      SELECT id FROM professional_profiles WHERE profile_id = auth.uid()
+    )
+  );
+
+-- Public can read reviews of approved professionals (for browse page)
+CREATE POLICY "Public read professional reviews"
+  ON reviews FOR SELECT
+  USING (
+    professional_profile_id IN (
+      SELECT id FROM professional_profiles WHERE status = 'approved'
+    )
+  );
 
 -- ✅ FIX 2 applied: simplified user booking policy too
 CREATE POLICY "Users manage own bookings"

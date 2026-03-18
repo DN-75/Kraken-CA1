@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { IoSearchOutline, IoStar, IoCheckmarkCircle } from "react-icons/io5";
-import { useProfessionals } from "@/hooks/useProfessionals";
+import { useCachedProfessionals } from "@/hooks/useProfessionalsContext";
 
 const FILTER_SKILLS = [
 	"UI/UX Design",
@@ -33,13 +34,30 @@ function getInitials(name: string) {
 }
 
 export default function BrowsePage() {
-	const { professionals, loading, error } = useProfessionals();
+	const { professionals, loading, error } = useCachedProfessionals();
+	const searchParams = useSearchParams();
 
 	const [search, setSearch] = useState("");
 	const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 	const [priceCap, setPriceCap] = useState(500);
 	const [priceInitialized, setPriceInitialized] = useState(false);
 	const [sortBy, setSortBy] = useState<SortOption>("top-rated");
+	const querySearch = searchParams.get("search")?.trim() ?? "";
+
+	const mappedCategorySkill = useMemo(() => {
+		const category = searchParams.get("category")?.trim();
+		if (!category) return "";
+
+		const categoryMap: Record<string, string> = {
+			"web developers": "Web Development",
+			"career coaches": "Business Strategy",
+			"software engineers": "Web Development",
+			"data scientist": "Data Science",
+			marketing: "Digital Marketing",
+		};
+
+		return categoryMap[category.toLowerCase()] ?? category;
+	}, [searchParams]);
 
 	const maxAvailablePrice = useMemo(() => {
 		if (!professionals.length) return 500;
@@ -114,6 +132,21 @@ export default function BrowsePage() {
 		setPriceCap(maxAvailablePrice);
 		setPriceInitialized(true);
 	}, [maxAvailablePrice, loading, priceInitialized]);
+
+	useEffect(() => {
+		if (!mappedCategorySkill) return;
+
+		setSelectedSkills((prev) => {
+			if (prev.some((skill) => skill.toLowerCase() === mappedCategorySkill.toLowerCase())) {
+				return prev;
+			}
+			return [...prev, mappedCategorySkill];
+		});
+	}, [mappedCategorySkill]);
+
+	useEffect(() => {
+		setSearch(querySearch);
+	}, [querySearch]);
 
 	const clearAllFilters = () => {
 		setSearch("");
@@ -293,7 +326,7 @@ export default function BrowsePage() {
 
 										<div className="text-right">
 											<p className="text-2xl font-bold leading-none text-white">
-												${mentor.price_per_hour}
+												Rs.{mentor.price_per_hour}
 												<span className="text-xs font-medium text-white/45">/hr</span>
 											</p>
 											<p className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-300">

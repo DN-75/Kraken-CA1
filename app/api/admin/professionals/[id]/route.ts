@@ -1,7 +1,7 @@
 // app/api/admin/professionals/[id]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseServer'
+import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
@@ -14,49 +14,149 @@ const updateStatusSchema = z.object({
   }),
 })
 
-// ── Helper: Verify caller is admin ──────────────────────
-async function verifyAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
-
-  return data?.role === 'admin'
+// Create admin Supabase client with service role key (bypasses RLS)
+// This is safe because middleware already verified the user is an admin
+function createAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PRIVATE_SUPABASE_ANON_KEY!, // Service role key
+  )
 }
 
 // ══════════════════════════════════════════════════════
-// PATCH /api/admin/professionals/[id]
-// Admin approves or rejects a professional
+// GET /api/admin/professionals/[id]
+// Fetches a single professional's full profile for admin review
+// Note: Middleware already verifies admin access
 // ══════════════════════════════════════════════════════
-export async function PATCH(
-  req:     NextRequest,
+export async function GET(
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: professionalProfileId } = await params
 
-    // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Middleware already validated admin access, use service role client
+    const supabase = createAdminClient()
 
-    if (authError || !user) {
+    // Fetch professional profile
+    const { data: proData, error: fetchError } = await supabase
+      .from('professional_profiles')
+      .select(`
+        id,
+        job_title,
+        job,
+        field,
+        national_id,
+        phone_number,
+        university,
+        degree,
+        portfolio,
+        linkedin,
+        instagram,
+        facebook,
+        status,
+        created_at,
+        profile_id,
+        verify_time_id
+      `)
+      .eq('id', professionalProfileId)
+      .single()
+
+    if (fetchError || !proData) {
+      console.error('Fetch error:', fetchError)
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Professional profile not found' },
+        { status: 404 }
       )
     }
 
-    // ── Step 2: Verify caller is admin ──────────────────
-    const admin = await verifyAdmin(user.id)
+    // Fetch profile data separately (name, photo, bio, timezone)
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('name, profile_photo, bio, time_zone')
+      .eq('id', proData.profile_id)
+      .single()
 
-    if (!admin) {
-      return NextResponse.json(
-        { error: 'Only admins can approve or reject professionals' },
-        { status: 403 }
-      )
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
     }
 
-    // ── Step 3: Validate request body ───────────────────
+    // Fetch skills separately
+    const { data: skillsData, error: skillsError } = await supabase
+      .from('professional_skills')
+      .select('skill, skill_other_label')
+      .eq('professional_profile_id', professionalProfileId)
+
+    if (skillsError) {
+      console.error('Skills fetch error:', skillsError)
+    }
+
+    // Fetch verify time slot if exists
+    let verifyTimeSlot: string | null = null
+    if (proData.verify_time_id) {
+      const { data: verifyTimeData } = await supabase
+        .from('verify_time_options')
+        .select('label')
+        .eq('id', proData.verify_time_id)
+        .single()
+      
+      verifyTimeSlot = verifyTimeData?.label ?? null
+    }
+
+    const skills = (skillsData ?? []).map((s: { skill: string; skill_other_label: string | null }) => 
+      s.skill_other_label ?? s.skill
+    )
+
+    const responseData = {
+      id: proData.id,
+      name: profileData?.name ?? 'Unknown',
+      profile_photo: profileData?.profile_photo ?? null,
+      bio: profileData?.bio ?? null,
+      time_zone: profileData?.time_zone ?? 'UTC',
+      job_title: proData.job_title,
+      job: proData.job,
+      field: proData.field,
+      national_id: proData.national_id,
+      phone_number: proData.phone_number,
+      university: proData.university,
+      degree: proData.degree,
+      portfolio: proData.portfolio,
+      linkedin: proData.linkedin,
+      instagram: proData.instagram,
+      facebook: proData.facebook,
+      status: proData.status,
+      created_at: proData.created_at,
+      skills,
+      verify_time_slot: verifyTimeSlot,
+    }
+
+    return NextResponse.json({ data: responseData }, { status: 200 })
+
+  } catch (err: unknown) {
+    console.error('Unexpected error in GET /api/admin/professionals/[id]:', err)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PATCH /api/admin/professionals/[id]
+// Admin approves or rejects a professional
+// Note: Middleware already verifies admin access
+// ══════════════════════════════════════════════════════
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: professionalProfileId } = await params
+
+    // Middleware already validated admin access, use service role client
+    const supabase = createAdminClient()
+
+    // Validate request body
     const body = await req.json()
     const parsed = updateStatusSchema.safeParse(body)
 
@@ -70,7 +170,7 @@ export async function PATCH(
     const { action } = parsed.data
     const newStatus = action === 'approve' ? 'approved' : 'rejected'
 
-    // ── Step 4: Fetch professional profile ──────────────
+    // Fetch professional profile
     const { data: professional, error: fetchError } = await supabase
       .from('professional_profiles')
       .select('id, status, job_title, profile_id')
@@ -84,7 +184,7 @@ export async function PATCH(
       )
     }
 
-    // ── Step 5: Check current status ────────────────────
+    // Check current status
     if (professional.status !== 'pending_approval') {
       return NextResponse.json(
         { error: `This professional has already been ${professional.status}` },
@@ -92,7 +192,7 @@ export async function PATCH(
       )
     }
 
-    // ── Step 6: Update status ───────────────────────────
+    // Update status
     const { error: updateError } = await supabase
       .from('professional_profiles')
       .update({ status: newStatus })
@@ -106,7 +206,7 @@ export async function PATCH(
       )
     }
 
-    // ── Step 7: Get professional's name and email ───────
+    // Get professional's name and email
     const { data: profileData } = await supabase
       .from('profiles_with_email')
       .select('name, email')
@@ -116,7 +216,7 @@ export async function PATCH(
     const recipientEmail = profileData?.email
     const professionalName = profileData?.name ?? 'Professional'
 
-    // ── Step 8: Send email via Resend ───────────────────
+    // Send email via Resend
     const emailSubject = action === 'approve'
       ? 'ExpertConnect — Your Account Has Been Approved!'
       : 'ExpertConnect — Account Application Update'
@@ -142,7 +242,7 @@ export async function PATCH(
       }
     }
 
-    // ── Step 9: Log email in email_logs ─────────────────
+    // Log email in email_logs
     if (recipientEmail) {
       await supabase.from('email_logs').insert({
         recipient:  recipientEmail,
@@ -153,7 +253,7 @@ export async function PATCH(
       })
     }
 
-    // ── Step 10: Return success ─────────────────────────
+    // Return success
     return NextResponse.json(
       {
         success:         true,
@@ -173,91 +273,3 @@ export async function PATCH(
     )
   }
 }
-
-// ══════════════════════════════════════════════════════════════
-// END-TO-END FLOW: Admin Approves / Rejects a Professional
-// ══════════════════════════════════════════════════════════════
-//
-// ROUTE:   PATCH /api/admin/professionals/[id]
-// BODY:    { action: "approve" | "reject" }
-// CALLER:  Admin only (role = 'admin' in profiles table)
-//
-// ┌─────────────────────────────────────────────────────────┐
-// │  FRONTEND (Admin Dashboard)                             │
-// │                                                         │
-// │  1. Admin logs in → middleware redirects to /admin       │
-// │  2. Admin page fetches pending professionals:           │
-// │     GET professional_profiles WHERE status =            │
-// │     'pending_approval'                                  │
-// │  3. Admin clicks "Approve" or "Reject" on a card        │
-// │  4. Frontend calls:                                     │
-// │     fetch('/api/admin/professionals/{id}', {             │
-// │       method: 'PATCH',                                  │
-// │       body: JSON.stringify({ action: 'approve' })       │
-// │     })                                                  │
-// └────────────────────────┬────────────────────────────────┘
-//                          │
-//                          ▼
-// ┌─────────────────────────────────────────────────────────┐
-// │  THIS API ROUTE                                         │
-// │                                                         │
-// │  Step 1:  Auth check → supabase.auth.getUser()          │
-// │           └─ 401 if not logged in                       │
-// │                                                         │
-// │  Step 2:  Admin check → profiles.role === 'admin'       │
-// │           └─ 403 if not admin                           │
-// │                                                         │
-// │  Step 3:  Zod validates { action: 'approve'|'reject' }  │
-// │           └─ 400 if invalid                             │
-// │                                                         │
-// │  Step 4:  Fetch professional_profiles by [id]           │
-// │           Selects: id, status, job_title, profile_id    │
-// │           └─ 404 if not found                           │
-// │                                                         │
-// │  Step 5:  Guard: status must be 'pending_approval'      │
-// │           └─ 400 if already approved/rejected           │
-// │                                                         │
-// │  Step 6:  UPDATE professional_profiles                  │
-// │           SET status = 'approved' | 'rejected'          │
-// │           └─ 500 if DB error                            │
-// │                                                         │
-// │  Step 7:  Get name + email from profiles_with_email     │
-// │           (view joining profiles ↔ auth.users)          │
-// │                                                         │
-// │  Step 8:  Send email via Resend                         │
-// │           ├─ Approve → "Your Account Has Been Approved" │
-// │           └─ Reject  → "Account Application Update"    │
-// │           (failure is non-blocking, logged to console)  │
-// │                                                         │
-// │  Step 9:  INSERT into email_logs                        │
-// │           type = 'pro_approved' | 'pro_rejected'        │
-// │           related_id = professional_profile.id          │
-// │                                                         │
-// │  Step 10: Return 200                                    │
-// │           { success, professional_id, status,           │
-// │             email_sent, message }                       │
-// └────────────────────────┬────────────────────────────────┘
-//                          │
-//                          ▼
-// ┌─────────────────────────────────────────────────────────┐
-// │  DATABASE TABLES AFFECTED                               │
-// │                                                         │
-// │  READ:   profiles          → verify admin role          │
-// │  READ:   professional_profiles → fetch current status   │
-// │  READ:   profiles_with_email   → get name + email       │
-// │  WRITE:  professional_profiles → update status          │
-// │  WRITE:  email_logs            → log sent email         │
-// └─────────────────────────────────────────────────────────┘
-//
-// ENV VARIABLES REQUIRED:
-//   RESEND_API_KEY       — Resend API key (re_xxxxxxxxx)
-//   RESEND_FROM_EMAIL    — Sender address (e.g. "ExpertConnect <noreply@yourdomain.com>")
-//
-// ERROR RESPONSES:
-//   401 — Not authenticated
-//   403 — Not an admin
-//   400 — Invalid action OR professional already approved/rejected
-//   404 — Professional profile not found
-//   500 — DB write failure or internal error
-//
-// ══════════════════════════════════════════════════════════════

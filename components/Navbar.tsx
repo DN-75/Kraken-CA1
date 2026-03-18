@@ -8,6 +8,7 @@ import {
   IoLogOutOutline,
   IoMenuOutline,
   IoCloseOutline,
+  IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabaseClient";
@@ -76,9 +77,25 @@ export default function Navbar() {
   }, [pathname]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
     setDropdownOpen(false);
-    router.push("/");
+    setMenuOpen(false);
+    try {
+      // Clear all cached session data first
+      sessionStorage.removeItem("ec_session_profile");
+      sessionStorage.removeItem("ec_professionals_cache");
+      // Clear the access token cookie
+      document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      // Navigate and refresh
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Force navigation even if signOut fails
+      router.push("/");
+      router.refresh();
+    }
   };
 
   const isLoggedIn = !loading && !!profile;
@@ -188,14 +205,22 @@ export default function Navbar() {
                       <IoPersonOutline size={16} className="text-emerald-400" />
                       My Profile
                     </Link>
+                    {profile.role === "admin" && (
+                      <>
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white hover:bg-emerald-500/10 transition-colors"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <IoShieldCheckmarkOutline size={16} className="text-amber-400" />
+                          Admin Dashboard
+                        </Link>
+                      </>
+                    )}
                     <div className="border-t border-emerald-500/10 mx-2" />
                     <button
                       type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleLogout();
-                      }}
+                      onClick={handleLogout}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full cursor-pointer bg-transparent border-none"
                     >
                       <IoLogOutOutline size={16} />
@@ -300,13 +325,18 @@ export default function Navbar() {
                   <IoPersonOutline size={16} className="text-emerald-400" />
                   My Profile
                 </Link>
+                {profile?.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-white hover:bg-emerald-500/10 transition-colors"
+                  >
+                    <IoShieldCheckmarkOutline size={16} className="text-amber-400" />
+                    Admin Dashboard
+                  </Link>
+                )}
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleLogout();
-                  }}
+                  onClick={handleLogout}
                   className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors w-full cursor-pointer bg-transparent border-none text-left"
                 >
                   <IoLogOutOutline size={16} />

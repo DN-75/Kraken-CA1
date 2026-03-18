@@ -56,4 +56,52 @@ button {
   opacity: 1;
 }
 
+/* ── Bouncing Loader Animations ── */
+@keyframes bounce-ball {
+  0% {
+    top: 60%;
+    height: 5px;
+    border-radius: 50px 50px 25px 25px;
+    transform: scaleX(1.7);
+  }
+  40% {
+    height: 20px;
+    border-radius: 50%;
+    transform: scaleX(1);
+  }
+  100% {
+    top: 0%;
+  }
+}
+
+@keyframes bounce-shadow {
+  0% {
+    transform: scaleX(1.5);
+  }
+  40% {
+    transform: scaleX(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scaleX(0.2);
+    opacity: 0.4;
+  }
+}
+
+.animate-bounce-ball {
+  animation: bounce-ball 0.5s alternate infinite ease;
+}
+
+.animate-bounce-shadow {
+  animation: bounce-shadow 0.5s alternate infinite ease;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
 

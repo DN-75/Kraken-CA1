@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   IoPersonOutline,
   IoMailOutline,
@@ -15,6 +15,8 @@ import {
   IoCashOutline,
   IoCalendarOutline,
   IoCloseOutline,
+  IoAddOutline,
+  IoTrashOutline,
 } from "react-icons/io5";
 import { supabase } from "@/lib/supabaseClient";
 import { useSession } from "@/hooks/useSession";
@@ -50,6 +52,16 @@ const TIMEZONES: Enums<"time_zone">[] = [
   "Asia/Hong_Kong",
   "Asia/Seoul",
   "Asia/Tokyo",
+];
+
+const DAYS_OF_WEEK: Enums<"day_of_week">[] = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
 ];
 
 const SKILL_OPTIONS: Enums<"skill_tag">[] = [
@@ -96,6 +108,17 @@ type FormDataState = {
   selectedSkills: Enums<"skill_tag">[];
   otherSkillLabel: string;
 };
+
+type TimeSlotData = {
+  id: string;
+  day_of_week: Enums<"day_of_week">;
+  start_time: string;
+  end_time: string;
+  is_booked: boolean;
+  created_at: string;
+};
+
+type GroupedTimeSlots = Partial<Record<Enums<"day_of_week">, TimeSlotData[]>>;
 
 type BookingForProfessional = Pick<
   Tables<"bookings">,
@@ -149,12 +172,45 @@ function getUserStatusLabel(status: Enums<"user_status"> | undefined): string {
   return "Not specified";
 }
 
+function getProfessionalStatusMeta(status: string) {
+  if (status === "approved") {
+    return {
+      label: "Approved",
+      textColor: "#A7F3D0",
+      background: "rgba(16, 185, 129, 0.22)",
+      border: "1px solid rgba(16, 185, 129, 0.45)",
+    };
+  }
+
+  if (status === "rejected") {
+    return {
+      label: "Rejected",
+      textColor: "#FCA5A5",
+      background: "rgba(220, 38, 38, 0.22)",
+      border: "1px solid rgba(248, 113, 113, 0.45)",
+    };
+  }
+
+  return {
+    label: "Pending Approval",
+    textColor: "#FDE68A",
+    background: "rgba(245, 158, 11, 0.22)",
+    border: "1px solid rgba(245, 158, 11, 0.45)",
+  };
+}
+
+function normalizeTimeLabel(time: string): string {
+  const [hour = "00", minute = "00"] = time.split(":");
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+}
+
 export default function ProfessionalDashboardClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile, patchProfile, isProfessional, loading: sessionLoading } = useSession();
   const { data: proProfile, loading: profileLoading, error: profileError, update } = useProProfile();
 
-  const [activeTab, setActiveTab] = useState<"profile" | "requests" | "upcoming">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "availability" | "requests" | "upcoming">("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [photoSaveLoading, setPhotoSaveLoading] = useState(false);
@@ -168,6 +224,19 @@ export default function ProfessionalDashboardClient() {
   const [upcomingSessions, setUpcomingSessions] = useState<BookingForProfessional[]>([]);
   const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
   const [selectedRequestProfile, setSelectedRequestProfile] = useState<BookingForProfessional | null>(null);
+
+  // Time slots state
+  const [timeSlots, setTimeSlots] = useState<TimeSlotData[]>([]);
+  const [groupedSlots, setGroupedSlots] = useState<GroupedTimeSlots>({});
+  const [timeSlotsLoading, setTimeSlotsLoading] = useState(true);
+  const [timeSlotsError, setTimeSlotsError] = useState<string | null>(null);
+  const [addingSlot, setAddingSlot] = useState(false);
+  const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
+  const [newSlot, setNewSlot] = useState({
+    day_of_week: "Monday" as Enums<"day_of_week">,
+    start_time: "09:00",
+    end_time: "10:00",
+  });
 
   const [formData, setFormData] = useState<FormDataState>({
     name: "",
@@ -195,6 +264,11 @@ export default function ProfessionalDashboardClient() {
     [formData.selectedSkills],
   );
 
+  const professionalStatusMeta = useMemo(
+    () => getProfessionalStatusMeta(proProfile?.status ?? "pending_approval"),
+    [proProfile?.status],
+  );
+
   useEffect(() => {
     if (!sessionLoading && profile && !isProfessional) {
       router.replace("/user");
@@ -205,6 +279,13 @@ export default function ProfessionalDashboardClient() {
       router.replace("/login");
     }
   }, [sessionLoading, profile, isProfessional, router]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "profile" || tab === "availability" || tab === "requests" || tab === "upcoming") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!proProfile) return;
@@ -302,6 +383,160 @@ export default function ProfessionalDashboardClient() {
 
     fetchBookings();
   }, [profile?.id, isProfessional]);
+
+  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    const sessionResult = await withTimeout(
+      supabase.auth.getSession(),
+      8000,
+      "Session lookup timed out",
+    );
+
+    const {
+      data: { session },
+    } = sessionResult;
+
+    if (!session?.access_token) {
+      return {};
+    }
+
+    return {
+      Authorization: `Bearer ${session.access_token}`,
+    };
+  }, []);
+
+  const fetchTimeSlots = useCallback(async () => {
+    if (!profile?.id || !isProfessional) {
+      setTimeSlots([]);
+      setGroupedSlots({});
+      setTimeSlotsLoading(false);
+      return;
+    }
+
+    setTimeSlotsLoading(true);
+    setTimeSlotsError(null);
+
+    try {
+      if (!profile?.id) {
+        setTimeSlots([]);
+        setGroupedSlots({});
+        return;
+      }
+
+      const response = await fetch("/api/professional/time-slots", {
+        method: "GET",
+        headers: await getAuthHeaders(),
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        slots?: TimeSlotData[];
+        grouped?: GroupedTimeSlots;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to fetch time slots");
+      }
+
+      const fetchedSlots = result.slots ?? [];
+      const fetchedGrouped = (result.grouped ?? {}) as GroupedTimeSlots;
+
+      setTimeSlots(fetchedSlots);
+      setGroupedSlots(fetchedGrouped);
+    } catch (err) {
+      setTimeSlotsError(err instanceof Error ? err.message : "Failed to fetch time slots");
+      setTimeSlots([]);
+      setGroupedSlots({});
+    } finally {
+      setTimeSlotsLoading(false);
+    }
+  }, [profile?.id, isProfessional, getAuthHeaders]);
+
+  useEffect(() => {
+    void fetchTimeSlots();
+  }, [fetchTimeSlots]);
+
+  const handleNewSlotChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setNewSlot((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleAddTimeSlot = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (newSlot.end_time <= newSlot.start_time) {
+      setTimeSlotsError("End time must be after start time.");
+      return;
+    }
+
+    setAddingSlot(true);
+    setTimeSlotsError(null);
+    setSaveError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/professional/time-slots", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
+        },
+        body: JSON.stringify(newSlot),
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to add time slot");
+      }
+
+      setSuccessMessage(result.message || "Time slot added successfully.");
+      await fetchTimeSlots();
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setTimeSlotsError(err instanceof Error ? err.message : "Failed to add time slot");
+    } finally {
+      setAddingSlot(false);
+    }
+  };
+
+  const handleDeleteTimeSlot = async (slotId: string) => {
+    setDeletingSlotId(slotId);
+    setTimeSlotsError(null);
+    setSaveError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch(`/api/professional/time-slots/${slotId}`, {
+        method: "DELETE",
+        headers: await getAuthHeaders(),
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete time slot");
+      }
+
+      setSuccessMessage(result.message || "Time slot deleted successfully.");
+      await fetchTimeSlots();
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setTimeSlotsError(err instanceof Error ? err.message : "Failed to delete time slot");
+    } finally {
+      setDeletingSlotId(null);
+    }
+  };
 
   const handleFormChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -534,7 +769,7 @@ export default function ProfessionalDashboardClient() {
       <div
         className="min-h-screen flex items-center justify-center"
         style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
+          background: "linear-gradient(0deg, #021711 0%, #021711 50%, #021711 100%)",
         }}
       >
         <div className="text-white text-lg">Loading...</div>
@@ -554,6 +789,7 @@ export default function ProfessionalDashboardClient() {
         <button
           onClick={async () => {
             await supabase.auth.signOut();
+            document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
             router.push("/login");
           }}
           className="px-6 py-2 rounded-full text-white"
@@ -603,6 +839,16 @@ export default function ProfessionalDashboardClient() {
             }}
           >
             Profile
+          </button>
+          <button
+            onClick={() => setActiveTab("availability")}
+            className="text-white font-semibold pb-2 relative transition-colors"
+            style={{
+              color: activeTab === "availability" ? "white" : "#649c8c",
+              borderBottom: activeTab === "availability" ? "3px solid #10B981" : "none",
+            }}
+          >
+            Availability
           </button>
           <button
             onClick={() => setActiveTab("requests")}
@@ -712,6 +958,16 @@ export default function ProfessionalDashboardClient() {
                 <p style={{ color: "#649c8c" }} className="text-sm mb-2">
                   {proProfile.email}
                 </p>
+                <div
+                  className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold mb-2"
+                  style={{
+                    color: professionalStatusMeta.textColor,
+                    background: professionalStatusMeta.background,
+                    border: professionalStatusMeta.border,
+                  }}
+                >
+                  {professionalStatusMeta.label}
+                </div>
                 <p style={{ color: "#A7F3D0" }} className="text-sm">
                   {proProfile.job_title || proProfile.field}
                 </p>
@@ -979,7 +1235,7 @@ export default function ProfessionalDashboardClient() {
                           }}
                         >
                           {skill.skill === "Other" && skill.skill_other_label
-                            ? `${skill.skill} (${skill.skill_other_label})`
+                            ? `${skill.skill_other_label}`
                             : skill.skill}
                         </span>
                       ))
@@ -1005,6 +1261,151 @@ export default function ProfessionalDashboardClient() {
           </div>
         )}
 
+        {activeTab === "availability" && (
+          <div
+            className="w-full rounded-2xl p-8 sm:p-10 space-y-8"
+            style={{
+              background: "rgba(17, 49, 39, 0.40)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(16, 185, 129, 0.15)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
+            }}
+          >
+            <div className="border-b border-emerald-500/10 pb-6">
+              <h2 className="text-2xl font-bold text-white">Manage Availability</h2>
+              <p className="text-sm mt-2" style={{ color: "#A7F3D0" }}>
+                Add weekly recurring time slots that will be shown on your public profile.
+              </p>
+            </div>
+
+            <form id="availability-setup" onSubmit={handleAddTimeSlot} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[2px]" style={{ color: "#10B981" }}>
+                    Day
+                  </label>
+                  <select
+                    name="day_of_week"
+                    value={newSlot.day_of_week}
+                    onChange={handleNewSlotChange}
+                    className="w-full rounded-full border-none py-3 px-4 text-sm text-white outline-none appearance-none cursor-pointer bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] focus:bg-[rgba(2,44,34,0.8)] focus:shadow-[0_0_20px_rgba(16,185,129,0.25),0_0_0_2px_rgba(16,185,129,0.4)]"
+                  >
+                    {DAYS_OF_WEEK.map((day) => (
+                      <option key={day} value={day} className="bg-[#052e16]">
+                        {day}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[2px]" style={{ color: "#10B981" }}>
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    name="start_time"
+                    value={newSlot.start_time}
+                    onChange={handleNewSlotChange}
+                    required
+                    className="w-full rounded-full border-none py-3 px-4 text-sm text-white outline-none bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] focus:bg-[rgba(2,44,34,0.8)] focus:shadow-[0_0_20px_rgba(16,185,129,0.25),0_0_0_2px_rgba(16,185,129,0.4)]"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[2px]" style={{ color: "#10B981" }}>
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    name="end_time"
+                    value={newSlot.end_time}
+                    onChange={handleNewSlotChange}
+                    required
+                    className="w-full rounded-full border-none py-3 px-4 text-sm text-white outline-none bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] focus:bg-[rgba(2,44,34,0.8)] focus:shadow-[0_0_20px_rgba(16,185,129,0.25),0_0_0_2px_rgba(16,185,129,0.4)]"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={addingSlot}
+                className="inline-flex items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 px-6 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-80"
+              >
+                <IoAddOutline size={18} />
+                {addingSlot ? "Adding..." : "Add Time Slot"}
+              </button>
+            </form>
+
+            {timeSlotsError && (
+              <div
+                className="rounded-xl p-4 text-red-200"
+                style={{
+                  background: "rgba(127, 29, 29, 0.35)",
+                  border: "1px solid rgba(248, 113, 113, 0.35)",
+                }}
+              >
+                {timeSlotsError}
+              </div>
+            )}
+
+            <div className="space-y-5">
+              <h3 className="text-lg font-semibold text-white">Your Time Slots</h3>
+
+              {timeSlotsLoading ? (
+                <div className="text-white/70">Loading time slots...</div>
+              ) : timeSlots.length === 0 ? (
+                <div className="rounded-xl p-5 text-sm" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#A7F3D0" }}>
+                  No time slots added yet.
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {DAYS_OF_WEEK.filter((day) => (groupedSlots[day]?.length ?? 0) > 0).map((day) => (
+                    <div key={day}>
+                      <p className="text-emerald-300 text-xs uppercase tracking-wider font-bold mb-2">{day}</p>
+                      <div className="space-y-2">
+                        {(groupedSlots[day] ?? []).map((slot) => (
+                          <div
+                            key={slot.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3"
+                            style={{ background: "rgba(16, 185, 129, 0.1)" }}
+                          >
+                            <div className="text-sm text-white">
+                              {normalizeTimeLabel(slot.start_time)} - {normalizeTimeLabel(slot.end_time)}
+                              <span className="ml-2 text-xs" style={{ color: slot.is_booked ? "#F59E0B" : "#6EE7B7" }}>
+                                {slot.is_booked ? "(Booked)" : "(Available)"}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTimeSlot(slot.id)}
+                              disabled={slot.is_booked || deletingSlotId === slot.id}
+                              className="inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition-all disabled:cursor-not-allowed"
+                              style={{
+                                background: slot.is_booked ? "rgba(245, 158, 11, 0.18)" : "rgba(220, 38, 38, 0.2)",
+                                color: slot.is_booked ? "#FCD34D" : "#FCA5A5",
+                                opacity: slot.is_booked ? 0.8 : 1,
+                              }}
+                            >
+                              <IoTrashOutline size={14} />
+                              {slot.is_booked
+                                ? "Booked"
+                                : deletingSlotId === slot.id
+                                  ? "Deleting..."
+                                  : "Delete"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === "requests" && (
           <div className="space-y-6">
             {bookingsError && (
@@ -1021,7 +1422,7 @@ export default function ProfessionalDashboardClient() {
 
             {bookingsLoading ? (
               <div
-                className="w-full rounded-2xl p-12 text-center"
+                className="w-full rounded-2xl p-12 flex items-center justify-center"
                 style={{
                   background: "rgba(17, 49, 39, 0.40)",
                   backdropFilter: "blur(20px)",
@@ -1029,7 +1430,7 @@ export default function ProfessionalDashboardClient() {
                   border: "1px solid rgba(16, 185, 129, 0.15)",
                 }}
               >
-                <p className="text-white/70 text-lg">Loading session requests...</p>
+                <div className="text-white/70 text-lg">Loading session requests...</div>
               </div>
             ) : pendingRequests.length === 0 ? (
               <div
@@ -1078,7 +1479,7 @@ export default function ProfessionalDashboardClient() {
 
             {bookingsLoading ? (
               <div
-                className="w-full rounded-2xl p-12 text-center"
+                className="w-full rounded-2xl p-12 flex items-center justify-center"
                 style={{
                   background: "rgba(17, 49, 39, 0.40)",
                   backdropFilter: "blur(20px)",
@@ -1086,7 +1487,7 @@ export default function ProfessionalDashboardClient() {
                   border: "1px solid rgba(16, 185, 129, 0.15)",
                 }}
               >
-                <p className="text-white/70 text-lg">Loading upcoming sessions...</p>
+                <div className="text-white/70 text-lg">Loading upcoming sessions...</div>
               </div>
             ) : upcomingSessions.length === 0 ? (
               <div

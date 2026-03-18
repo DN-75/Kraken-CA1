@@ -46,12 +46,13 @@ const TIMEZONES = [
 ];
 
 const WINDOWS = [
-    "Monday 09:00 AM", "Monday 02:00 PM", "Monday 06:00 PM",
-    "Tuesday 09:00 AM", "Tuesday 02:00 PM", "Tuesday 06:00 PM",
-    "Wednesday 09:00 AM", "Wednesday 02:00 PM", "Wednesday 06:00 PM",
-    "Thursday 09:00 AM", "Thursday 02:00 PM", "Thursday 06:00 PM",
-    "Friday 09:00 AM", "Friday 02:00 PM", "Friday 06:00 PM",
-    "Saturday 10:00 AM", "Saturday 03:00 PM", "Sunday 10:00 AM",
+    "Monday 6:00 AM", "Monday 9:00 AM", "Monday 12:00 PM", "Monday 3:00 PM", "Monday 6:00 PM", "Monday 9:00 PM",
+    "Tuesday 6:00 AM", "Tuesday 9:00 AM", "Tuesday 12:00 PM", "Tuesday 3:00 PM", "Tuesday 6:00 PM", "Tuesday 9:00 PM",
+    "Wednesday 6:00 AM", "Wednesday 9:00 AM", "Wednesday 12:00 PM", "Wednesday 3:00 PM", "Wednesday 6:00 PM", "Wednesday 9:00 PM",
+    "Thursday 6:00 AM", "Thursday 9:00 AM", "Thursday 12:00 PM", "Thursday 3:00 PM", "Thursday 6:00 PM", "Thursday 9:00 PM",
+    "Friday 6:00 AM", "Friday 9:00 AM", "Friday 12:00 PM", "Friday 3:00 PM", "Friday 6:00 PM", "Friday 9:00 PM",
+    "Saturday 9:00 AM", "Saturday 12:00 PM", "Saturday 3:00 PM", "Saturday 6:00 PM", "Saturday 9:00 PM",
+    "Sunday 9:00 AM", "Sunday 12:00 PM", "Sunday 3:00 PM", "Sunday 6:00 PM", "Sunday 9:00 PM",
 ];
 
 // ── Shared Tailwind class strings ──────────────────────────────────────────────
@@ -110,12 +111,13 @@ export default function RegisterPage() {
     const [university, setUniversity] = useState("");
     const [degree, setDegree] = useState("");
     const [selectedSkills, setSelectedSkills] = useState<string[]>(["Web Development"]);
+    const [otherSkillLabel, setOtherSkillLabel] = useState("");
     const [portfolio, setPortfolio] = useState("");
     const [linkedin, setLinkedin] = useState("");
     const [instagram, setInstagram] = useState("");
     const [facebook, setFacebook] = useState("");
     const [timezone, setTimezone] = useState("Asia/Colombo (UTC+05:30)");
-    const [verifyWindow, setVerifyWindow] = useState("Monday 09:00 AM");
+    const [verifyWindow, setVerifyWindow] = useState("Monday 9:00 AM");
     const [bio, setBio] = useState("");
     const [expertUsername, setExpertUsername] = useState("");
     const [expertEmail, setExpertEmail] = useState("");
@@ -128,9 +130,17 @@ export default function RegisterPage() {
     const [expertSubmitSuccess, setExpertSubmitSuccess] = useState<string | null>(null);
 
     const toggleSkill = (skill: string) => {
-        setSelectedSkills((prev) =>
-            prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
-        );
+        setSelectedSkills((prev) => {
+            const next = prev.includes(skill)
+                ? prev.filter((s) => s !== skill)
+                : [...prev, skill];
+
+            if (!next.includes("Other")) {
+                setOtherSkillLabel("");
+            }
+
+            return next;
+        });
     };
 
     const handleContinue = () => {
@@ -245,16 +255,48 @@ export default function RegisterPage() {
             setExpertSubmitError("Passwords do not match.");
             return;
         }
+        if (!jobTitle.trim()) {
+            setExpertSubmitError("Current job title is required.");
+            return;
+        }
+        if (!employer.trim()) {
+            setExpertSubmitError("Employer is required.");
+            return;
+        }
+        if (!nationalId.trim()) {
+            setExpertSubmitError("National ID is required.");
+            return;
+        }
+        if (!phone.trim()) {
+            setExpertSubmitError("Phone number is required.");
+            return;
+        }
         if (!expertise.trim()) {
             setExpertSubmitError("Field of expertise is required.");
+            return;
+        }
+        if (!university.trim()) {
+            setExpertSubmitError("University is required.");
+            return;
+        }
+        if (!degree.trim()) {
+            setExpertSubmitError("Degree is required.");
+            return;
+        }
+        if (!linkedin.trim()) {
+            setExpertSubmitError("LinkedIn profile is required.");
+            return;
+        }
+        if (!bio.trim()) {
+            setExpertSubmitError("Professional bio is required.");
             return;
         }
         if (selectedSkills.length === 0) {
             setExpertSubmitError("Select at least one skill.");
             return;
         }
-        if (selectedSkills.includes("Other")) {
-            setExpertSubmitError("Please remove 'Other' skill.");
+        if (selectedSkills.includes("Other") && !otherSkillLabel.trim()) {
+            setExpertSubmitError("Please provide a label for the 'Other' skill.");
             return;
         }
         setExpertSubmitting(true);
@@ -290,6 +332,18 @@ export default function RegisterPage() {
                 time_zone: mapProfessionalTimezone(timezone),
             });
             if (profileError) throw new Error(profileError.message);
+
+            // Look up verify_time_id from verify_time_options table
+            let verifyTimeId: number | null = null;
+            if (verifyWindow) {
+                const {data: verifyTimeData} = await supabase
+                    .from("verify_time_options")
+                    .select("id")
+                    .eq("label", verifyWindow)
+                    .single();
+                verifyTimeId = verifyTimeData?.id ?? null;
+            }
+
             const {data: professionalProfile, error: professionalProfileError} = await supabase
                 .from("professional_profiles")
                 .insert({
@@ -299,7 +353,7 @@ export default function RegisterPage() {
                     university: university.trim() || null, degree: degree.trim() || null,
                     job: employer.trim() || null, job_title: jobTitle.trim() || null,
                     phone_number: phone.trim() || null, portfolio: portfolio.trim() || null,
-                    verify_time_id: null,
+                    verify_time_id: verifyTimeId,
                 })
                 .select("id")
                 .single();
@@ -308,6 +362,7 @@ export default function RegisterPage() {
             const skillRows = selectedSkills.map((skill) => ({
                 professional_profile_id: professionalProfile.id,
                 skill: skill as SkillTag,
+                skill_other_label: skill === "Other" ? otherSkillLabel.trim() : null,
             }));
             const {error: skillsError} = await supabase.from("professional_skills").insert(skillRows);
             if (skillsError) throw new Error(skillsError.message);
@@ -787,17 +842,17 @@ export default function RegisterPage() {
                             </div>
 
                             {/* Skills — full width */}
-                            <div className="col-span-full">
-                                <label
-                                    className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
-                                    Skills &amp; Technologies
-                                </label>
+                             <div className="col-span-full">
+                                 <label
+                                     className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
+                                     Skills &amp; Technologies
+                                 </label>
                                 <div
                                     className="flex min-h-[60px] flex-wrap gap-2 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] p-3.5 shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.1)]">
-                                    {ALL_SKILLS.map((skill) => {
-                                        const active = selectedSkills.includes(skill);
-                                        return (
-                                            <button
+                                     {ALL_SKILLS.map((skill) => {
+                                         const active = selectedSkills.includes(skill);
+                                         return (
+                                             <button
                                                 key={skill}
                                                 type="button"
                                                 onClick={() => toggleSkill(skill)}
@@ -808,11 +863,24 @@ export default function RegisterPage() {
                                             >
                                                 {active && <IoCloseCircle size={13} className="text-emerald-400"/>}
                                                 {skill}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                             </button>
+                                         );
+                                     })}
+                                 </div>
+
+                                {selectedSkills.includes("Other") && (
+                                    <div className="mt-3">
+                                        <label className={FIELD_LABEL}>Other Skill Label</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Technical Writing"
+                                            value={otherSkillLabel}
+                                            onChange={(e) => setOtherSkillLabel(e.target.value)}
+                                            className={ROUND_INPUT}
+                                        />
+                                    </div>
+                                )}
+                             </div>
 
                             {/* Bio — full width */}
                             <div className="col-span-full">

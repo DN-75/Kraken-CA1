@@ -238,6 +238,7 @@ export default function UserProfilePage() {
         <button
           onClick={async () => {
             await supabase.auth.signOut();
+            document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
             router.push("/login");
           }}
           className="px-6 py-2 rounded-full text-white"

@@ -1,22 +1,30 @@
 // app/api/professional/time-slots/[id]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 // ══════════════════════════════════════════════════════
 // DELETE /api/professional/time-slots/[id]
 // Remove a time slot — only if not currently booked
 // ══════════════════════════════════════════════════════
 export async function DELETE(
-  _req:    NextRequest,
+  req:    NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // const supabase = await createClient()
+    const accessToken = req.headers.get('authorization')?.replace('Bearer ', '')
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'You must be logged in' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
     const { id: slotId } = await params
 
     // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
@@ -95,7 +103,7 @@ export async function DELETE(
       { status: 200 }
     )
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Unexpected error in DELETE /api/professional/time-slots/[id]:', err)
     return NextResponse.json(
       { error: 'Internal server error' },
