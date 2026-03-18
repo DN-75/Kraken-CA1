@@ -34,14 +34,39 @@ const EXPERT_DATA = {
 };
 
 function InfoField({ label, value }: { label: string; value: string }) {
+  const isLink = 
+    value.includes("http") || 
+    value.includes("linkedin.com") || 
+    value.includes("instagram.com") || 
+    value.includes("facebook.com");
+
+  const getFullUrl = (val: string) => {
+    if (val.includes("http")) return val;
+    if (val.includes("linkedin.com")) return `https://${val}`;
+    if (val.includes("instagram.com")) return `https://${val}`;
+    if (val.includes("facebook.com")) return `https://${val}`;
+    return val;
+  };
+
   return (
     <div>
       <p className="text-emerald-400 text-xs font-semibold mb-2 uppercase tracking-wider">
         {label}
       </p>
-      <div className="w-full rounded-full border-none py-3 px-4 text-sm text-white bg-linear-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)]">
-        {value}
-      </div>
+      {isLink ? (
+        <a
+          href={getFullUrl(value)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full rounded-full border-none py-3 px-4 text-sm text-emerald-400 hover:text-emerald-300 bg-linear-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)] hover:underline transition-colors block"
+        >
+          {value}
+        </a>
+      ) : (
+        <div className="w-full rounded-full border-none py-3 px-4 text-sm text-white bg-linear-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.3),inset_0.3px_0.5px_1px_rgba(255,255,255,0.35),0_4px_5px_rgba(0,0,0,0.2)]">
+          {value}
+        </div>
+      )}
     </div>
   );
 }
@@ -180,7 +205,7 @@ export default function ExpertReviewPage() {
           <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
             Professional Bio
           </p>
-          <p className="text-[#649c8c] leading-relaxed italic text-sm">
+          <p className="text-[#649c8c] leading-relaxed text-sm">
             "{EXPERT_DATA.bio}"
           </p>
         </div>
@@ -189,11 +214,13 @@ export default function ExpertReviewPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button className="flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)]">
             <IoClose size={18} />
-            Reject Application
+            Reject
           </button>
           <button className="flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 hover:scale-105">
-            <IoCheckmarkDone size={18} />
-            Approve Application
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            Approve
           </button>
         </div>
       </div>

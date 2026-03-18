@@ -70,7 +70,7 @@ function RequestCard({ request }: any) {
           <p className="text-gray-400 text-xs mt-1">{request.date}</p>
         </div>
       </div>
-      <button style={{ fontFamily: "Inter, Helvetica, sans-serif" }} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-1.5 text-base rounded-full transition-colors duration-300 whitespace-nowrap ml-4 flex items-center justify-center">
+      <button className="flex items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-emerald-600 px-6 py-1.5 text-base font-medium text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 hover:scale-105 whitespace-nowrap ml-4">
         Review
       </button>
     </div>
