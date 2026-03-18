@@ -62,8 +62,8 @@ function RequestCard({ request }: any) {
           <p className="text-emerald-400 text-sm">{request.title}</p>
         </div>
       </div>
-      <button style={{ fontFamily: "Inter, Helvetica, sans-serif" }} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-1 text-sm rounded-2xl transition-colors duration-300 whitespace-nowrap ml-4">
-        REVIEW
+      <button style={{ fontFamily: "Inter, Helvetica, sans-serif" }} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-1 text-xs rounded-2xl transition-colors duration-300 whitespace-nowrap ml-4">
+        Review
       </button>
     </div>
   );
@@ -106,9 +106,9 @@ export default function AdminPage() {
             <button
               onClick={handleShowMore}
               style={{ fontFamily: "Inter, Helvetica, sans-serif" }}
-              className="border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 font-semibold px-6 py-2 text-sm rounded-2xl transition-all duration-300"
+              className="border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 font-semibold px-6 py-2 text-xs rounded-2xl transition-all duration-300"
             >
-              SHOW MORE
+              Show more
             </button>
           </div>
         )}
