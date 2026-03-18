@@ -8,42 +8,49 @@ const ALL_REGISTRATION_REQUESTS = [
     id: 1,
     name: "Dr. Julian Vane",
     title: "Senior AI Research Scientist",
+    date: "Mar 15, 2026",
     image: "/images/expert-1.jpg",
   },
   {
     id: 2,
     name: "Sarah Jenkins",
     title: "FinTech Strategy Consultant",
+    date: "Mar 14, 2026",
     image: "/images/expert-2.jpg",
   },
   {
     id: 3,
     name: "Marcus Thorne",
     title: "Cybersecurity Lead Architect",
+    date: "Mar 13, 2026",
     image: "/images/expert-3.jpg",
   },
   {
     id: 4,
     name: "Elena Rodriguez",
     title: "Sustainable Energy Engineer",
+    date: "Mar 12, 2026",
     image: "/images/expert-4.jpg",
   },
   {
     id: 5,
     name: "Dr. Kenji Sato",
     title: "Biomedical Ethics Specialist",
+    date: "Mar 11, 2026",
     image: "/images/expert-5.jpg",
   },
   {
     id: 6,
     name: "Alex Chen",
     title: "Cloud Architecture Expert",
+    date: "Mar 10, 2026",
     image: "/images/expert-6.jpg",
   },
   {
     id: 7,
     name: "Lisa Anderson",
     title: "Product Strategy Lead",
+    date: "Mar 09, 2026",
     image: "/images/expert-7.jpg",
   },
 ];
@@ -60,9 +67,10 @@ function RequestCard({ request }: any) {
         <div>
           <h3 className="text-lg font-semibold text-white">{request.name}</h3>
           <p className="text-emerald-400 text-sm">{request.title}</p>
+          <p className="text-gray-400 text-xs mt-1">{request.date}</p>
         </div>
       </div>
-      <button style={{ fontFamily: "Inter, Helvetica, sans-serif" }} className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-1 text-xs rounded-2xl transition-colors duration-300 whitespace-nowrap ml-4">
+      <button style={{ fontFamily: "Inter, Helvetica, sans-serif" }} className="border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 font-semibold px-3 py-1 text-base rounded-full transition-colors duration-300 whitespace-nowrap ml-4 flex items-center justify-center">
         Review
       </button>
     </div>
@@ -105,8 +113,8 @@ export default function AdminPage() {
           <div className="flex justify-center mt-10">
             <button
               onClick={handleShowMore}
-              style={{ fontFamily: "Inter, Helvetica, sans-serif" }}
-              className="border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 font-semibold px-6 py-2 text-xs rounded-2xl transition-all duration-300"
+              style={{ fontFamily: "Inter, Helvetica, sans-serif", fontSize: "16px" }}
+              className="border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 font-semibold px-7 py-2.5 rounded-full transition-all duration-300 flex items-center justify-center"
             >
               Show more
             </button>
