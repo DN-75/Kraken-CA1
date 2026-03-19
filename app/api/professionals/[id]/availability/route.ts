@@ -60,7 +60,13 @@ export async function GET(
         professional_id: professional.id,
         slots: slots ?? [],
       },
-      { status: 200 },
+      { 
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+        }
+      },
     );
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

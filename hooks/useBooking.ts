@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { Tables, Enums } from '@/types/database.types'
+import { Tables } from '@/types/database.types'
 
 // ─── BookingWithDetails ───────────────────────────────────────────────────────
 export type BookingWithDetails = Tables<'bookings'> & {
@@ -134,15 +134,27 @@ export function useBookings(): UseBookingsReturn {
 
   // ── cancelBooking ──────────────────────────────────────────────────────────
   const cancelBooking = async (bookingId: string): Promise<void> => {
-    // const supabase = createClient()
+    // Get the current session for authentication
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      throw new Error('You must be logged in to cancel a booking')
+    }
 
-    const { error: cancelError } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' as Enums<'booking_status'> })
-      .eq('id', bookingId)
+    // Use the API route to cancel the booking
+    // This ensures the time slot is explicitly freed
+    const response = await fetch(`/api/bookings/${bookingId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ action: 'cancel' }),
+    })
 
-    if (cancelError) {
-      throw new Error(cancelError.message)
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Failed to cancel booking')
     }
 
     await fetchBookings()
@@ -229,15 +241,18 @@ export function useBookings(): UseBookingsReturn {
  *
  *   When the user clicks Cancel on a pending booking:
  *
- *   1. Sends UPDATE bookings SET status = 'cancelled' WHERE id = bookingId
- *   2. Supabase DB trigger fires automatically:
- *        trg_booking_free_slot → sets time_slots.is_booked = false
+ *   1. Calls PATCH /api/bookings/[id] with action: 'cancel'
+ *   2. API route DELETES the booking record from the database
+ *      (not just status update, because UNIQUE(time_slot_id) constraint
+ *       would prevent rebooking the same slot)
+ *   3. API route explicitly frees the time slot (is_booked = false)
  *        → that slot is now available for other users to book again
- *   3. fetchBookings() runs again → allBookings[] is refreshed from DB
- *   4. The cancelled booking disappears from pending[] and appears in cancelled[]
- *   5. UI re-renders — the Pending tab no longer shows that booking
+ *        → the professional's page will show this slot as available
+ *   4. fetchBookings() runs again → allBookings[] is refreshed from DB
+ *   5. The cancelled booking disappears from the list entirely
+ *   6. UI re-renders — the Pending tab no longer shows that booking
  *
- *   If the UPDATE fails, cancelBooking() throws an Error.
+ *   If the API call fails, cancelBooking() throws an Error.
  *   The calling component catches it and shows a toast:
  *     try { await cancelBooking(id) }
  *     catch(e) { toast.error('Could not cancel booking') }
