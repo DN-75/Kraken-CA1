@@ -1,7 +1,7 @@
 // app/api/bookings/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseServer'
+import { supabase as adminSupabase, createSupabaseServerClient } from '@/lib/supabaseServer'
 // import { sendBookingRequestEmail } from '@/lib/email/sendEmail'
 import { z } from 'zod'
 
@@ -11,16 +11,37 @@ const bookingSchema = z.object({
   professional_profile_id: z.string().uuid('Invalid professional ID'),
 })
 
+function getAccessToken(req: NextRequest): string | null {
+  const authHeader = req.headers.get('authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.replace('Bearer ', '').trim()
+    : null
+
+  if (bearerToken) {
+    return bearerToken
+  }
+
+  return req.cookies.get('ec_access_token')?.value ?? null
+}
+
 // ══════════════════════════════════════════════════════
 // POST /api/bookings
 // Creates a new booking request from user to professional
 // ══════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    // const supabase = await createClient()
+    const accessToken = getAccessToken(req)
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'You must be logged in to book a session' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
 
     // ── Step 1: Verify user is authenticated ────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
@@ -85,6 +106,20 @@ export async function POST(req: NextRequest) {
         { error: 'This time slot is no longer available' },
         { status: 409 }
       )
+    }
+
+    // ── Step 4b: Clean up any cancelled bookings for this slot ──
+    // This handles legacy cancelled bookings that weren't deleted
+    // (due to UNIQUE constraint on time_slot_id, we need to remove them first)
+    const { error: cleanupError } = await adminSupabase
+      .from('bookings')
+      .delete()
+      .eq('time_slot_id', time_slot_id)
+      .eq('status', 'cancelled')
+
+    if (cleanupError) {
+      console.error('Failed to cleanup cancelled bookings:', cleanupError)
+      // Continue anyway - the insert will fail if there's still a conflict
     }
 
     // ── Step 5: Verify professional is approved ──────────
@@ -216,7 +251,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     )
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Unexpected error in POST /api/bookings:', err)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -226,16 +261,114 @@ export async function POST(req: NextRequest) {
 }
 
 
+// ══════════════════════════════════════════════════════════════════════
+// API ROUTE DESCRIPTION — /api/bookings
+// ══════════════════════════════════════════════════════════════════════
+//
+// Base URL:  /api/bookings
+// Auth:      Required (user must be logged in via Supabase session)
+//
+// ── POST /api/bookings ──────────────────────────────────────────────
+//
+//   Description:  Creates a new booking request from a user to a professional.
+//                 Validates the time slot is available, belongs to the correct
+//                 professional, and the user is not booking their own profile.
+//                 A DB trigger marks the time slot as booked on insert.
+//
+//   Request body (JSON):
+//     {
+//       "time_slot_id":            "uuid",   // required — the time slot to book
+//       "professional_profile_id": "uuid"    // required — the professional to book with
+//     }
+//
+//   Success response (201):
+//     {
+//       "success":    true,
+//       "booking_id": "uuid",
+//       "message":    "Booking request sent successfully"
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     400 — Invalid body / slot doesn't belong to professional / professional not approved / self-booking
+//     404 — User profile, time slot, or professional not found
+//     409 — Time slot already booked (race condition or already taken)
+//     500 — Internal server error
+//
+//
+// ── GET /api/bookings ───────────────────────────────────────────────
+//
+//   Description:  Returns all bookings for the currently logged-in user,
+//                 ordered by created_at descending. Includes joined data
+//                 for time slots and professional profiles. Also returns
+//                 bookings grouped by status.
+//
+//   Request body: None (no query params needed)
+//
+//   Success response (200):
+//     {
+//       "bookings": [
+//         {
+//           "id":           "uuid",
+//           "status":       "pending" | "approved" | "completed" | "rejected" | "cancelled",
+//           "is_paid":      false,
+//           "payment_link": "https://..." | null,
+//           "zoom_link":    "https://..." | null,
+//           "created_at":   "ISO timestamp",
+//           "updated_at":   "ISO timestamp",
+//           "time_slots": {
+//             "id":          "uuid",
+//             "day_of_week": "Monday",
+//             "start_time":  "09:00:00",
+//             "end_time":    "10:00:00"
+//           },
+//           "professional_profiles": {
+//             "id":             "uuid",
+//             "job_title":      "Software Engineer",
+//             "price_per_hour": 50.00,
+//             "profiles": {
+//               "name":          "John Doe",
+//               "profile_photo": "https://..."
+//             }
+//           }
+//         }
+//       ],
+//       "grouped": {
+//         "pending":   [...],
+//         "approved":  [...],
+//         "completed": [...],
+//         "rejected":  [...],
+//         "cancelled": [...]
+//       },
+//       "total": 5
+//     }
+//
+//   Error responses:
+//     401 — Not logged in
+//     404 — User profile not found
+//     500 — Failed to fetch bookings / Internal server error
+//
+// ══════════════════════════════════════════════════════════════════════
+
+
 // ══════════════════════════════════════════════════════
 // GET /api/bookings
 // Returns all bookings for the currently logged-in user
 // ══════════════════════════════════════════════════════
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // const supabase = await createClient()
+    const accessToken = getAccessToken(req)
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
 
     // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
@@ -314,7 +447,7 @@ export async function GET() {
       { status: 200 }
     )
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Unexpected error in GET /api/bookings:', err)
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -16,9 +16,9 @@ export interface FullUserProfile {
   bio:           string | null
   time_zone:     string
   role:          string
-  // from user_profiles table
-  user_profile_id: string
-  status:          'undergraduate' | 'school_student' | 'job'
+  // from user_profiles table (only present when role === 'user')
+  user_profile_id: string | null
+  status:          'undergraduate' | 'school_student' | 'job' | null | 'admin'
 }
 
 interface UseUserProfileReturn {
@@ -36,7 +36,7 @@ export interface UpdateUserPayload {
   time_zone:     Enums<'time_zone'>
   profile_photo: string
   // user_profiles fields
-  status: 'undergraduate' | 'school_student' | 'job'
+  status: 'undergraduate' | 'school_student' | 'job' | 'admin'
 }
 
 // ── Hook ───────────────────────────────────────────────
@@ -52,43 +52,58 @@ export function useUserProfile(): UseUserProfileReturn {
     setError(null)
 
     try {
-      // Step 1: get auth user
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) throw new Error('Not authenticated')
+      // Read from local auth session to avoid an extra auth API request on load.
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+      if (!user) throw new Error('Not authenticated')
 
-      // Step 2: fetch profiles + email view
+      // Step 2: fetch profile from profiles table (not the view)
+      // profiles_with_email view joins auth.users which may be blocked by
+      // security_invoker, so we read email from the auth user instead.
       const { data: profile, error: profileError } = await supabase
-        .from('profiles_with_email')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
 
       if (profileError) throw new Error(profileError.message)
 
-      // Step 3: fetch user_profiles row
-      const { data: userProfile, error: userProfileError } = await supabase
-        .from('user_profiles')
-        .select('id, status')
-        .eq('profile_id', user.id)
-        .single()
+      // Step 3: fetch user_profiles row (only exists for role = 'user')
+      let userProfileId: string | null = null
+      let userStatus: 'undergraduate' | 'school_student' | 'job' | 'admin' |null = null
 
-      if (userProfileError) throw new Error(userProfileError.message)
+      if (profile.role === 'user') {
+        const { data: userProfile, error: userProfileError } = await supabase
+          .from('user_profiles')
+          .select('id, status')
+          .eq('profile_id', user.id)
+          .single()
+
+        if (userProfileError) throw new Error(userProfileError.message)
+        userProfileId = userProfile.id
+        userStatus = userProfile.status
+      } else if (profile.role === 'admin') {
+        // Admin users don't have user_profiles, set status to 'admin'
+        userStatus = 'admin'
+      }
 
       // Step 4: merge into one flat object
+      // Email comes from auth user (step 1), not from the profiles table
       setData({
         id:              profile.id,
         name:            profile.name,
-        email:           profile.email,
+        email:           user.email ?? '',
         profile_photo:   profile.profile_photo,
         bio:             profile.bio,
         time_zone:       profile.time_zone,
         role:            profile.role,
-        user_profile_id: userProfile.id,
-        status:          userProfile.status,
+        user_profile_id: userProfileId,
+        status:          userStatus,
       })
 
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error')
+      setData(null)
     } finally {
       setLoading(false)
     }
@@ -106,9 +121,11 @@ export function useUserProfile(): UseUserProfileReturn {
       if (fields.time_zone     !== undefined) profileFields.time_zone     = fields.time_zone
       if (fields.profile_photo !== undefined) profileFields.profile_photo = fields.profile_photo
 
-      // Fields that go into user_profiles table
+      // Fields that go into user_profiles table (exclude 'admin' as it's not a valid user_profiles status)
       const userProfileFields: TablesUpdate<'user_profiles'> = {}
-      if (fields.status !== undefined) userProfileFields.status = fields.status
+      if (fields.status !== undefined && fields.status !== 'admin') {
+        userProfileFields.status = fields.status
+      }
 
       // Run both updates in parallel if needed
       const updates: PromiseLike<{ error: { message: string } | null }>[] = []
@@ -119,17 +136,15 @@ export function useUserProfile(): UseUserProfileReturn {
             .from('profiles')
             .update(profileFields)
             .eq('id', data.id)
-            .select()
         )
       }
 
-      if (Object.keys(userProfileFields).length > 0) {
+      if (Object.keys(userProfileFields).length > 0 && data.user_profile_id) {
         updates.push(
           supabase
             .from('user_profiles')
             .update(userProfileFields)
             .eq('id', data.user_profile_id)
-            .select()
         )
       }
 
@@ -137,8 +152,20 @@ export function useUserProfile(): UseUserProfileReturn {
       const failed  = results.find(r => r.error)
       if (failed?.error) throw new Error(failed.error.message)
 
-      // Refresh local state after save
-      await fetchProfile()
+      // Apply updates locally so UI responds immediately even on slower networks.
+      setData((prev) => {
+        if (!prev) return prev
+
+        return {
+          ...prev,
+          ...(fields.name !== undefined ? { name: fields.name } : {}),
+          ...(fields.bio !== undefined ? { bio: fields.bio } : {}),
+          ...(fields.time_zone !== undefined ? { time_zone: fields.time_zone } : {}),
+          ...(fields.profile_photo !== undefined ? { profile_photo: fields.profile_photo } : {}),
+          ...(fields.status !== undefined ? { status: fields.status } : {}),
+        }
+      })
+
       return true
 
     } catch (err: unknown) {
