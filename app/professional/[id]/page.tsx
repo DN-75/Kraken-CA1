@@ -7,7 +7,6 @@ import {
   FaUser,
   FaClock,
   FaCommentDots,
-  FaDollarSign,
   FaLaptopCode,
   FaCalendarAlt,
   FaLinkedin,
@@ -17,6 +16,7 @@ import {
 } from "react-icons/fa";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import BookingSessionPopup from "@/components/BookingSessionPopup";
 
 /* ───────── Types ───────── */
 
@@ -112,6 +112,11 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isBookingPopupOpen, setIsBookingPopupOpen] = useState(false);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
+  const [bookingPopupKey, setBookingPopupKey] = useState(0);
 
   useEffect(() => {
     // Early return if no id, but still ensure loading is false
@@ -197,7 +202,8 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
         if (fetchError) throw fetchError;
         if (!data) throw new Error("Professional not found.");
 
-        setProfessional(data as unknown as Professional);
+        const professionalData = data as unknown as Professional;
+        setProfessional(professionalData);
 
         const availabilityResponse = await fetch(`/api/professionals/${id}/availability`, {
           method: "GET",
@@ -228,6 +234,71 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
       cancelled = true;
     };
   }, [id]);
+
+  const refreshAvailability = async () => {
+    const availabilityResponse = await fetch(`/api/professionals/${id}/availability`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (availabilityResponse.ok) {
+      const availabilityResult = (await availabilityResponse.json()) as {
+        slots?: TimeSlot[];
+      };
+      setAvailabilitySlots(availabilityResult.slots ?? []);
+      setAvailabilityLoaded(true);
+    }
+  };
+
+  const handleBookingSubmit = async (timeSlotId: string) => {
+    if (!professional) return;
+    if (!timeSlotId) {
+      setBookingError("Please select a time slot before confirming your booking.");
+      return;
+    }
+
+    try {
+      setBookingSubmitting(true);
+      setBookingError(null);
+      setBookingSuccess(null);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setBookingError("You must be logged in to book a session.");
+        return;
+      }
+
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          time_slot_id: timeSlotId,
+          professional_profile_id: professional.id,
+        }),
+      });
+
+      const data = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        setBookingError(data.error ?? "Could not create booking. Please try again.");
+        return;
+      }
+
+      setBookingSuccess(data.message ?? "Booking request sent successfully.");
+      await refreshAvailability();
+    } catch (err: unknown) {
+      console.error("Booking error:", err);
+      setBookingError("Something went wrong while creating your booking.");
+    } finally {
+      setBookingSubmitting(false);
+    }
+  };
 
   /* ── Derived Data ── */
   const skills = professional?.professional_skills || [];
@@ -389,7 +460,15 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
           </div>
 
           <div className="flex-shrink-0 self-center md:mt-4">
-            <button className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 px-8 text-white font-semibold text-sm shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 hover:shadow-[0_8px_24px_rgba(16,185,129,0.45)] w-full md:w-auto">
+            <button
+              onClick={() => {
+                setIsBookingPopupOpen(true);
+                setBookingPopupKey((prev) => prev + 1);
+                setBookingError(null);
+                setBookingSuccess(null);
+              }}
+              className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 px-8 text-white font-semibold text-sm shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 hover:shadow-[0_8px_24px_rgba(16,185,129,0.45)] w-full md:w-auto"
+            >
               <FaCalendarAlt /> Book Session
             </button>
           </div>
@@ -515,6 +594,27 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
       </main>
 
 
+
+      <BookingSessionPopup
+        key={bookingPopupKey}
+        isOpen={isBookingPopupOpen}
+        onClose={() => {
+          if (bookingSubmitting) return;
+          setIsBookingPopupOpen(false);
+          setBookingError(null);
+          setBookingSuccess(null);
+        }}
+        onConfirm={handleBookingSubmit}
+        professionalName={profile.name}
+        professionalRole={professional.job_title ?? professional.field}
+        professionalField={professional.field}
+        timeZone={profile.time_zone}
+        pricePerHour={professional.price_per_hour}
+        slots={availableSlots}
+        isSubmitting={bookingSubmitting}
+        errorMessage={bookingError}
+        successMessage={bookingSuccess}
+      />
 
     </div>
   );

@@ -9,6 +9,7 @@ import {
   IoMenuOutline,
   IoCloseOutline,
   IoShieldCheckmarkOutline,
+  IoCalendarOutline,
 } from "react-icons/io5";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabaseClient";
@@ -205,6 +206,16 @@ export default function Navbar() {
                       <IoPersonOutline size={16} className="text-emerald-400" />
                       My Profile
                     </Link>
+                    {profile.role === "user" && (
+                      <Link
+                        href="/user?tab=sessions"
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white hover:bg-emerald-500/10 transition-colors"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        <IoCalendarOutline size={16} className="text-emerald-400" />
+                        My Sessions
+                      </Link>
+                    )}
                     {profile.role === "admin" && (
                       <>
                         <Link
@@ -325,6 +336,15 @@ export default function Navbar() {
                   <IoPersonOutline size={16} className="text-emerald-400" />
                   My Profile
                 </Link>
+                {profile?.role === "user" && (
+                  <Link
+                    href="/user?tab=sessions"
+                    className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm text-white hover:bg-emerald-500/10 transition-colors"
+                  >
+                    <IoCalendarOutline size={16} className="text-emerald-400" />
+                    My Sessions
+                  </Link>
+                )}
                 {profile?.role === "admin" && (
                   <Link
                     href="/admin"

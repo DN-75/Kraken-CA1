@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useSession } from "@/hooks/useSession";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -86,6 +86,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 
 export default function UserProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { patchProfile, isProfessional, loading: sessionLoading } = useSession();
   const { data: userProfile, loading: profileLoading, error: profileError, update } = useUserProfile();
 
@@ -97,7 +98,21 @@ export default function UserProfilePage() {
   }, [sessionLoading, isProfessional, router]);
   const { pending, approved, completed, loading: bookingsLoading, cancelBooking } = useBookings();
 
-  const [activeTab, setActiveTab] = useState<"profile" | "sessions">("profile");
+  // Initialize tab from URL query parameter
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<"profile" | "sessions">(
+    tabParam === "sessions" ? "sessions" : "profile"
+  );
+
+  // Update active tab when URL changes
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "sessions") {
+      setActiveTab("sessions");
+    } else if (tab === "profile" || !tab) {
+      setActiveTab("profile");
+    }
+  }, [searchParams]);
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [photoSaveLoading, setPhotoSaveLoading] = useState(false);
