@@ -4,6 +4,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase as adminSupabase, createSupabaseServerClient } from '@/lib/supabaseServer'
 import { z } from 'zod'
 
+type Nullable<T> = T | null
+
+type TimeSlotShape = {
+  id: string
+  day_of_week: string
+  start_time: string
+  end_time: string
+}
+
+type ProfessionalShape = {
+  id: string
+  job_title: string | null
+  price_per_hour: number | null
+  profiles: {
+    name: string | null
+    profile_photo: string | null
+    bio: string | null
+  } | null
+}
+
+function normalizeSingle<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+  return value ?? null
+}
+
 // ── Validation Schema ───────────────────────────────────
 const updateBookingSchema = z.object({
   action: z.enum(['cancel'], {
@@ -336,6 +363,8 @@ export async function GET(
         created_at,
         updated_at,
         user_profile_id,
+        time_slot_id,
+        professional_profile_id,
         time_slots (
           id,
           day_of_week,
@@ -371,7 +400,68 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ booking }, { status: 200 })
+    const bookingRecord = booking as unknown as Record<string, unknown> & {
+      time_slots?: TimeSlotShape | TimeSlotShape[] | null
+      professional_profiles?: ProfessionalShape | ProfessionalShape[] | null
+      time_slot_id?: string | null
+      professional_profile_id?: string | null
+    }
+
+    const bookingWithFallbacks: Record<string, unknown> & {
+      time_slots: Nullable<TimeSlotShape>
+      professional_profiles: Nullable<ProfessionalShape>
+    } = {
+      ...bookingRecord,
+      time_slots: normalizeSingle(bookingRecord.time_slots),
+      professional_profiles: normalizeSingle(bookingRecord.professional_profiles),
+    }
+
+    if (!bookingWithFallbacks.time_slots && bookingRecord.time_slot_id) {
+      const { data: slotData } = await adminSupabase
+        .from('time_slots')
+        .select('id, day_of_week, start_time, end_time')
+        .eq('id', bookingRecord.time_slot_id)
+        .single()
+
+      bookingWithFallbacks.time_slots = slotData as Nullable<TimeSlotShape>
+    }
+
+    if (!bookingWithFallbacks.professional_profiles && bookingRecord.professional_profile_id) {
+      const { data: proData } = await adminSupabase
+        .from('professional_profiles')
+        .select(`
+          id,
+          job_title,
+          price_per_hour,
+          profiles (
+            name,
+            profile_photo,
+            bio
+          )
+        `)
+        .eq('id', bookingRecord.professional_profile_id)
+        .single()
+
+      if (proData) {
+        const profileRef = (proData as { profiles?: ProfessionalShape['profiles'] | ProfessionalShape['profiles'][] | null }).profiles
+        const normalizedProfile = normalizeSingle(profileRef)
+
+        bookingWithFallbacks.professional_profiles = {
+          ...(proData as Omit<ProfessionalShape, 'profiles'>),
+          profiles: normalizedProfile,
+        }
+      }
+    }
+
+    if (bookingWithFallbacks.professional_profiles) {
+      const profileRef = bookingWithFallbacks.professional_profiles.profiles
+      bookingWithFallbacks.professional_profiles = {
+        ...bookingWithFallbacks.professional_profiles,
+        profiles: normalizeSingle(profileRef),
+      }
+    }
+
+    return NextResponse.json({ booking: bookingWithFallbacks }, { status: 200 })
 
   } catch (err: unknown) {
     console.error('Unexpected error in GET /api/bookings/[id]:', err)

@@ -8,6 +8,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useBookings, type BookingWithDetails } from "@/hooks/useBooking";
 import { uploadProfilePhoto } from "@/utils/uploadProfilePhoto";
 import ProfilePhotoModal from "./ProfilePhotoModal";
+import SessionPopup from "@/components/SessionPopup";
 import type { Enums } from "@/types/database.types";
 import {
   IoPersonOutline,
@@ -60,6 +61,28 @@ const getStatusLabel = (value: 'undergraduate' | 'school_student' | 'job' | stri
   if (value === "school_student") return "Post-Graduate Student";
   if (value === "other") return "Other";
   return "Undergraduate";
+};
+
+const MOCK_ZOOM_LINK = "https://zoom.us/j/12345678901?pwd=mockSessionLink";
+
+const formatTo12Hour = (time?: string): string => {
+  if (!time) return "--.--";
+
+  const [hourPart = "0", minutePart = "00"] = time.split(":");
+  const hour = Number.parseInt(hourPart, 10);
+  const minute = Number.parseInt(minutePart, 10);
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return "--.--";
+
+  const period = hour >= 12 ? "pm" : "am";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+
+  return `${hour12}.${String(minute).padStart(2, "0")} ${period}`;
+};
+
+const formatDayLabel = (day?: string): string => {
+  if (!day) return "Day not set";
+  return `${day.charAt(0).toUpperCase()}${day.slice(1).toLowerCase()}`;
 };
 
 type FormDataState = {
@@ -117,6 +140,8 @@ export default function UserProfilePage() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [photoSaveLoading, setPhotoSaveLoading] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [selectedSessionBooking, setSelectedSessionBooking] = useState<BookingWithDetails | null>(null);
+  const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -228,6 +253,43 @@ export default function UserProfilePage() {
     }
   };
 
+  const handleViewSession = async (bookingId: string) => {
+    setViewingSessionId(bookingId);
+    setSaveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("You must be logged in");
+      }
+
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        booking?: BookingWithDetails;
+      };
+
+      if (!response.ok || !result.booking) {
+        throw new Error(result.error || "Failed to load session details");
+      }
+
+      setSelectedSessionBooking(result.booking);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to load session details");
+    } finally {
+      setViewingSessionId(null);
+    }
+  };
+
   if (profileLoading || bookingsLoading || (!sessionLoading && isProfessional)) {
     return (
       <div
@@ -282,6 +344,19 @@ export default function UserProfilePage() {
           saving={photoSaveLoading}
           onClose={() => setIsPhotoModalOpen(false)}
           onSave={handleSavePhoto}
+        />
+      )}
+
+      {selectedSessionBooking && (
+        <SessionPopup
+          professionalName={selectedSessionBooking.professional_profiles?.profiles?.name || "Professional"}
+          professionalRole={selectedSessionBooking.professional_profiles?.job_title || "Expert"}
+          profilePhotoUrl={selectedSessionBooking.professional_profiles?.profiles?.profile_photo || null}
+          sessionDate={formatDayLabel(selectedSessionBooking.time_slots?.day_of_week)}
+          sessionTime={`${formatTo12Hour(selectedSessionBooking.time_slots?.start_time)} to ${formatTo12Hour(selectedSessionBooking.time_slots?.end_time)}`}
+          sessionTimeZone={userProfile.time_zone || "Asia/Colombo"}
+          zoomLink={selectedSessionBooking.zoom_link || MOCK_ZOOM_LINK}
+          onClose={() => setSelectedSessionBooking(null)}
         />
       )}
 
@@ -646,7 +721,13 @@ export default function UserProfilePage() {
                 </h2>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {approved.map((booking) => (
-                    <SessionCard key={booking.id} booking={booking} status="approved" />
+                    <SessionCard
+                      key={booking.id}
+                      booking={booking}
+                      status="approved"
+                      loadingSession={viewingSessionId === booking.id}
+                      onViewSession={(id) => void handleViewSession(id)}
+                    />
                   ))}
                 </div>
               </div>
@@ -693,9 +774,11 @@ interface SessionCardProps {
   booking: BookingWithDetails;
   status: "pending" | "approved" | "completed";
   onCancel?: (bookingId: string) => void;
+  onViewSession?: (bookingId: string) => void;
+  loadingSession?: boolean;
 }
 
-function SessionCard({ booking, status, onCancel }: SessionCardProps) {
+function SessionCard({ booking, status, onCancel, onViewSession, loadingSession = false }: SessionCardProps) {
   const { time_slots, professional_profiles } = booking;
   const professional = professional_profiles?.profiles;
   const jobTitle = professional_profiles?.job_title;
@@ -810,25 +893,37 @@ function SessionCard({ booking, status, onCancel }: SessionCardProps) {
         {status === "approved" && (
           <>
             <div className="p-[1px] rounded-full flex-1" style={{ background: "rgba(250, 204, 21, 0.2)" }}>
-              <button
+                <button
+                onClick={() => {
+                  window.location.href = `/payment/${booking.id}`;
+                }}
+                disabled={booking.is_paid}
                 className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
                 style={{
-                  color: "#FBBF24",
+                  color: booking.is_paid ? "#A3A3A3" : "#FBBF24",
                   background: "transparent",
+                  opacity: booking.is_paid ? 0.7 : 1,
                 }}
               >
-                Pay Now
+                {booking.is_paid ? "Payment Completed" : "Pay Now"}
               </button>
             </div>
             <div className="p-[1px] rounded-full flex-1" style={{ background: "rgba(16, 185, 129, 0.2)" }}>
               <button
+                onClick={() => {
+                  if (booking.is_paid) {
+                    onViewSession?.(booking.id);
+                  }
+                }}
+                disabled={!booking.is_paid || loadingSession}
                 className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
                 style={{
-                  color: "#10B981",
+                  color: booking.is_paid ? "#10B981" : "#A3A3A3",
                   background: "transparent",
+                  opacity: booking.is_paid && !loadingSession ? 1 : 0.7,
                 }}
               >
-                Join Session
+                {booking.is_paid ? (loadingSession ? "Opening..." : "View Session") : "Pay to View Session"}
               </button>
             </div>
           </>

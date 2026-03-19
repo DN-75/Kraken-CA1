@@ -4,29 +4,36 @@ import { useState } from "react";
 import { MdContentCopy, MdCheck } from "react-icons/md";
 import { FiArrowRight } from "react-icons/fi";
 
+const DEFAULT_MOCK_ZOOM_LINK = "https://zoom.us/j/12345678901?pwd=mockSessionLink";
+
 interface SessionPopupProps {
   professionalName: string;
   professionalRole: string;
+  profilePhotoUrl?: string | null;
   sessionDate: string;
   sessionTime: string;
   sessionTimeZone: string;
   zoomLink: string;
   onJoinClick?: () => void;
+  onClose?: () => void;
 }
 
 export default function SessionPopup({
   professionalName,
   professionalRole,
+  profilePhotoUrl,
   sessionDate,
   sessionTime,
   sessionTimeZone,
   zoomLink,
   onJoinClick,
+  onClose,
 }: SessionPopupProps) {
   const [copied, setCopied] = useState(false);
+  const effectiveZoomLink = zoomLink?.trim() ? zoomLink : DEFAULT_MOCK_ZOOM_LINK;
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(zoomLink);
+    navigator.clipboard.writeText(effectiveZoomLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -35,7 +42,7 @@ export default function SessionPopup({
     if (onJoinClick) {
       onJoinClick();
     } else {
-      window.open(zoomLink, "_blank");
+      window.open(effectiveZoomLink, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -52,9 +59,17 @@ export default function SessionPopup({
         <div className="mb-6 flex items-start gap-4">
           {/* Avatar Circle */}
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600">
-            <span className="text-lg font-bold text-white">
-              {professionalName.charAt(0).toUpperCase()}
-            </span>
+            {profilePhotoUrl ? (
+              <img
+                src={profilePhotoUrl}
+                alt={professionalName}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-lg font-bold text-white">
+                {professionalName.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
 
           {/* Professional Details */}
@@ -85,7 +100,7 @@ export default function SessionPopup({
             <input
               type="text"
               readOnly
-              value={zoomLink}
+              value={effectiveZoomLink}
               className="flex-1 bg-transparent text-xs text-white/80 outline-none truncate"
             />
             <button
@@ -113,6 +128,7 @@ export default function SessionPopup({
 
         {/* Optional: Cancel/Close - if you want a close button */}
         <button
+          onClick={onClose}
           className="mt-3 w-full rounded-full border border-white/10 px-6 py-2 font-medium text-white/70 transition-all hover:bg-white/5 hover:text-white"
         >
           Cancel
