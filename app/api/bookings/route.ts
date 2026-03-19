@@ -1,7 +1,7 @@
 // app/api/bookings/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseServer'
+import { supabase as adminSupabase, createSupabaseServerClient } from '@/lib/supabaseServer'
 // import { sendBookingRequestEmail } from '@/lib/email/sendEmail'
 import { z } from 'zod'
 
@@ -11,16 +11,37 @@ const bookingSchema = z.object({
   professional_profile_id: z.string().uuid('Invalid professional ID'),
 })
 
+function getAccessToken(req: NextRequest): string | null {
+  const authHeader = req.headers.get('authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.replace('Bearer ', '').trim()
+    : null
+
+  if (bearerToken) {
+    return bearerToken
+  }
+
+  return req.cookies.get('ec_access_token')?.value ?? null
+}
+
 // ══════════════════════════════════════════════════════
 // POST /api/bookings
 // Creates a new booking request from user to professional
 // ══════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    // const supabase = await createClient()
+    const accessToken = getAccessToken(req)
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'You must be logged in to book a session' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
 
     // ── Step 1: Verify user is authenticated ────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
@@ -85,6 +106,20 @@ export async function POST(req: NextRequest) {
         { error: 'This time slot is no longer available' },
         { status: 409 }
       )
+    }
+
+    // ── Step 4b: Clean up any cancelled bookings for this slot ──
+    // This handles legacy cancelled bookings that weren't deleted
+    // (due to UNIQUE constraint on time_slot_id, we need to remove them first)
+    const { error: cleanupError } = await adminSupabase
+      .from('bookings')
+      .delete()
+      .eq('time_slot_id', time_slot_id)
+      .eq('status', 'cancelled')
+
+    if (cleanupError) {
+      console.error('Failed to cleanup cancelled bookings:', cleanupError)
+      // Continue anyway - the insert will fail if there's still a conflict
     }
 
     // ── Step 5: Verify professional is approved ──────────
@@ -320,12 +355,20 @@ export async function POST(req: NextRequest) {
 // GET /api/bookings
 // Returns all bookings for the currently logged-in user
 // ══════════════════════════════════════════════════════
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // const supabase = await createClient()
+    const accessToken = getAccessToken(req)
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
 
     // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
