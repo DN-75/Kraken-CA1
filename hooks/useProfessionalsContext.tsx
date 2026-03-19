@@ -8,7 +8,6 @@ import {
   useContext,
   useEffect,
   useState,
-  useRef,
   useCallback,
   type ReactNode,
 } from 'react'
@@ -89,30 +88,11 @@ const ProfessionalsContext = createContext<ProfessionalsContextValue | null>(nul
 
 // ── Provider ───────────────────────────────────────────
 export function ProfessionalsProvider({ children }: { children: ReactNode }) {
-  const [professionals, setProfessionals] = useState<ProfessionalWithDetails[]>(() => {
-    // Initialize from cache if available
-    if (typeof window !== 'undefined') {
-      const cached = getCachedProfessionals()
-      if (cached) return cached.professionals
-    }
-    return []
-  })
-  const [loading, setLoading] = useState(() => {
-    // Don't show loading if we have cached data
-    if (typeof window !== 'undefined') {
-      const cached = getCachedProfessionals()
-      if (cached) return false
-    }
-    return true
-  })
+  // Keep first server/client render identical; cache is applied after mount.
+  const [professionals, setProfessionals] = useState<ProfessionalWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [lastFetched, setLastFetched] = useState<number | null>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = getCachedProfessionals()
-      if (cached) return cached.timestamp
-    }
-    return null
-  })
+  const [lastFetched, setLastFetched] = useState<number | null>(null)
 
   const fetchProfessionals = useCallback(async (bypassCache = false) => {
     // Check cache first (unless bypassing)
@@ -173,7 +153,7 @@ export function ProfessionalsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Fetch on mount
+  // Hydrate from cache/fetch on mount.
   useEffect(() => {
     fetchProfessionals()
   }, [fetchProfessionals])
