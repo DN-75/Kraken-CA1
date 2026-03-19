@@ -92,7 +92,10 @@ export default function Home() {
     professionals.slice(0, 3).map(pro => ({
       id: pro.id,
       name: pro.profiles?.name ?? 'Unknown',
-      profile_photo: pro.profiles?.profile_photo ?? null,
+      profile_photo: (() => {
+        const photo = pro.profiles?.profile_photo
+        return typeof photo === "string" && photo.trim() ? photo : null
+      })(),
       job_title: pro.job_title,
       job: pro.job,
       price_per_hour: pro.price_per_hour,
