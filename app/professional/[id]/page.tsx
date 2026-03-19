@@ -108,18 +108,29 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
   const { id } = use(params);
 
   const [professional, setProfessional] = useState<Professional | null>(null);
+  const [availabilitySlots, setAvailabilitySlots] = useState<TimeSlot[]>([]);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    // Prevent double fetching and ensure id is available
-    if (!id || hasFetched) return;
+    // Early return if no id, but still ensure loading is false
+    if (!id) {
+      setLoading(false);
+      setError("No professional ID provided");
+      return;
+    }
+
+    let cancelled = false;
 
     const fetchProfessional = async () => {
       try {
+        if (cancelled) return;
         setLoading(true);
         setError(null);
+        setProfessional(null);
+        setAvailabilitySlots([]);
+        setAvailabilityLoaded(false);
 
         const selectQuery = `
           id,
@@ -181,26 +192,46 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
           fetchError = result.error;
         }
 
+        if (cancelled) return;
+
         if (fetchError) throw fetchError;
         if (!data) throw new Error("Professional not found.");
 
         setProfessional(data as unknown as Professional);
-        setHasFetched(true);
-      } catch (err: any) {
+
+        const availabilityResponse = await fetch(`/api/professionals/${id}/availability`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!cancelled && availabilityResponse.ok) {
+          const availabilityResult = (await availabilityResponse.json()) as {
+            slots?: TimeSlot[];
+          };
+          setAvailabilitySlots(availabilityResult.slots ?? []);
+          setAvailabilityLoaded(true);
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
         console.error("Error fetching professional:", err);
-        setError(err.message || "Failed to load profile.");
-        setHasFetched(true);
+        setError(err instanceof Error ? err.message : "Failed to load profile.");
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProfessional();
-  }, [id, hasFetched]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   /* ── Derived Data ── */
   const skills = professional?.professional_skills || [];
-  const allTimeSlots = professional?.time_slots || [];
+  const allTimeSlots = availabilityLoaded ? availabilitySlots : (professional?.time_slots || []);
   const reviews = professional?.reviews || [];
 
   const avgRating =
@@ -415,7 +446,7 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
                           key={slot.id}
                           className="rounded-lg border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] shadow-sm"
                         >
-                          {formatTime(slot.start_time)}
+                          {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                         </span>
                       ))}
                     </div>

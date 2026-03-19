@@ -1,7 +1,7 @@
 // app/api/professional/time-slots/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseServer'
+import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { z } from 'zod'
 
 // ── Validation Schema ───────────────────────────────────
@@ -34,12 +34,20 @@ const timeSlotSchema = z.object({
 // GET /api/professional/time-slots
 // Returns all time slots for the logged-in professional
 // ══════════════════════════════════════════════════════
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // const supabase = await createClient()
+    const accessToken = req.headers.get('authorization')?.replace('Bearer ', '')
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'You must be logged in' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
 
     // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
@@ -135,10 +143,18 @@ export async function GET() {
 // ══════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    // const supabase = await createClient()
+    const accessToken = req.headers.get('authorization')?.replace('Bearer ', '')
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'You must be logged in' },
+        { status: 401 }
+      )
+    }
+
+    const supabase = createSupabaseServerClient()
 
     // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
 
     if (authError || !user) {
       return NextResponse.json(
