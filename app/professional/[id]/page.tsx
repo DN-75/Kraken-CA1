@@ -5,6 +5,8 @@ import ProfessionalProfileClient, {
   type TimeSlot,
 } from "./ProfessionalProfileClient";
 
+export const revalidate = 60;
+
 const SELECT_QUERY = `
   id,
   job_title,
@@ -48,22 +50,12 @@ const SELECT_QUERY = `
 
 async function fetchProfessional(id: string): Promise<{ data: Professional | null; error: string | null }> {
   try {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from("professional_profiles")
       .select(SELECT_QUERY)
-      .eq("id", id)
+      .eq("status", "approved")
+      .or(`id.eq.${id},profile_id.eq.${id}`)
       .maybeSingle();
-
-    if (!data && !error) {
-      const fallback = await supabase
-        .from("professional_profiles")
-        .select(SELECT_QUERY)
-        .eq("profile_id", id)
-        .maybeSingle();
-
-      data = fallback.data;
-      error = fallback.error;
-    }
 
     if (error) {
       return { data: null, error: error.message };
@@ -82,35 +74,12 @@ async function fetchProfessional(id: string): Promise<{ data: Professional | nul
   }
 }
 
-async function fetchAvailableSlots(id: string): Promise<TimeSlot[]> {
+async function fetchAvailableSlots(professionalProfileId: string): Promise<TimeSlot[]> {
   try {
-    let { data: professional, error } = await supabase
-      .from("professional_profiles")
-      .select("id")
-      .eq("id", id)
-      .eq("status", "approved")
-      .maybeSingle();
-
-    if (!professional && !error) {
-      const fallback = await supabase
-        .from("professional_profiles")
-        .select("id")
-        .eq("profile_id", id)
-        .eq("status", "approved")
-        .maybeSingle();
-
-      professional = fallback.data;
-      error = fallback.error;
-    }
-
-    if (error || !professional) {
-      return [];
-    }
-
     const { data: slots, error: slotsError } = await supabase
       .from("time_slots")
       .select("id, day_of_week, start_time, end_time, is_booked")
-      .eq("professional_profile_id", professional.id)
+      .eq("professional_profile_id", professionalProfileId)
       .eq("is_booked", false)
       .order("day_of_week", { ascending: true })
       .order("start_time", { ascending: true });
@@ -129,45 +98,36 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+function ProfilePageState({ message }: { message: string }) {
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-center gap-4"
+      style={{
+        background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
+      }}
+    >
+      <p className="text-red-400 text-xl drop-shadow-md">{message}</p>
+      <Link href="/" className="text-white hover:text-gray-200 transition-colors drop-shadow-md">
+        &larr; Back to Home
+      </Link>
+    </div>
+  );
+}
+
 export default async function ProfessionalProfilePage({ params }: PageProps) {
   const { id } = await params;
 
   if (!id) {
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center gap-4"
-        style={{
-          background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
-        }}
-      >
-        <p className="text-red-400 text-xl drop-shadow-md">No professional ID provided</p>
-        <Link href="/" className="text-white hover:text-gray-200 transition-colors drop-shadow-md">
-          &larr; Back to Home
-        </Link>
-      </div>
-    );
+    return <ProfilePageState message="No professional ID provided" />;
   }
 
-  const [{ data: professional, error }, initialAvailableSlots] = await Promise.all([
-    fetchProfessional(id),
-    fetchAvailableSlots(id),
-  ]);
+  const { data: professional, error } = await fetchProfessional(id);
 
   if (error || !professional) {
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center gap-4"
-        style={{
-          background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
-        }}
-      >
-        <p className="text-red-400 text-xl drop-shadow-md">{error ?? "Profile not found."}</p>
-        <Link href="/" className="text-white hover:text-gray-200 transition-colors drop-shadow-md">
-          &larr; Back to Home
-        </Link>
-      </div>
-    );
+    return <ProfilePageState message={error ?? "Profile not found."} />;
   }
+
+  const initialAvailableSlots = await fetchAvailableSlots(professional.id);
 
   return (
     <ProfessionalProfileClient

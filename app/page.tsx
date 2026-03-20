@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import {
   IoShieldCheckmarkOutline,
   IoCardOutline,
@@ -14,6 +15,8 @@ import { supabase } from "@/lib/supabaseServer";
 import type { ProfessionalCardData } from "@/hooks/useProProfiles";
 import ProfessionalCard from "@/components/ProfessionalCard";
 import HeroSearch from "@/components/home/HeroSearch";
+
+export const revalidate = 3600;
 
 /* ── Data ─────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -79,65 +82,69 @@ const CONTACT_ITEMS = [
 ];
 
 /* ── Page ─────────────────────────────────────────────── */
-async function getTopProfessionals(): Promise<{ topProfessionals: ProfessionalCardData[]; error: string | null }> {
-  try {
-    const { data: professionals, error } = await supabase
-      .from("professional_profiles")
-      .select(
-        `
-          id,
-          job_title,
-          job,
-          price_per_hour,
-          profiles ( name, profile_photo ),
-          reviews ( rating ),
-          bookings ( id )
-        `,
-      )
-      .eq("status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(3);
+const getTopProfessionals = unstable_cache(
+  async (): Promise<{ topProfessionals: ProfessionalCardData[]; error: string | null }> => {
+    try {
+      const { data: professionals, error } = await supabase
+        .from("professional_profiles")
+        .select(
+          `
+            id,
+            job_title,
+            job,
+            price_per_hour,
+            profiles ( name, profile_photo ),
+            reviews ( rating ),
+            bookings ( id )
+          `,
+        )
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(3);
 
-    if (error) {
-      return { topProfessionals: [], error: error.message };
-    }
+      if (error) {
+        return { topProfessionals: [], error: error.message };
+      }
 
-    const topProfessionals: ProfessionalCardData[] = (professionals ?? []).map((pro) => {
-      const rawProfile = pro.profiles as unknown as
-        | { name: string; profile_photo: string | null }
-        | { name: string; profile_photo: string | null }[]
-        | null;
-      const profile = Array.isArray(rawProfile) ? (rawProfile[0] ?? null) : rawProfile;
-      const reviews = (pro.reviews ?? []) as { rating: number }[];
-      const bookings = (pro.bookings ?? []) as { id: string }[];
-      const averageRating =
-        reviews.length > 0
-          ? Math.round((reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length) * 10) / 10
-          : null;
+      const topProfessionals: ProfessionalCardData[] = (professionals ?? []).map((pro) => {
+        const rawProfile = pro.profiles as unknown as
+          | { name: string; profile_photo: string | null }
+          | { name: string; profile_photo: string | null }[]
+          | null;
+        const profile = Array.isArray(rawProfile) ? (rawProfile[0] ?? null) : rawProfile;
+        const reviews = (pro.reviews ?? []) as { rating: number }[];
+        const bookings = (pro.bookings ?? []) as { id: string }[];
+        const averageRating =
+          reviews.length > 0
+            ? Math.round((reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length) * 10) / 10
+            : null;
 
+        return {
+          id: pro.id,
+          name: profile?.name ?? "Unknown",
+          profile_photo:
+            typeof profile?.profile_photo === "string" && profile.profile_photo.trim()
+              ? profile.profile_photo
+              : null,
+          job_title: pro.job_title,
+          job: pro.job,
+          price_per_hour: pro.price_per_hour,
+          avg_rating: averageRating,
+          session_count: bookings.length,
+        };
+      });
+
+      return { topProfessionals, error: null };
+    } catch (err) {
       return {
-        id: pro.id,
-        name: profile?.name ?? "Unknown",
-        profile_photo:
-          typeof profile?.profile_photo === "string" && profile.profile_photo.trim()
-            ? profile.profile_photo
-            : null,
-        job_title: pro.job_title,
-        job: pro.job,
-        price_per_hour: pro.price_per_hour,
-        avg_rating: averageRating,
-        session_count: bookings.length,
+        topProfessionals: [],
+        error: err instanceof Error ? err.message : "Failed to load professionals",
       };
-    });
-
-    return { topProfessionals, error: null };
-  } catch (err) {
-    return {
-      topProfessionals: [],
-      error: err instanceof Error ? err.message : "Failed to load professionals",
-    };
-  }
-}
+    }
+  },
+  ["home-top-professionals"],
+  { revalidate: 3600 },
+);
 
 export default async function Home() {
   const { topProfessionals, error } = await getTopProfessionals();
