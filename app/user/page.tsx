@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useSession } from "@/hooks/useSession";
@@ -424,9 +425,11 @@ export default function UserProfilePage() {
             <div className="flex items-start gap-6 mb-8 pb-8 border-b border-emerald-500/10">
               <div className="relative">
                 {userProfile.profile_photo ? (
-                  <img
+                  <Image
                     src={userProfile.profile_photo}
                     alt={userProfile.name}
+                    width={96}
+                    height={96}
                     className="w-24 h-24 rounded-full object-cover border-2 border-emerald-500/30"
                   />
                 ) : (
@@ -831,9 +834,11 @@ function SessionCard({ booking, status, onCancel, onViewSession, loadingSession 
           style={{ background: "rgba(16, 185, 129, 0.1)" }}
         >
           {professional?.profile_photo ? (
-            <img
+            <Image
               src={professional.profile_photo}
               alt={professional.name}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full object-cover"
             />
           ) : (

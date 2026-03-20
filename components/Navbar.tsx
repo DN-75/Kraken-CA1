@@ -80,21 +80,24 @@ export default function Navbar() {
   const handleLogout = async () => {
     setDropdownOpen(false);
     setMenuOpen(false);
+
+    // Clear app-level caches immediately for responsive UI state.
+    sessionStorage.removeItem("ec_session_profile");
+    sessionStorage.removeItem("ec_professionals_cache");
+    document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
+
     try {
-      // Clear all cached session data first
-      sessionStorage.removeItem("ec_session_profile");
-      sessionStorage.removeItem("ec_professionals_cache");
-      // Clear the access token cookie
-      document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
-      // Sign out from Supabase
-      await supabase.auth.signOut();
-      // Navigate and refresh
-      router.push("/");
-      router.refresh();
+      const { error } = await supabase.auth.signOut({ scope: "global" });
+      if (error) throw error;
     } catch (error) {
       console.error("Logout failed:", error);
-      // Force navigation even if signOut fails
-      router.push("/");
+    } finally {
+      // Clear persisted Supabase auth entries to avoid stale sessions.
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("sb-"))
+        .forEach((key) => localStorage.removeItem(key));
+
+      router.replace("/login");
       router.refresh();
     }
   };
