@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import NextImage from "next/image";
 import { IoCloseOutline, IoCloudUploadOutline } from "react-icons/io5";
 
 type ProfilePhotoModalProps = {
@@ -256,9 +257,11 @@ export default function ProfilePhotoModal({
             <div className="text-sm font-semibold text-emerald-200">Preview</div>
             <div className="flex items-center justify-center rounded-2xl border border-emerald-500/20 bg-black/20 p-5">
               {previewUrl ? (
-                <img
+                <NextImage
                   src={previewUrl}
                   alt="Profile photo preview"
+                  width={192}
+                  height={192}
                   className="h-48 w-48 rounded-full border-2 border-emerald-500/35 object-cover"
                 />
               ) : (

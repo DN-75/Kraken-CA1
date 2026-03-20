@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { IoPersonOutline, IoTimeOutline, IoCheckmarkCircle, IoWarningOutline } from "react-icons/io5";
 import { supabase } from "@/lib/supabaseClient";
@@ -182,7 +183,13 @@ export default function PaymentPage() {
         <div className="flex items-center gap-4 pb-5 mb-5 border-b border-emerald-500/15">
           <div className="w-16 h-16 rounded-full flex items-center justify-center border-2 border-emerald-500/30" style={{ background: "rgba(16,185,129,0.1)" }}>
             {professional?.profile_photo ? (
-              <img src={professional.profile_photo} alt={professional.name || "Professional"} className="w-16 h-16 rounded-full object-cover" />
+              <Image
+                src={professional.profile_photo}
+                alt={professional.name || "Professional"}
+                width={64}
+                height={64}
+                className="w-16 h-16 rounded-full object-cover"
+              />
             ) : (
               <IoPersonOutline size={24} className="text-emerald-400" />
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IoPersonOutline,
@@ -1027,9 +1028,11 @@ export default function ProfessionalDashboardClient() {
             <div className="flex items-start gap-6 mb-8 pb-8 border-b border-emerald-500/10">
               <div className="relative">
                 {proProfile.profile_photo ? (
-                  <img
+                  <Image
                     src={proProfile.profile_photo}
                     alt={proProfile.name}
+                    width={96}
+                    height={96}
                     className="w-24 h-24 rounded-full object-cover border-2 border-emerald-500/30"
                   />
                 ) : (
@@ -1775,7 +1778,13 @@ function ProfessionalBookingCard({
           style={{ background: "rgba(16, 185, 129, 0.1)" }}
         >
           {user?.profile_photo ? (
-            <img src={user.profile_photo} alt={user.name || "User"} className="w-16 h-16 rounded-full object-cover" />
+            <Image
+              src={user.profile_photo}
+              alt={user.name || "User"}
+              width={64}
+              height={64}
+              className="w-16 h-16 rounded-full object-cover"
+            />
           ) : (
             <IoPersonOutline size={24} className="text-emerald-400" />
           )}
@@ -1943,7 +1952,13 @@ function RequestUserProfileModal({
             style={{ background: "rgba(16, 185, 129, 0.1)" }}
           >
             {user?.profile_photo ? (
-              <img src={user.profile_photo} alt={user.name || "User"} className="h-16 w-16 rounded-full object-cover" />
+              <Image
+                src={user.profile_photo}
+                alt={user.name || "User"}
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded-full object-cover"
+              />
             ) : (
               <IoPersonOutline size={24} className="text-emerald-400" />
             )}

@@ -553,9 +553,11 @@ export default function ProfessionalProfilePage({ params }: PageProps) {
                   >
                     <div className="flex items-center gap-3">
                       {review.user_profiles?.profiles?.profile_photo ? (
-                        <img
+                        <Image
                           src={review.user_profiles.profiles.profile_photo}
                           alt={reviewerName}
+                          width={40}
+                          height={40}
                           className="h-10 w-10 rounded-full object-cover border border-emerald-500/15"
                         />
                       ) : (
