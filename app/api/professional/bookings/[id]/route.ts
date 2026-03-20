@@ -1,7 +1,7 @@
 // app/api/professional/bookings/[id]/route.ts
 
 import {NextRequest, NextResponse} from 'next/server'
-import {supabase} from '@/lib/supabaseServer'
+import {createSupabaseServerClient} from '@/lib/supabaseServer'
 import {sendApprovalEmail, sendRejectionEmail} from '@/lib/email/sendEmail'
 import {z} from 'zod'
 
@@ -14,6 +14,19 @@ const updateSchema = z.object({
     payment_link: z.string().url().optional(),  // optional — override generated one
 })
 
+function getAccessToken(req: NextRequest): string | null {
+    const authHeader = req.headers.get('authorization')
+    const bearerToken = authHeader?.startsWith('Bearer ')
+        ? authHeader.replace('Bearer ', '').trim()
+        : null
+
+    if (bearerToken) {
+        return bearerToken
+    }
+
+    return req.cookies.get('ec_access_token')?.value ?? null
+}
+
 // ══════════════════════════════════════════════════════
 // PATCH /api/professional/bookings/[id]
 // Professional approves or rejects a booking request
@@ -23,11 +36,19 @@ export async function PATCH(
     {params}: { params: Promise<{ id: string }> }
 ) {
     try {
-        // const supabase = await createClient()
+        const accessToken = getAccessToken(req)
+        if (!accessToken) {
+            return NextResponse.json(
+                {error: 'You must be logged in'},
+                {status: 401}
+            )
+        }
+
+        const supabase = createSupabaseServerClient()
         const { id: bookingId } = await params
 
         // ── Step 1: Verify authentication ───────────────────
-        const {data: {user}, error: authError} = await supabase.auth.getUser()
+        const {data: {user}, error: authError} = await supabase.auth.getUser(accessToken)
 
         if (authError || !user) {
             return NextResponse.json(
@@ -407,15 +428,23 @@ export async function PATCH(
 // Get a single booking detail — for professional's view
 // ══════════════════════════════════════════════════════
 export async function GET(
-    _req: NextRequest,
+    req: NextRequest,
     {params}: { params: Promise<{ id: string }> }
 ) {
     try {
-        // const supabase = await createClient()
+        const accessToken = getAccessToken(req)
+        if (!accessToken) {
+            return NextResponse.json(
+                {error: 'Unauthorized'},
+                {status: 401}
+            )
+        }
+
+        const supabase = createSupabaseServerClient()
         const { id: bookingId } = await params
 
         // ── Step 1: Verify authentication ───────────────────
-        const {data: {user}, error: authError} = await supabase.auth.getUser()
+        const {data: {user}, error: authError} = await supabase.auth.getUser(accessToken)
 
         if (authError || !user) {
             return NextResponse.json(

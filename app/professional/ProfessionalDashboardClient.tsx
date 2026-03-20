@@ -23,6 +23,7 @@ import { useSession } from "@/hooks/useSession";
 import { useProProfile, type UpdateProPayload } from "@/hooks/useProProfiles";
 import { uploadProfilePhoto } from "@/utils/uploadProfilePhoto";
 import ProfilePhotoModal from "@/app/user/ProfilePhotoModal";
+import SessionPopup from "@/components/SessionPopup";
 import type { Enums, Tables } from "@/types/database.types";
 
 const TIMEZONES: Enums<"time_zone">[] = [
@@ -134,6 +135,34 @@ type BookingForProfessional = Pick<
     | null;
 };
 
+type RawBookingForProfessional = Pick<
+  Tables<"bookings">,
+  "id" | "status" | "is_paid" | "created_at" | "payment_link" | "zoom_link"
+> & {
+  time_slots:
+    | Pick<Tables<"time_slots">, "day_of_week" | "start_time" | "end_time">
+    | Pick<Tables<"time_slots">, "day_of_week" | "start_time" | "end_time">[]
+    | null;
+  user_profiles:
+    | {
+        id: string;
+        status: Enums<"user_status">;
+        profiles:
+          | Pick<Tables<"profiles">, "name" | "profile_photo" | "bio" | "time_zone">
+          | Pick<Tables<"profiles">, "name" | "profile_photo" | "bio" | "time_zone">[]
+          | null;
+      }
+    | {
+        id: string;
+        status: Enums<"user_status">;
+        profiles:
+          | Pick<Tables<"profiles">, "name" | "profile_photo" | "bio" | "time_zone">
+          | Pick<Tables<"profiles">, "name" | "profile_photo" | "bio" | "time_zone">[]
+          | null;
+      }[]
+    | null;
+};
+
 async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -204,6 +233,41 @@ function normalizeTimeLabel(time: string): string {
   return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
 }
 
+const MOCK_ZOOM_LINK = "https://zoom.us/j/12345678901?pwd=mockSessionLink";
+
+function normalizeSingle<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function formatTo12Hour(time?: string): string {
+  if (!time) return "--.--";
+  const [hourPart = "0", minutePart = "00"] = time.split(":");
+  const hour = Number.parseInt(hourPart, 10);
+  const minute = Number.parseInt(minutePart, 10);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return "--.--";
+  const period = hour >= 12 ? "pm" : "am";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}.${String(minute).padStart(2, "0")} ${period}`;
+}
+
+function normalizeBookingForProfessional(raw: RawBookingForProfessional): BookingForProfessional {
+  const normalizedTimeSlot = normalizeSingle(raw.time_slots);
+  const normalizedUserProfile = normalizeSingle(raw.user_profiles);
+  const normalizedProfile = normalizeSingle(normalizedUserProfile?.profiles);
+
+  return {
+    ...raw,
+    time_slots: normalizedTimeSlot,
+    user_profiles: normalizedUserProfile
+      ? {
+          ...normalizedUserProfile,
+          profiles: normalizedProfile,
+        }
+      : null,
+  };
+}
+
 export default function ProfessionalDashboardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -223,7 +287,10 @@ export default function ProfessionalDashboardClient() {
   const [pendingRequests, setPendingRequests] = useState<BookingForProfessional[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<BookingForProfessional[]>([]);
   const [processingBookingId, setProcessingBookingId] = useState<string | null>(null);
+  const [viewingRequestId, setViewingRequestId] = useState<string | null>(null);
+  const [viewingUpcomingId, setViewingUpcomingId] = useState<string | null>(null);
   const [selectedRequestProfile, setSelectedRequestProfile] = useState<BookingForProfessional | null>(null);
+  const [selectedUpcomingSession, setSelectedUpcomingSession] = useState<BookingForProfessional | null>(null);
 
   // Time slots state
   const [timeSlots, setTimeSlots] = useState<TimeSlotData[]>([]);
@@ -328,49 +395,29 @@ export default function ProfessionalDashboardClient() {
       setBookingsError(null);
 
       try {
-        const { data: professionalProfile, error: proError } = await supabase
-          .from("professional_profiles")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .single();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        if (proError || !professionalProfile) {
-          throw new Error("Could not load professional profile");
+        const authHeaders: Record<string, string> = session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {};
+
+        const response = await fetch("/api/professional/bookings", {
+          method: "GET",
+          headers: authHeaders,
+        });
+
+        const result = (await response.json()) as {
+          error?: string;
+          bookings?: RawBookingForProfessional[];
+        };
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to fetch bookings");
         }
 
-        const { data: bookingsData, error: bookingsFetchError } = await supabase
-          .from("bookings")
-          .select(`
-            id,
-            status,
-            is_paid,
-            payment_link,
-            zoom_link,
-            created_at,
-            time_slots (
-              day_of_week,
-              start_time,
-              end_time
-            ),
-            user_profiles (
-              id,
-              status,
-              profiles (
-                name,
-                profile_photo,
-                bio,
-                time_zone
-              )
-            )
-          `)
-          .eq("professional_profile_id", professionalProfile.id)
-          .order("created_at", { ascending: false });
-
-        if (bookingsFetchError) {
-          throw new Error(bookingsFetchError.message);
-        }
-
-        const normalizedBookings = (bookingsData ?? []) as unknown as BookingForProfessional[];
+        const normalizedBookings = (result.bookings ?? []).map(normalizeBookingForProfessional);
 
         setPendingRequests(normalizedBookings.filter((booking) => booking.status === "pending"));
         setUpcomingSessions(normalizedBookings.filter((booking) => booking.status === "approved"));
@@ -677,49 +724,29 @@ export default function ProfessionalDashboardClient() {
     setBookingsError(null);
 
     try {
-      const { data: professionalProfile, error: proError } = await supabase
-        .from("professional_profiles")
-        .select("id")
-        .eq("profile_id", profile.id)
-        .single();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (proError || !professionalProfile) {
-        throw new Error("Could not load professional profile");
+      const authHeaders: Record<string, string> = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
+
+      const response = await fetch("/api/professional/bookings", {
+        method: "GET",
+        headers: authHeaders,
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        bookings?: RawBookingForProfessional[];
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to refresh bookings");
       }
 
-      const { data: bookingsData, error: bookingsFetchError } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          status,
-          is_paid,
-          payment_link,
-          zoom_link,
-          created_at,
-          time_slots (
-            day_of_week,
-            start_time,
-            end_time
-          ),
-          user_profiles (
-            id,
-            status,
-            profiles (
-              name,
-              profile_photo,
-              bio,
-              time_zone
-            )
-          )
-        `)
-        .eq("professional_profile_id", professionalProfile.id)
-        .order("created_at", { ascending: false });
-
-      if (bookingsFetchError) {
-        throw new Error(bookingsFetchError.message);
-      }
-
-      const normalizedBookings = (bookingsData ?? []) as unknown as BookingForProfessional[];
+      const normalizedBookings = (result.bookings ?? []).map(normalizeBookingForProfessional);
       setPendingRequests(normalizedBookings.filter((booking) => booking.status === "pending"));
       setUpcomingSessions(normalizedBookings.filter((booking) => booking.status === "approved"));
     } catch (err) {
@@ -761,6 +788,88 @@ export default function ProfessionalDashboardClient() {
       setSaveError(err instanceof Error ? err.message : `Failed to ${action} booking`);
     } finally {
       setProcessingBookingId(null);
+    }
+  };
+
+  const handleViewRequestProfile = async (booking: BookingForProfessional) => {
+    setViewingRequestId(booking.id);
+    setSaveError(null);
+
+    try {
+      const response = await fetch(`/api/professional/bookings/${booking.id}`, {
+        method: "GET",
+        headers: await getAuthHeaders(),
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        booking?: BookingForProfessional;
+      };
+
+      if (!response.ok || !result.booking) {
+        throw new Error(result.error || "Failed to load user details");
+      }
+
+      setSelectedRequestProfile(normalizeBookingForProfessional(result.booking as RawBookingForProfessional));
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to load user details");
+      setSelectedRequestProfile(booking);
+    } finally {
+      setViewingRequestId(null);
+    }
+  };
+
+  const handleViewUpcomingSession = async (booking: BookingForProfessional) => {
+    setViewingUpcomingId(booking.id);
+    setSaveError(null);
+
+    try {
+      const response = await fetch(`/api/professional/bookings/${booking.id}`, {
+        method: "GET",
+        headers: await getAuthHeaders(),
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        booking?: BookingForProfessional;
+      };
+
+      if (!response.ok || !result.booking) {
+        throw new Error(result.error || "Failed to load session details");
+      }
+
+      const normalizedFetched = normalizeBookingForProfessional(result.booking as RawBookingForProfessional);
+
+      const fallbackUserProfile = normalizeSingle(booking.user_profiles);
+      const fallbackUser = normalizeSingle(fallbackUserProfile?.profiles);
+      const fetchedUserProfile = normalizeSingle(normalizedFetched.user_profiles);
+      const fetchedUser = normalizeSingle(fetchedUserProfile?.profiles);
+
+      const mergedUserProfile = fetchedUserProfile ?? fallbackUserProfile;
+      const mergedUser: Pick<Tables<"profiles">, "name" | "profile_photo" | "bio" | "time_zone"> | null =
+        mergedUserProfile
+          ? {
+              name: fetchedUser?.name ?? fallbackUser?.name ?? "User",
+              profile_photo: fetchedUser?.profile_photo ?? fallbackUser?.profile_photo ?? null,
+              bio: fetchedUser?.bio ?? fallbackUser?.bio ?? null,
+              time_zone: (fetchedUser?.time_zone ?? fallbackUser?.time_zone ?? "Asia/Colombo") as Enums<"time_zone">,
+            }
+          : null;
+
+      setSelectedUpcomingSession({
+        ...normalizedFetched,
+        user_profiles: mergedUserProfile
+          ? {
+              ...mergedUserProfile,
+              profiles: mergedUser,
+            }
+          : null,
+      });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to load session details");
+      setSelectedUpcomingSession(booking);
+    } finally {
+      setViewingUpcomingId(null);
     }
   };
 
@@ -825,6 +934,18 @@ export default function ProfessionalDashboardClient() {
         <RequestUserProfileModal
           booking={selectedRequestProfile}
           onClose={() => setSelectedRequestProfile(null)}
+        />
+      )}
+
+      {selectedUpcomingSession && (
+        <SessionPopup
+          professionalName={normalizeSingle(normalizeSingle(selectedUpcomingSession.user_profiles)?.profiles)?.name || "User"}
+          professionalRole={getUserStatusLabel(normalizeSingle(selectedUpcomingSession.user_profiles)?.status)}
+          sessionDate={selectedUpcomingSession.time_slots?.day_of_week || "Day not set"}
+          sessionTime={`${formatTo12Hour(selectedUpcomingSession.time_slots?.start_time)} to ${formatTo12Hour(selectedUpcomingSession.time_slots?.end_time)}`}
+          sessionTimeZone={normalizeSingle(normalizeSingle(selectedUpcomingSession.user_profiles)?.profiles)?.time_zone || "Asia/Colombo"}
+          zoomLink={selectedUpcomingSession.zoom_link || MOCK_ZOOM_LINK}
+          onClose={() => setSelectedUpcomingSession(null)}
         />
       )}
 
@@ -1452,8 +1573,8 @@ export default function ProfessionalDashboardClient() {
                     key={booking.id}
                     booking={booking}
                     type="request"
-                    loadingAction={processingBookingId === booking.id}
-                    onViewProfile={() => setSelectedRequestProfile(booking)}
+                    loadingAction={processingBookingId === booking.id || viewingRequestId === booking.id}
+                    onViewProfile={() => void handleViewRequestProfile(booking)}
                     onApprove={() => handleBookingAction(booking.id, "approve")}
                     onReject={() => handleBookingAction(booking.id, "reject")}
                   />
@@ -1505,7 +1626,13 @@ export default function ProfessionalDashboardClient() {
             ) : (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {upcomingSessions.map((booking) => (
-                  <ProfessionalBookingCard key={booking.id} booking={booking} type="upcoming" />
+                  <ProfessionalBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    type="upcoming"
+                    loadingAction={viewingUpcomingId === booking.id}
+                    onViewSession={() => void handleViewUpcomingSession(booking)}
+                  />
                 ))}
               </div>
             )}
@@ -1619,6 +1746,7 @@ function ProfessionalBookingCard({
   onViewProfile,
   onApprove,
   onReject,
+  onViewSession,
 }: {
   booking: BookingForProfessional;
   type: "request" | "upcoming";
@@ -1626,8 +1754,10 @@ function ProfessionalBookingCard({
   onViewProfile?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
+  onViewSession?: () => void;
 }) {
-  const user = booking.user_profiles?.profiles;
+  const userProfile = normalizeSingle(booking.user_profiles);
+  const user = normalizeSingle(userProfile?.profiles);
 
   return (
     <div
@@ -1745,24 +1875,28 @@ function ProfessionalBookingCard({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between rounded-full px-4 py-2" style={{ background: "rgba(16,185,129,0.12)" }}>
-          <span className="text-sm" style={{ color: "#A7F3D0" }}>
-            Payment: {booking.is_paid ? "Paid" : "Pending"}
-          </span>
-          {booking.payment_link ? (
-            <a
-              href={booking.payment_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm underline"
-              style={{ color: "#10B981" }}
-            >
-              View Payment Link
-            </a>
-          ) : (
-            <span className="text-sm" style={{ color: "#649c8c" }}>
-              Payment link not set
+        <div className="space-y-3">
+          <div className="flex items-center justify-center rounded-full px-4 py-2" style={{ background: "rgba(16,185,129,0.12)" }}>
+            <span className="text-sm" style={{ color: "#A7F3D0" }}>
+              Payment: {booking.is_paid ? "Paid" : "Pending"}
             </span>
+          </div>
+
+          {booking.is_paid && (
+            <div className="p-[1px] rounded-full w-full" style={{ background: "rgba(59, 130, 246, 0.35)" }}>
+              <button
+                type="button"
+                onClick={onViewSession}
+                disabled={loadingAction}
+                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
+                style={{
+                  color: "#93C5FD",
+                  background: "transparent",
+                }}
+              >
+                {loadingAction ? "Opening..." : "View Session"}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -1777,8 +1911,9 @@ function RequestUserProfileModal({
   booking: BookingForProfessional;
   onClose: () => void;
 }) {
-  const user = booking.user_profiles?.profiles;
-  const userStatus = booking.user_profiles?.status;
+  const userProfile = normalizeSingle(booking.user_profiles);
+  const user = normalizeSingle(userProfile?.profiles);
+  const userStatus = userProfile?.status;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
