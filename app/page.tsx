@@ -204,7 +204,8 @@ export default async function Home() {
         {/* ═══ Why Choose ═════════════════════════════════ */}
         <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
         <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Why Choose</p>
-        <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
+        <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2"
+        >
           Expert<span className="text-[var(--emerald-primary)]">Connect</span> ?
         </h2>
         <p className="text-sm max-sm:text-[0.85rem] text-white/55 max-w-[520px] mx-auto mb-12 md:max-lg:mb-9 max-sm:mb-7 leading-[1.7]">
@@ -212,7 +213,12 @@ export default async function Home() {
           Accelerate your career with direct mentorship and actionable insights.
         </p>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] max-sm:grid-cols-1 md:max-lg:grid-cols-2 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] max-sm:grid-cols-1 md:max-lg:grid-cols-2 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto"
+        style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+        >
           {FEATURES.map((f) => (
             <div
               key={f.title}
@@ -230,7 +236,8 @@ export default async function Home() {
 
       {/* ═══ Top Rated Mentors ══════════════════════════ */}
       <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
-        <div className="max-w-[900px] mx-auto mb-12 md:max-lg:mb-9 md:max-lg:text-center max-sm:mb-7 max-sm:text-center">
+        <div className="max-w-[900px] mx-auto mb-12 md:max-lg:mb-9 md:max-lg:text-center max-sm:mb-7 max-sm:text-center"
+        >
           <h2 className="text-[2rem] md:max-lg:text-[1.7rem] max-sm:text-[1.5rem] max-[400px]:text-[1.3rem] font-extrabold text-white mb-2">
             Meet Top Rated Mentors
           </h2>
@@ -239,7 +246,12 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto"
+        style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+        >
           {error ? (
             // Error state
             <div className="col-span-full text-center py-8">
