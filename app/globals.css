@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #021C14;
+  --background: #041008;
   --foreground: #ededed;
   --emerald-primary: #10B981;
   --emerald-glow: #34D399;
@@ -34,8 +34,8 @@ button {
   background: linear-gradient(
     180deg,
     rgba(2, 28, 20, 0.3) 0%,
-    rgba(2, 28, 20, 0.6) 60%,
-    rgba(2, 28, 20, 1) 100%
+    rgba(2, 28, 20, 0.6) 65%,
+    rgba(4, 16, 8, 1) 100%
   );
 }
 

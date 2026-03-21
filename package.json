@@ -18,7 +18,8 @@
     "react-dom": "19.2.3",
     "react-icons": "^5.5.0",
     "resend": "^6.9.3",
-    "supabase": "^2.81.3"
+    "supabase": "^2.81.3",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -26,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.170.0",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",

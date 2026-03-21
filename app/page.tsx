@@ -185,7 +185,7 @@ export default async function Home() {
               <Link
                 key={cat}
                 href={`/browse?category=${encodeURIComponent(cat)}`}
-                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-lg text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60"
+                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-2xl text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60 backdrop-blur-sm"
               >
                 <IoPersonOutline size={14} />
                 {cat}
