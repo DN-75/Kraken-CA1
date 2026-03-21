@@ -9,6 +9,8 @@ export interface InteractiveNebulaShaderProps {
   disableCenterDimming?: boolean;
   className?: string;
   fullPage?: boolean; // When true, shader covers entire page and scrolls with content
+  speed?: number; // Animation speed multiplier (default: 1.0, lower = slower)
+  spread?: boolean; // When true, spreads the effect more across the screen
 }
 
 /**
@@ -21,9 +23,23 @@ export function InteractiveNebulaShader({
   disableCenterDimming = false,
   className = "",
   fullPage = false,
+  speed = 1.0,
+  spread = false,
 }: InteractiveNebulaShaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const speedRef = useRef(speed);
+  const spreadRef = useRef(spread);
+
+  // Update speed ref when prop changes
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
+
+  // Update spread ref when prop changes
+  useEffect(() => {
+    spreadRef.current = spread;
+  }, [spread]);
 
   // Sync props into uniforms
   useEffect(() => {
@@ -43,6 +59,7 @@ export function InteractiveNebulaShader({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
+    renderer.domElement.style.display = "block";
 
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -70,6 +87,7 @@ export function InteractiveNebulaShader({
       uniform bool hasActiveReminders;
       uniform bool hasUpcomingReminders;
       uniform bool disableCenterDimming;
+      uniform bool spreadMode;
       varying vec2 vUv;
 
       #define t iTime
@@ -83,26 +101,37 @@ export function InteractiveNebulaShader({
       }
 
       void mainImage(out vec4 O, in vec2 fragCoord) {
-        // Center the effect across the entire screen
-        vec2 uv = (fragCoord - 0.5 * iResolution.xy) / min(iResolution.x, iResolution.y);
+        // For spread mode, use smaller divisor to spread effect across screen
+        float divisor = spreadMode ? max(iResolution.x, iResolution.y) * 0.5 : min(iResolution.x, iResolution.y);
+        vec2 uv = (fragCoord - 0.5 * iResolution.xy) / divisor;
+        
+        // Scale down UV for more spread out effect
+        if (spreadMode) {
+          uv *= 0.6;
+        }
+        
         vec3 col = vec3(0.0);
         float d = 2.5;
 
-        // Ray-march
-        for (int i = 0; i <= 5; i++) {
+        // Ray-march with more iterations for spread mode
+        int maxIter = spreadMode ? 7 : 5;
+        for (int i = 0; i <= 7; i++) {
+          if (i > maxIter) break;
           vec3 p = vec3(0,0,5.) + normalize(vec3(uv, -1.)) * d;
           float rz = map(p);
           float f  = clamp((rz - map(p + 0.1)) * 0.5, -0.1, 1.0);
 
           // Emerald color palette matching the website theme
-          // Base dark green: #021C14 -> rgb(0.008, 0.11, 0.08)
-          // Primary emerald: #10B981 -> rgb(0.063, 0.725, 0.506)
-          // Glow emerald: #34D399 -> rgb(0.204, 0.827, 0.6)
           vec3 base = hasActiveReminders
-            ? vec3(0.008, 0.15, 0.1) + vec3(0.2, 2.5, 1.5)*f      // Brighter emerald when active
+            ? vec3(0.008, 0.15, 0.1) + vec3(0.2, 2.5, 1.5)*f
             : hasUpcomingReminders
-            ? vec3(0.01, 0.12, 0.08) + vec3(0.15, 2.0, 1.2)*f     // Medium emerald for upcoming
-            : vec3(0.008, 0.11, 0.08) + vec3(0.1, 1.8, 1.0)*f;    // Default emerald palette
+            ? vec3(0.01, 0.12, 0.08) + vec3(0.15, 2.0, 1.2)*f
+            : vec3(0.008, 0.11, 0.08) + vec3(0.1, 1.8, 1.0)*f;
+
+          // Spread mode has slightly brighter colors
+          if (spreadMode) {
+            base *= 1.15;
+          }
 
           col = col * base + smoothstep(2.5, 0.0, rz) * 0.7 * base;
           d += min(rz, 1.0);
@@ -134,6 +163,7 @@ export function InteractiveNebulaShader({
       hasActiveReminders: { value: hasActiveReminders },
       hasUpcomingReminders: { value: hasUpcomingReminders },
       disableCenterDimming: { value: disableCenterDimming },
+      spreadMode: { value: spreadRef.current },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -161,7 +191,7 @@ export function InteractiveNebulaShader({
 
     // Animation loop
     renderer.setAnimationLoop(() => {
-      uniforms.iTime.value = clock.getElapsedTime();
+      uniforms.iTime.value = clock.getElapsedTime() * speedRef.current;
       renderer.render(scene, camera);
     });
 
@@ -174,12 +204,12 @@ export function InteractiveNebulaShader({
       mesh.geometry.dispose();
       renderer.dispose();
     };
-  }, [hasActiveReminders, hasUpcomingReminders, disableCenterDimming, fullPage]);
+  }, [hasActiveReminders, hasUpcomingReminders, disableCenterDimming, fullPage, spread]);
 
   return (
     <div
       ref={containerRef}
-      className={`${fullPage ? 'absolute inset-0 min-h-full w-full' : 'fixed inset-0'} ${className}`}
+      className={`${fullPage ? "absolute inset-0 h-full w-full overflow-hidden" : "fixed inset-0"} ${className}`}
       style={{ backgroundColor: "#021C14" }}
       aria-label="Interactive nebula background"
     />

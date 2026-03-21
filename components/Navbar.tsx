@@ -106,7 +106,7 @@ export default function Navbar() {
 
   return (
     <nav
-      className="sticky top-0 z-50 w-full border-b border-emerald-500/15"
+      className="fixed top-0 left-0 right-0 z-50 w-full border-b border-emerald-500/15"
       style={{
         background: "rgba(2, 44, 34, 0.7)",
         backdropFilter: "blur(20px)",
