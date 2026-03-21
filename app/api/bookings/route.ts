@@ -20,6 +20,56 @@ function getAccessToken(req: NextRequest): string | null {
   return req.cookies.get("ec_access_token")?.value ?? null;
 }
 
+async function getEligibleUserProfileId(supabase: ReturnType<typeof createSupabaseServerClient>, userId: string) {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    return {
+      userProfileId: null,
+      response: NextResponse.json({ error: "Profile not found" }, { status: 404 }),
+    };
+  }
+
+  if (profile.role === "professional") {
+    return {
+      userProfileId: null,
+      response: NextResponse.json(
+        { error: "Professional accounts cannot book other professionals." },
+        { status: 403 },
+      ),
+    };
+  }
+
+  if (profile.role === "admin") {
+    return {
+      userProfileId: null,
+      response: NextResponse.json(
+        { error: "Admin accounts cannot book professionals." },
+        { status: 403 },
+      ),
+    };
+  }
+
+  const { data: userProfile, error: userProfileError } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("profile_id", userId)
+    .maybeSingle();
+
+  if (userProfileError || !userProfile) {
+    return {
+      userProfileId: null,
+      response: NextResponse.json({ error: "User profile not found" }, { status: 404 }),
+    };
+  }
+
+  return { userProfileId: userProfile.id, response: null };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const accessToken = getAccessToken(req);
@@ -56,15 +106,12 @@ export async function POST(req: NextRequest) {
 
     const { time_slot_id, professional_profile_id } = parsed.data;
 
-    const { data: userProfile, error: userProfileError } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .eq("profile_id", user.id)
-      .single();
-
-    if (userProfileError || !userProfile) {
-      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
+    const eligibility = await getEligibleUserProfileId(supabase, user.id);
+    if (eligibility.response) {
+      return eligibility.response;
     }
+
+    const userProfileId = eligibility.userProfileId!;
 
     const { data: slot, error: slotError } = await supabase
       .from("time_slots")
@@ -129,7 +176,7 @@ export async function POST(req: NextRequest) {
     const { data: existingBookings, error: existingBookingError } = await supabase
       .from("bookings")
       .select("id")
-      .eq("user_profile_id", userProfile.id)
+      .eq("user_profile_id", userProfileId)
       .eq("time_slot_id", time_slot_id)
       .in("status", ["pending", "approved"])
       .limit(1);
@@ -152,7 +199,7 @@ export async function POST(req: NextRequest) {
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
-        user_profile_id: userProfile.id,
+        user_profile_id: userProfileId,
         professional_profile_id,
         time_slot_id,
         status: "pending",
@@ -201,15 +248,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: userProfile, error: userProfileError } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .eq("profile_id", user.id)
-      .single();
-
-    if (userProfileError || !userProfile) {
-      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
+    const eligibility = await getEligibleUserProfileId(supabase, user.id);
+    if (eligibility.response) {
+      return eligibility.response;
     }
+
+    const userProfileId = eligibility.userProfileId!;
 
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
@@ -237,7 +281,7 @@ export async function GET(req: NextRequest) {
           )
         )
       `)
-      .eq("user_profile_id", userProfile.id)
+      .eq("user_profile_id", userProfileId)
       .order("created_at", { ascending: false });
 
     if (bookingsError) {

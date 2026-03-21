@@ -348,7 +348,7 @@ export default function ExpertReviewPage() {
             <button 
               onClick={() => handleAction('reject')}
               disabled={actionLoading !== null}
-              className="flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {actionLoading === 'reject' ? (
                 <span>Rejecting...</span>
@@ -362,7 +362,7 @@ export default function ExpertReviewPage() {
             <button 
               onClick={() => handleAction('approve')}
               disabled={actionLoading !== null}
-              className="flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {actionLoading === 'approve' ? (
                 <span>Approving...</span>
