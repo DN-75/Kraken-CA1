@@ -50,7 +50,7 @@ function RequestCard({ request, onClick }: { request: PendingProfessional; onCli
       </div>
       <button 
         onClick={onClick}
-        className="flex items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-emerald-600 px-6 py-1.5 text-base font-medium text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 hover:scale-105 whitespace-nowrap ml-4"
+        className="flex items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-emerald-600 px-6 py-1.5 text-base font-medium text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 hover:scale-105 whitespace-nowrap ml-4 cursor-pointer"
       >
         Review
       </button>

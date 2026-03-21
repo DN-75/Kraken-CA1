@@ -9,6 +9,7 @@ interface PasswordFieldProps {
   show: boolean;
   onToggle: () => void;
   placeholder?: string;
+  required?: boolean;
 }
 
 export function PasswordField({
@@ -18,14 +19,16 @@ export function PasswordField({
   show,
   onToggle,
   placeholder = "Enter password",
+  required = false,
 }: PasswordFieldProps) {
   return (
-    <Field label={label} icon={<IoLockClosedOutline size={18} />}>
+    <Field label={label} icon={<IoLockClosedOutline size={18} />} required={required}>
       <input
         type={show ? "text" : "password"}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        required={required}
         className={ROUND_INPUT + " pr-11"}
       />
       <button
