@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabaseServer";
 import type { ProfessionalCardData } from "@/hooks/useProProfiles";
 import ProfessionalCard from "@/components/ProfessionalCard";
 import HeroSearch from "@/components/home/HeroSearch";
+import HomeBackground from "@/components/home/HomeBackground";
 
 export const revalidate = 3600;
 
@@ -150,9 +151,9 @@ export default async function Home() {
   const { topProfessionals, error } = await getTopProfessionals();
 
   return (
-    <main>
+    <main className="relative  overflow-x-hidden ">
       {/* ═══ Hero ═══════════════════════════════════════ */}
-      <section className="relative min-h-[600px] md:max-lg:min-h-[520px] max-sm:min-h-[480px] max-[400px]:min-h-[420px] flex flex-col items-center justify-center text-center py-[60px] px-5 pt-[80px] md:max-lg:pt-[70px] md:max-lg:pb-[48px] max-sm:py-[40px] max-sm:px-4 max-sm:pt-[60px] max-[400px]:py-[32px] max-[400px]:px-3 max-[400px]:pt-[48px] overflow-hidden">
+      <section className="relative z-[2] min-h-[600px] md:max-lg:min-h-[520px] max-sm:min-h-[480px] max-[400px]:min-h-[420px] flex flex-col items-center justify-center text-center py-[60px] px-5 pt-[80px] md:max-lg:pt-[70px] md:max-lg:pb-[48px] max-sm:py-[40px] max-sm:px-4 max-sm:pt-[60px] max-[400px]:py-[32px] max-[400px]:px-3 max-[400px]:pt-[48px] overflow-hidden">
 
         <div
           className="hero-bg absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -185,7 +186,7 @@ export default async function Home() {
               <Link
                 key={cat}
                 href={`/browse?category=${encodeURIComponent(cat)}`}
-                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-lg text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60"
+                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-2xl text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60 backdrop-blur-sm"
               >
                 <IoPersonOutline size={14} />
                 {cat}
@@ -195,8 +196,13 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ═══ Why Choose ═════════════════════════════════ */}
-      <section className="py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
+      {/* Sections below hero with shader background */}
+      <div className="relative">
+        {/* Shader Background - positioned higher to cover Why Choose area */}
+        <HomeBackground />
+
+        {/* ═══ Why Choose ═════════════════════════════════ */}
+        <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
         <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Why Choose</p>
         <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
           Expert<span className="text-[var(--emerald-primary)]">Connect</span> ?
@@ -223,7 +229,7 @@ export default async function Home() {
       </section>
 
       {/* ═══ Top Rated Mentors ══════════════════════════ */}
-      <section className="py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
+      <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
         <div className="max-w-[900px] mx-auto mb-12 md:max-lg:mb-9 md:max-lg:text-center max-sm:mb-7 max-sm:text-center">
           <h2 className="text-[2rem] md:max-lg:text-[1.7rem] max-sm:text-[1.5rem] max-[400px]:text-[1.3rem] font-extrabold text-white mb-2">
             Meet Top Rated Mentors
@@ -254,7 +260,7 @@ export default async function Home() {
       </section>
 
       {/* ═══ About Us ════════════════════════════════════ */}
-      <section id="about" className="py-14 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
+      <section id="about" className="relative z-[1] py-14 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
         <div className="text-center mb-8">
           <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Who We Are</p>
           <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
@@ -320,7 +326,7 @@ export default async function Home() {
       </section>
 
       {/* ═══ Contact Us ══════════════════════════════════ */}
-      <section id="contact" className="py-12 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
+      <section id="contact" className="relative z-[1] py-12 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
         <div className="relative max-w-[750px] lg:max-xl:max-w-full md:max-lg:max-w-full mx-auto rounded-[20px] border border-[var(--card-border)] bg-[var(--card-bg)] backdrop-blur-[12px] p-8 px-7 pb-7 max-sm:p-5 max-sm:px-4 md:max-lg:p-6 md:max-lg:px-5 overflow-hidden">
           <div className="absolute -bottom-[50px] -left-[50px] w-[160px] h-[160px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.1)_0%,transparent_70%)] pointer-events-none" />
           <div className="text-center mb-4">
@@ -381,6 +387,7 @@ export default async function Home() {
           </form>
         </div>
       </section>
+      </div>
 
     </main>
   );
