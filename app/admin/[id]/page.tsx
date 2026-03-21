@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { IoCheckmarkDone, IoClose } from "react-icons/io5";
 import { useSession } from "@/hooks/useSession";
@@ -202,9 +203,11 @@ export default function ExpertReviewPage() {
               className="relative bg-[rgba(17,49,39,0.95)] border border-emerald-500/20 rounded-2xl p-4 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
+              <Image
                 src={professionalData.profile_photo}
                 alt={professionalData.name}
+                width={640}
+                height={640}
                 className="w-full h-auto rounded-xl"
               />
               <button
@@ -223,12 +226,14 @@ export default function ExpertReviewPage() {
             onClick={() => professionalData.profile_photo && setShowPhotoModal(true)}
             className="w-20 h-20 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shrink-0 bg-[rgba(16,185,129,0.1)] hover:border-emerald-400/60 hover:bg-[rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer group overflow-hidden"
           >
-            {professionalData.profile_photo ? (
-              <img
-                src={professionalData.profile_photo}
-                alt={professionalData.name}
-                className="w-full h-full object-cover"
-              />
+              {professionalData.profile_photo ? (
+                <Image
+                  src={professionalData.profile_photo}
+                  alt={professionalData.name}
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover"
+                />
             ) : (
               <svg
                 className="w-6 h-6 text-emerald-400 group-hover:text-emerald-300 transition-colors"

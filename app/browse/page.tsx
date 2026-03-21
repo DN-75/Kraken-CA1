@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { IoSearchOutline, IoStar, IoCheckmarkCircle } from "react-icons/io5";
@@ -309,9 +310,11 @@ export default function BrowsePage() {
 									<div className="mb-4 flex items-start justify-between gap-3">
 										<div className="relative">
 											{mentor.profiles?.profile_photo ? (
-												<img
+												<Image
 													src={mentor.profiles.profile_photo}
 													alt={mentor.profiles.name}
+													width={56}
+													height={56}
 													className="h-14 w-14 rounded-full border-2 border-emerald-400/70 object-cover"
 												/>
 											) : (
