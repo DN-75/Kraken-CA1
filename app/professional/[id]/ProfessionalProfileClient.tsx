@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   FaStar,
@@ -108,7 +108,7 @@ export default function ProfessionalProfileClient({
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const [bookingPopupKey, setBookingPopupKey] = useState(0);
 
-  const refreshAvailability = async () => {
+  const refreshAvailability = useCallback(async () => {
     const availabilityResponse = await fetch(`/api/professionals/${routeId}/availability`, {
       method: "GET",
       cache: "no-store",
@@ -118,7 +118,34 @@ export default function ProfessionalProfileClient({
       const availabilityResult = (await availabilityResponse.json()) as { slots?: TimeSlot[] };
       setAvailableSlots(availabilityResult.slots ?? []);
     }
-  };
+  }, [routeId]);
+
+  useEffect(() => {
+    void refreshAvailability();
+  }, [refreshAvailability]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshAvailability();
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshAvailability();
+      }
+    }, 15000);
+
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [refreshAvailability]);
 
   const handleBookingSubmit = async (timeSlotId: string) => {
     if (!timeSlotId) {

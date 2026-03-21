@@ -5,7 +5,7 @@ import ProfessionalProfileClient, {
   type TimeSlot,
 } from "./ProfessionalProfileClient";
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 const SELECT_QUERY = `
   id,
@@ -80,7 +80,6 @@ async function fetchAvailableSlots(professionalProfileId: string): Promise<TimeS
       .from("time_slots")
       .select("id, day_of_week, start_time, end_time, is_booked")
       .eq("professional_profile_id", professionalProfileId)
-      .eq("is_booked", false)
       .order("day_of_week", { ascending: true })
       .order("start_time", { ascending: true });
 
@@ -88,7 +87,19 @@ async function fetchAvailableSlots(professionalProfileId: string): Promise<TimeS
       return [];
     }
 
-    return (slots ?? []) as TimeSlot[];
+    const { data: paidBookings, error: paidBookingsError } = await supabase
+      .from("bookings")
+      .select("time_slot_id")
+      .eq("professional_profile_id", professionalProfileId)
+      .eq("is_paid", true)
+      .in("status", ["approved", "completed"]);
+
+    if (paidBookingsError) {
+      return [];
+    }
+
+    const paidSlotIds = new Set((paidBookings ?? []).map((booking) => booking.time_slot_id));
+    return ((slots ?? []).filter((slot) => !slot.is_booked && !paidSlotIds.has(slot.id))) as TimeSlot[];
   } catch {
     return [];
   }

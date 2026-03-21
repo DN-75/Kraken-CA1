@@ -45,6 +45,7 @@ export default function PaymentPage() {
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [paymentBlocked, setPaymentBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -97,6 +98,7 @@ export default function PaymentPage() {
     if (!bookingId) return;
 
     setPaying(true);
+    setPaymentBlocked(false);
     setError(null);
     setSuccess(null);
 
@@ -120,6 +122,9 @@ export default function PaymentPage() {
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
+        if (response.status === 409) {
+          setPaymentBlocked(true);
+        }
         throw new Error(result.error || "Payment failed");
       }
 
@@ -218,13 +223,19 @@ export default function PaymentPage() {
         <button
           type="button"
           onClick={handlePay}
-          disabled={paying || !booking || booking.is_paid || booking.status !== "approved"}
+          disabled={paying || paymentBlocked || !booking || booking.is_paid || booking.status !== "approved"}
           className="w-full py-3 rounded-full text-white font-semibold transition-all hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed"
           style={{
             background: "linear-gradient(135deg, rgba(28,196,133,0.85), rgba(20,150,100,0.95))",
           }}
         >
-          {booking?.is_paid ? "Already Paid" : paying ? "Processing Payment..." : "Pay Now"}
+          {booking?.is_paid
+            ? "Already Paid"
+            : paymentBlocked
+              ? "Slot Unavailable"
+              : paying
+                ? "Processing Payment..."
+                : "Pay Now"}
         </button>
       </div>
     </div>

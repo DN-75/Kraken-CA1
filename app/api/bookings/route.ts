@@ -1,130 +1,97 @@
-// app/api/bookings/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { z } from "zod";
 
-import { NextRequest, NextResponse } from 'next/server'
-import { supabase as adminSupabase, createSupabaseServerClient } from '@/lib/supabaseServer'
-// import { sendBookingRequestEmail } from '@/lib/email/sendEmail'
-import { z } from 'zod'
-
-// ── Validation Schema ───────────────────────────────────
 const bookingSchema = z.object({
-  time_slot_id:            z.string().uuid('Invalid time slot ID'),
-  professional_profile_id: z.string().uuid('Invalid professional ID'),
-})
+  time_slot_id: z.string().uuid("Invalid time slot ID"),
+  professional_profile_id: z.string().uuid("Invalid professional ID"),
+});
 
 function getAccessToken(req: NextRequest): string | null {
-  const authHeader = req.headers.get('authorization')
-  const bearerToken = authHeader?.startsWith('Bearer ')
-    ? authHeader.replace('Bearer ', '').trim()
-    : null
+  const authHeader = req.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.replace("Bearer ", "").trim()
+    : null;
 
   if (bearerToken) {
-    return bearerToken
+    return bearerToken;
   }
 
-  return req.cookies.get('ec_access_token')?.value ?? null
+  return req.cookies.get("ec_access_token")?.value ?? null;
 }
 
-// ══════════════════════════════════════════════════════
-// POST /api/bookings
-// Creates a new booking request from user to professional
-// ══════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    const accessToken = getAccessToken(req)
+    const accessToken = getAccessToken(req);
     if (!accessToken) {
       return NextResponse.json(
-        { error: 'You must be logged in to book a session' },
-        { status: 401 }
-      )
+        { error: "You must be logged in to book a session" },
+        { status: 401 },
+      );
     }
 
-    const supabase = createSupabaseServerClient()
+    const supabase = createSupabaseServerClient();
 
-    // ── Step 1: Verify user is authenticated ────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(accessToken);
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'You must be logged in to book a session' },
-        { status: 401 }
-      )
+        { error: "You must be logged in to book a session" },
+        { status: 401 },
+      );
     }
 
-    // ── Step 2: Validate request body ───────────────────
-    const body = await req.json()
-    const parsed = bookingSchema.safeParse(body)
+    const body = await req.json();
+    const parsed = bookingSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid request', details: parsed.error.flatten() },
-        { status: 400 }
-      )
+        { error: "Invalid request", details: parsed.error.flatten() },
+        { status: 400 },
+      );
     }
 
-    const { time_slot_id, professional_profile_id } = parsed.data
+    const { time_slot_id, professional_profile_id } = parsed.data;
 
-    // ── Step 3: Get user_profile id ─────────────────────
-    // We need user_profiles.id (not auth user id) for the booking
     const { data: userProfile, error: userProfileError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('profile_id', user.id)
-      .single()
+      .from("user_profiles")
+      .select("id")
+      .eq("profile_id", user.id)
+      .single();
 
     if (userProfileError || !userProfile) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
 
-    // ── Step 4: Verify the time slot exists and is available ──
     const { data: slot, error: slotError } = await supabase
-      .from('time_slots')
-      .select('id, is_booked, professional_profile_id')
-      .eq('id', time_slot_id)
-      .single()
+      .from("time_slots")
+      .select("id, is_booked, professional_profile_id")
+      .eq("id", time_slot_id)
+      .single();
 
     if (slotError || !slot) {
-      return NextResponse.json(
-        { error: 'Time slot not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Time slot not found" }, { status: 404 });
     }
 
-    // Check slot belongs to the correct professional
     if (slot.professional_profile_id !== professional_profile_id) {
       return NextResponse.json(
-        { error: 'Time slot does not belong to this professional' },
-        { status: 400 }
-      )
+        { error: "Time slot does not belong to this professional" },
+        { status: 400 },
+      );
     }
 
-    // Check slot is not already booked (app-level check before DB insert)
     if (slot.is_booked) {
       return NextResponse.json(
-        { error: 'This time slot is no longer available' },
-        { status: 409 }
-      )
+        { error: "This time slot is no longer available" },
+        { status: 409 },
+      );
     }
 
-    // ── Step 4b: Clean up any cancelled bookings for this slot ──
-    // This handles legacy cancelled bookings that weren't deleted
-    // (due to UNIQUE constraint on time_slot_id, we need to remove them first)
-    const { error: cleanupError } = await adminSupabase
-      .from('bookings')
-      .delete()
-      .eq('time_slot_id', time_slot_id)
-      .eq('status', 'cancelled')
-
-    if (cleanupError) {
-      console.error('Failed to cleanup cancelled bookings:', cleanupError)
-      // Continue anyway - the insert will fail if there's still a conflict
-    }
-
-    // ── Step 5: Verify professional is approved ──────────
     const { data: professional, error: proError } = await supabase
-      .from('professional_profiles')
+      .from("professional_profiles")
       .select(`
         id,
         status,
@@ -132,268 +99,120 @@ export async function POST(req: NextRequest) {
           name
         )
       `)
-      .eq('id', professional_profile_id)
-      .single()
+      .eq("id", professional_profile_id)
+      .single();
 
     if (proError || !professional) {
-      return NextResponse.json(
-        { error: 'Professional not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Professional not found" }, { status: 404 });
     }
 
-    if (professional.status !== 'approved') {
+    if (professional.status !== "approved") {
       return NextResponse.json(
-        { error: 'This professional is not available for bookings' },
-        { status: 400 }
-      )
+        { error: "This professional is not available for bookings" },
+        { status: 400 },
+      );
     }
 
-    // ── Step 6: Prevent user booking their own profile ───
-    // (in case a professional also has a user account)
     const { data: proProfileCheck } = await supabase
-      .from('professional_profiles')
-      .select('profile_id')
-      .eq('id', professional_profile_id)
-      .single()
+      .from("professional_profiles")
+      .select("profile_id")
+      .eq("id", professional_profile_id)
+      .single();
 
     if (proProfileCheck?.profile_id === user.id) {
       return NextResponse.json(
-        { error: 'You cannot book your own profile' },
-        { status: 400 }
-      )
+        { error: "You cannot book your own profile" },
+        { status: 400 },
+      );
     }
 
-    // ── Step 7: Insert the booking ───────────────────────
-    // UNIQUE(time_slot_id) constraint at DB level is the
-    // final safety net against race conditions
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .insert({
-        user_profile_id:         userProfile.id,
-        professional_profile_id: professional_profile_id,
-        time_slot_id:            time_slot_id,
-        status:                  'pending',
-        is_paid:                 false,
-      })
-      .select()
-      .single()
+    const { data: existingBookings, error: existingBookingError } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("user_profile_id", userProfile.id)
+      .eq("time_slot_id", time_slot_id)
+      .in("status", ["pending", "approved"])
+      .limit(1);
 
-    if (bookingError) {
-      // ── Handle DB unique violation (race condition) ────
-      // Error code 23505 = unique_violation in PostgreSQL
-      if (bookingError.code === '23505') {
-        return NextResponse.json(
-          { error: 'Slot already taken — someone else just booked it' },
-          { status: 409 }
-        )
-      }
-
-      console.error('Booking insert error:', bookingError)
+    if (existingBookingError) {
+      console.error("Existing booking lookup error:", existingBookingError);
       return NextResponse.json(
-        { error: 'Failed to create booking. Please try again.' },
-        { status: 500 }
-      )
+        { error: "Failed to verify your existing requests. Please try again." },
+        { status: 500 },
+      );
     }
 
-    // ── Step 8: Fetch professional email for notification ─
-    // const { data: proEmailData } = await supabase
-    //   .from('profiles_with_email')
-    //   .select('email, name')
-    //   .eq('id', proProfileCheck?.profile_id)
-    //   .single()
-    //
-    // // ── Step 9: Fetch slot details for email ─────────────
-    // const { data: slotDetails } = await supabase
-    //   .from('time_slots')
-    //   .select('day_of_week, start_time, end_time')
-    //   .eq('id', time_slot_id)
-    //   .single()
-    //
-    // // ── Step 10: Fetch user name for email ───────────────
-    // const { data: userData } = await supabase
-    //   .from('profiles')
-    //   .select('name')
-    //   .eq('id', user.id)
-    //   .single()
+    if ((existingBookings?.length ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "You already have an active request for this time slot" },
+        { status: 409 },
+      );
+    }
 
-    // ── Step 11: Send email to professional ──────────────
-    // Non-blocking — don't fail the booking if email fails
-    // if (proEmailData?.email && slotDetails) {
-    //   sendBookingRequestEmail({
-    //     to:               proEmailData.email,
-    //     professionalName: proEmailData.name,
-    //     userName:         userData?.name ?? 'A user',
-    //     day:              slotDetails.day_of_week,
-    //     startTime:        slotDetails.start_time,
-    //     endTime:          slotDetails.end_time,
-    //     bookingId:        booking.id,
-    //   }).catch(err => console.error('Email send failed (non-critical):', err))
-    // }
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .insert({
+        user_profile_id: userProfile.id,
+        professional_profile_id,
+        time_slot_id,
+        status: "pending",
+        is_paid: false,
+      })
+      .select("id")
+      .single();
 
-    // ── Step 12: Log the email ────────────────────────────
-    // if (proEmailData?.email) {
-    //   await supabase.from('email_logs').insert({
-    //     recipient:  proEmailData.email,
-    //     subject:    'New booking request',
-    //     related_id: booking.id,
-    //     type:       'booking_request',
-    //   })
-    // }
+    if (bookingError || !booking) {
+      console.error("Booking insert error:", bookingError);
+      return NextResponse.json(
+        { error: "Failed to create booking. Please try again." },
+        { status: 500 },
+      );
+    }
 
-    // ── Step 13: Return success ───────────────────────────
     return NextResponse.json(
       {
-        success:    true,
+        success: true,
         booking_id: booking.id,
-        message:    'Booking request sent successfully',
+        message: "Booking request sent successfully",
       },
-      { status: 201 }
-    )
-
+      { status: 201 },
+    );
   } catch (err: unknown) {
-    console.error('Unexpected error in POST /api/bookings:', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error("Unexpected error in POST /api/bookings:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-
-// ══════════════════════════════════════════════════════════════════════
-// API ROUTE DESCRIPTION — /api/bookings
-// ══════════════════════════════════════════════════════════════════════
-//
-// Base URL:  /api/bookings
-// Auth:      Required (user must be logged in via Supabase session)
-//
-// ── POST /api/bookings ──────────────────────────────────────────────
-//
-//   Description:  Creates a new booking request from a user to a professional.
-//                 Validates the time slot is available, belongs to the correct
-//                 professional, and the user is not booking their own profile.
-//                 A DB trigger marks the time slot as booked on insert.
-//
-//   Request body (JSON):
-//     {
-//       "time_slot_id":            "uuid",   // required — the time slot to book
-//       "professional_profile_id": "uuid"    // required — the professional to book with
-//     }
-//
-//   Success response (201):
-//     {
-//       "success":    true,
-//       "booking_id": "uuid",
-//       "message":    "Booking request sent successfully"
-//     }
-//
-//   Error responses:
-//     401 — Not logged in
-//     400 — Invalid body / slot doesn't belong to professional / professional not approved / self-booking
-//     404 — User profile, time slot, or professional not found
-//     409 — Time slot already booked (race condition or already taken)
-//     500 — Internal server error
-//
-//
-// ── GET /api/bookings ───────────────────────────────────────────────
-//
-//   Description:  Returns all bookings for the currently logged-in user,
-//                 ordered by created_at descending. Includes joined data
-//                 for time slots and professional profiles. Also returns
-//                 bookings grouped by status.
-//
-//   Request body: None (no query params needed)
-//
-//   Success response (200):
-//     {
-//       "bookings": [
-//         {
-//           "id":           "uuid",
-//           "status":       "pending" | "approved" | "completed" | "rejected" | "cancelled",
-//           "is_paid":      false,
-//           "payment_link": "https://..." | null,
-//           "zoom_link":    "https://..." | null,
-//           "created_at":   "ISO timestamp",
-//           "updated_at":   "ISO timestamp",
-//           "time_slots": {
-//             "id":          "uuid",
-//             "day_of_week": "Monday",
-//             "start_time":  "09:00:00",
-//             "end_time":    "10:00:00"
-//           },
-//           "professional_profiles": {
-//             "id":             "uuid",
-//             "job_title":      "Software Engineer",
-//             "price_per_hour": 50.00,
-//             "profiles": {
-//               "name":          "John Doe",
-//               "profile_photo": "https://..."
-//             }
-//           }
-//         }
-//       ],
-//       "grouped": {
-//         "pending":   [...],
-//         "approved":  [...],
-//         "completed": [...],
-//         "rejected":  [...],
-//         "cancelled": [...]
-//       },
-//       "total": 5
-//     }
-//
-//   Error responses:
-//     401 — Not logged in
-//     404 — User profile not found
-//     500 — Failed to fetch bookings / Internal server error
-//
-// ══════════════════════════════════════════════════════════════════════
-
-
-// ══════════════════════════════════════════════════════
-// GET /api/bookings
-// Returns all bookings for the currently logged-in user
-// ══════════════════════════════════════════════════════
 export async function GET(req: NextRequest) {
   try {
-    const accessToken = getAccessToken(req)
+    const accessToken = getAccessToken(req);
     if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = createSupabaseServerClient()
+    const supabase = createSupabaseServerClient();
 
-    // ── Step 1: Verify authentication ───────────────────
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(accessToken);
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── Step 2: Get user_profile id ─────────────────────
     const { data: userProfile, error: userProfileError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('profile_id', user.id)
-      .single()
+      .from("user_profiles")
+      .select("id")
+      .eq("profile_id", user.id)
+      .single();
 
     if (userProfileError || !userProfile) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
 
-    // ── Step 3: Fetch all bookings with joined data ──────
     const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
+      .from("bookings")
       .select(`
         id,
         status,
@@ -418,25 +237,21 @@ export async function GET(req: NextRequest) {
           )
         )
       `)
-      .eq('user_profile_id', userProfile.id)
-      .order('created_at', { ascending: false })
+      .eq("user_profile_id", userProfile.id)
+      .order("created_at", { ascending: false });
 
     if (bookingsError) {
-      console.error('Bookings fetch error:', bookingsError)
-      return NextResponse.json(
-        { error: 'Failed to fetch bookings' },
-        { status: 500 }
-      )
+      console.error("Bookings fetch error:", bookingsError);
+      return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
     }
 
-    // ── Step 4: Group by status ──────────────────────────
     const grouped = {
-      pending:   bookings?.filter(b => b.status === 'pending')   ?? [],
-      approved:  bookings?.filter(b => b.status === 'approved')  ?? [],
-      completed: bookings?.filter(b => b.status === 'completed') ?? [],
-      rejected:  bookings?.filter(b => b.status === 'rejected')  ?? [],
-      cancelled: bookings?.filter(b => b.status === 'cancelled') ?? [],
-    }
+      pending: bookings?.filter((booking) => booking.status === "pending") ?? [],
+      approved: bookings?.filter((booking) => booking.status === "approved") ?? [],
+      completed: bookings?.filter((booking) => booking.status === "completed") ?? [],
+      rejected: bookings?.filter((booking) => booking.status === "rejected") ?? [],
+      cancelled: bookings?.filter((booking) => booking.status === "cancelled") ?? [],
+    };
 
     return NextResponse.json(
       {
@@ -444,14 +259,10 @@ export async function GET(req: NextRequest) {
         grouped,
         total: bookings?.length ?? 0,
       },
-      { status: 200 }
-    )
-
+      { status: 200 },
+    );
   } catch (err: unknown) {
-    console.error('Unexpected error in GET /api/bookings:', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error("Unexpected error in GET /api/bookings:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

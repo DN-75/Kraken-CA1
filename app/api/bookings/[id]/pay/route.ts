@@ -1,5 +1,6 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabase as adminSupabase, createSupabaseServerClient } from "@/lib/supabaseServer";
 
 function getAccessToken(req: NextRequest): string | null {
   const authHeader = req.headers.get("authorization");
@@ -48,7 +49,7 @@ export async function POST(
 
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id, user_profile_id, status, is_paid")
+      .select("id, user_profile_id, professional_profile_id, status, is_paid, time_slot_id")
       .eq("id", bookingId)
       .single();
 
@@ -74,17 +75,93 @@ export async function POST(
       );
     }
 
+    const { data: slot, error: slotError } = await supabase
+      .from("time_slots")
+      .select("id, is_booked")
+      .eq("id", booking.time_slot_id)
+      .single();
+
+    if (slotError || !slot) {
+      return NextResponse.json({ error: "Time slot not found" }, { status: 404 });
+    }
+
+    if (slot.is_booked) {
+      return NextResponse.json(
+        {
+          error: "This time slot is no longer available. Another user has already completed payment.",
+        },
+        { status: 409 },
+      );
+    }
+
     const { error: updateError } = await supabase
       .from("bookings")
       .update({ is_paid: true })
       .eq("id", bookingId);
 
     if (updateError) {
+      if (updateError.code === "23505") {
+        return NextResponse.json(
+          {
+            error: "This time slot is no longer available. Another user has already completed payment.",
+          },
+          { status: 409 },
+        );
+      }
+
       return NextResponse.json({ error: "Failed to mark payment" }, { status: 500 });
     }
 
+    // Explicitly mark the slot as booked as an immediate backup to the DB trigger.
+    const { data: updatedSlot, error: slotUpdateError } = await adminSupabase
+      .from("time_slots")
+      .update({ is_booked: true })
+      .eq("id", booking.time_slot_id)
+      .select("id, is_booked")
+      .single();
+
+    if (slotUpdateError) {
+      console.error("Failed to mark paid slot as booked:", slotUpdateError);
+
+      await supabase
+        .from("bookings")
+        .update({ is_paid: false })
+        .eq("id", bookingId);
+
+      return NextResponse.json(
+        { error: "Payment could not be finalized because the time slot was not updated." },
+        { status: 500 },
+      );
+    }
+
+    if (!updatedSlot?.is_booked) {
+      console.error("Paid slot update returned without setting is_booked=true:", updatedSlot);
+
+      await supabase
+        .from("bookings")
+        .update({ is_paid: false })
+        .eq("id", bookingId);
+
+      return NextResponse.json(
+        { error: "Payment could not be finalized because the time slot remained available." },
+        { status: 500 },
+      );
+    }
+
+    const { data: professionalProfile } = await adminSupabase
+      .from("professional_profiles")
+      .select("profile_id")
+      .eq("id", booking.professional_profile_id)
+      .maybeSingle();
+
+    revalidatePath(`/professional/${booking.professional_profile_id}`);
+
+    if (professionalProfile?.profile_id) {
+      revalidatePath(`/professional/${professionalProfile.profile_id}`);
+    }
+
     return NextResponse.json(
-      { success: true, message: "Payment completed" },
+      { success: true, message: "Payment completed. Your session is confirmed." },
       { status: 200 },
     );
   } catch (error) {

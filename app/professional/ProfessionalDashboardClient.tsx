@@ -718,7 +718,7 @@ export default function ProfessionalDashboardClient() {
     }
   };
 
-  const refreshBookings = async () => {
+  const refreshBookings = useCallback(async () => {
     if (!profile?.id || !isProfessional) return;
 
     setBookingsLoading(true);
@@ -755,7 +755,35 @@ export default function ProfessionalDashboardClient() {
     } finally {
       setBookingsLoading(false);
     }
-  };
+  }, [profile?.id, isProfessional]);
+
+  useEffect(() => {
+    const refreshActiveTabData = () => {
+      if (activeTab === "availability") {
+        void fetchTimeSlots();
+      }
+
+      if (activeTab === "requests" || activeTab === "upcoming") {
+        void refreshBookings();
+      }
+    };
+
+    refreshActiveTabData();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshActiveTabData();
+      }
+    };
+
+    window.addEventListener("focus", refreshActiveTabData);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", refreshActiveTabData);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeTab, fetchTimeSlots, refreshBookings]);
 
   const handleBookingAction = async (bookingId: string, action: "approve" | "reject") => {
     setProcessingBookingId(bookingId);

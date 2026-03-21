@@ -118,7 +118,14 @@ export function useBookings(): UseBookingsReturn {
         return
       }
 
-      setAllBookings((data as BookingWithDetails[]) ?? [])
+      // Normalize bookings: handle time_slots and professional_profiles that might be arrays
+      const normalizedBookings = (data ?? []).map((booking: any) => ({
+        ...booking,
+        time_slots: Array.isArray(booking.time_slots) ? booking.time_slots[0] || null : booking.time_slots,
+        professional_profiles: Array.isArray(booking.professional_profiles) ? booking.professional_profiles[0] || null : booking.professional_profiles,
+      })) as BookingWithDetails[]
+
+      setAllBookings(normalizedBookings)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error')
       setAllBookings([])

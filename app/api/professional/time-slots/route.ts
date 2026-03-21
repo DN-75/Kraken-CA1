@@ -116,13 +116,34 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Step 5: Group slots by day for easy frontend use ─
-    const grouped = groupSlotsByDay(slots ?? [])
+    const { data: paidBookings, error: paidBookingsError } = await supabase
+      .from('bookings')
+      .select('time_slot_id')
+      .eq('professional_profile_id', proProfile.id)
+      .eq('is_paid', true)
+      .in('status', ['approved', 'completed'])
+
+    if (paidBookingsError) {
+      console.error('Fetch paid bookings error:', paidBookingsError)
+      return NextResponse.json(
+        { error: 'Failed to fetch time slot payment status' },
+        { status: 500 }
+      )
+    }
+
+    const paidSlotIds = new Set((paidBookings ?? []).map(booking => booking.time_slot_id))
+    const resolvedSlots = (slots ?? []).map(slot => ({
+      ...slot,
+      is_booked: slot.is_booked || paidSlotIds.has(slot.id),
+    }))
+
+    const grouped = groupSlotsByDay(resolvedSlots)
 
     return NextResponse.json(
       {
-        slots:   slots ?? [],
+        slots:   resolvedSlots,
         grouped,
-        total:   slots?.length ?? 0,
+        total:   resolvedSlots.length,
       },
       { status: 200 }
     )
