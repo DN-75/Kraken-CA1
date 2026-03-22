@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import {
   FaStar,
   FaUser,
@@ -9,13 +10,35 @@ import {
   FaCommentDots,
   FaLaptopCode,
   FaCalendarAlt,
-  FaLinkedin,
-  FaInstagram,
-  FaFacebook,
-  FaGlobe,
 } from "react-icons/fa";
+import {
+  IoLogoLinkedin,
+  IoLogoInstagram,
+  IoLogoFacebook,
+  IoGlobeOutline,
+} from "react-icons/io5";
 import { supabase } from "@/lib/supabaseClient";
 import BookingSessionPopup from "@/components/BookingSessionPopup";
+
+const glassPanelStyle: CSSProperties = {
+  background: "rgba(17, 49, 39, 0.40)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(16, 185, 129, 0.15)",
+  boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
+};
+
+const glassSurfaceStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(2, 44, 34, 0.45), rgba(2, 34, 24, 0.35))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.3), inset 0.3px 0.5px 1px rgba(255,255,255,0.35), 0 4px 5px rgba(0,0,0,0.2)",
+};
+
+const pageBackdropStyle: CSSProperties = {
+  background:
+    "radial-gradient(circle at top, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.08) 24%, transparent 48%), linear-gradient(180deg, #021b14 0%, #053529 45%, #021b14 100%)",
+};
 
 export interface Skill {
   skill: string;
@@ -224,13 +247,11 @@ export default function ProfessionalProfileClient({
 
   return (
     <div
-      className="min-h-screen text-white selection:bg-emerald-400 selection:text-white"
-      style={{
-        background: "linear-gradient(90deg, #021C14 0%, #021C14 50%, #021C14 100%)",
-      }}
+      className="min-h-screen text-white selection:bg-emerald-400 selection:text-white relative px-4 py-8"
+      style={pageBackdropStyle}
     >
-      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8 relative z-10">
-        <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6">
+      <main className="max-w-5xl mx-auto space-y-8 relative z-10">
+        <section className="w-full rounded-2xl p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6" style={glassPanelStyle}>
           {profile.profile_photo ? (
             <Image
               src={profile.profile_photo}
@@ -258,7 +279,7 @@ export default function ProfessionalProfileClient({
                   <FaStar className="text-yellow-400 drop-shadow-sm" /> {avgRating} Stars
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-green-800 px-8 py-1.5 text-lg font-bold text-white shadow-inner">
+              <span className="inline-flex items-center gap-1.5 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 px-8 py-1.5 text-lg font-bold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)]">
                 Rs.{professional.price_per_hour}/hr
               </span>
             </div>
@@ -272,7 +293,7 @@ export default function ProfessionalProfileClient({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] hover:bg-emerald-400/20 transition-colors"
                   >
-                    <FaLinkedin className="text-blue-400" />
+                    <IoLogoLinkedin className="text-emerald-400" size={18} />
                   </a>
                 )}
                 {professional.instagram && (
@@ -282,7 +303,7 @@ export default function ProfessionalProfileClient({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] hover:bg-emerald-400/20 transition-colors"
                   >
-                    <FaInstagram className="text-pink-400" />
+                    <IoLogoInstagram className="text-emerald-400" size={18} />
                   </a>
                 )}
                 {professional.facebook && (
@@ -292,7 +313,7 @@ export default function ProfessionalProfileClient({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] hover:bg-emerald-400/20 transition-colors"
                   >
-                    <FaFacebook className="text-blue-500" />
+                    <IoLogoFacebook className="text-emerald-400" size={18} />
                   </a>
                 )}
                 {professional.portfolio && (
@@ -302,7 +323,7 @@ export default function ProfessionalProfileClient({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] hover:bg-emerald-400/20 transition-colors"
                   >
-                    <FaGlobe className="text-emerald-400" />
+                    <IoGlobeOutline className="text-emerald-400" size={18} />
                   </a>
                 )}
               </div>
@@ -325,7 +346,7 @@ export default function ProfessionalProfileClient({
         </section>
 
         {profile.bio && (
-          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
+          <section className="w-full rounded-2xl p-6 sm:p-8 md:p-10" style={glassPanelStyle}>
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-4 drop-shadow-sm">
               <FaUser className="text-emerald-400" /> Bio
             </h2>
@@ -334,7 +355,7 @@ export default function ProfessionalProfileClient({
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
+          <section className="w-full rounded-2xl p-6 sm:p-8 md:p-10" style={glassPanelStyle}>
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
               <FaLaptopCode className="text-emerald-400" /> Skills
             </h2>
@@ -343,7 +364,7 @@ export default function ProfessionalProfileClient({
                 skills.map((skill, index) => (
                   <span
                     key={index}
-                    className="rounded-lg border border-emerald-500/15 bg-emerald-400/10 px-4 py-2 text-sm text-[#649c8c] shadow-sm transition-colors hover:bg-emerald-400/20 cursor-default"
+                    className="rounded-full border border-emerald-500/15 bg-emerald-400/10 px-4 py-2 text-sm text-[#649c8c] shadow-sm transition-colors hover:bg-emerald-400/20 cursor-default"
                   >
                     {skill.skill === "Other" ? skill.skill_other_label : skill.skill}
                   </span>
@@ -354,7 +375,7 @@ export default function ProfessionalProfileClient({
             </div>
           </section>
 
-          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
+          <section className="w-full rounded-2xl p-6 sm:p-8 md:p-10" style={glassPanelStyle}>
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-5 drop-shadow-sm">
               <FaClock className="text-emerald-400" /> Availability
             </h2>
@@ -370,7 +391,7 @@ export default function ProfessionalProfileClient({
                       {groupedSlots[day].map((slot) => (
                         <span
                           key={slot.id}
-                          className="rounded-lg border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] shadow-sm"
+                          className="rounded-full border border-emerald-500/15 bg-[rgba(2,44,34,0.45)] px-3 py-1.5 text-sm text-[#649c8c] shadow-sm"
                         >
                           {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                         </span>
@@ -384,7 +405,7 @@ export default function ProfessionalProfileClient({
         </div>
 
         {reviews.length > 0 && (
-          <section className="w-full rounded-2xl border border-emerald-500/15 bg-[rgba(17,49,39,0.55)] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),0_0_40px_rgba(16,185,129,0.05)] backdrop-blur-2xl sm:p-8 md:p-10">
+          <section className="w-full rounded-2xl p-6 sm:p-8 md:p-10" style={glassPanelStyle}>
             <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6 drop-shadow-sm">
               <FaCommentDots className="text-emerald-400" /> User Reviews ({reviews.length})
             </h2>
@@ -395,7 +416,8 @@ export default function ProfessionalProfileClient({
                 return (
                   <div
                     key={review.id}
-                    className="rounded-xl border border-emerald-500/10 bg-[rgba(2,44,34,0.45)] shadow-inner p-5 space-y-3 backdrop-blur-sm"
+                    className="rounded-xl p-5 space-y-3"
+                    style={glassSurfaceStyle}
                   >
                     <div className="flex items-center gap-3">
                       {review.user_profiles?.profiles?.profile_photo ? (
