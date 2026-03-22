@@ -78,6 +78,8 @@ const SUBMIT_BTN =
 
 const TWO_COL_GRID = "grid grid-cols-1 gap-6 sm:grid-cols-2";
 
+const LOCAL_PHONE_PATTERN = /^0\d{9}$/;
+
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -243,6 +245,7 @@ export default function RegisterPage() {
         e.preventDefault();
         setExpertSubmitError(null);
         setExpertSubmitSuccess(null);
+        const normalizedPhone = phone.trim();
         if (!expertUsername.trim() || !expertEmail.trim() || !fullName.trim()) {
             setExpertSubmitError("Username, full name and email are required.");
             return;
@@ -267,8 +270,12 @@ export default function RegisterPage() {
             setExpertSubmitError("National ID is required.");
             return;
         }
-        if (!phone.trim()) {
+        if (!normalizedPhone) {
             setExpertSubmitError("Phone number is required.");
+            return;
+        }
+        if (!LOCAL_PHONE_PATTERN.test(normalizedPhone)) {
+            setExpertSubmitError("Phone number must start with 0 and contain exactly 10 digits.");
             return;
         }
         if (!expertise.trim()) {
@@ -352,7 +359,7 @@ export default function RegisterPage() {
                     facebook: facebook.trim() || null, field: expertise.trim(),
                     university: university.trim() || null, degree: degree.trim() || null,
                     job: employer.trim() || null, job_title: jobTitle.trim() || null,
-                    phone_number: phone.trim() || null, portfolio: portfolio.trim() || null,
+                    phone_number: normalizedPhone || null, portfolio: portfolio.trim() || null,
                     verify_time_id: verifyTimeId,
                 })
                 .select("id")
@@ -498,16 +505,18 @@ export default function RegisterPage() {
 
                         <div className={TWO_COL_GRID}>
                             {/* Full Name */}
-                            <Field label="Full Name" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Full Name" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="John Doe" value={fullName}
                                        onChange={(e) => setFullName(e.target.value)}
+                                       required
                                        className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Email */}
-                            <Field label="Email Address" icon={<IoMailOutline size={18}/>}>
+                            <Field label="Email Address" icon={<IoMailOutline size={18}/>} required>
                                 <input type="email" placeholder="john@example.com" value={email}
                                        onChange={(e) => setEmail(e.target.value)}
+                                       required
                                        className={ROUND_INPUT}/>
                             </Field>
 
@@ -518,6 +527,7 @@ export default function RegisterPage() {
                                 onChange={setSeekerPassword}
                                 show={showSeekerPassword}
                                 onToggle={() => setShowSeekerPassword((v) => !v)}
+                                required
                             />
 
                             {/* Confirm Password */}
@@ -528,6 +538,7 @@ export default function RegisterPage() {
                                 show={showSeekerConfirmPassword}
                                 onToggle={() => setShowSeekerConfirmPassword((v) => !v)}
                                 placeholder="Confirm password"
+                                required
                             />
 
                             {/* Current Status */}
@@ -631,16 +642,18 @@ export default function RegisterPage() {
                     }} className="flex flex-col gap-5">
                         <div className={TWO_COL_GRID}>
                             {/* Username */}
-                            <Field label="Username" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Username" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="your_username" value={expertUsername}
                                        onChange={(e) => setExpertUsername(e.target.value)}
+                                       required
                                        className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Email */}
-                            <Field label="Email Address" icon={<IoMailOutline size={18}/>}>
+                            <Field label="Email Address" icon={<IoMailOutline size={18}/>} required>
                                 <input type="email" placeholder="expert@example.com" value={expertEmail}
                                        onChange={(e) => setExpertEmail(e.target.value)}
+                                       required
                                        className={ROUND_INPUT}/>
                             </Field>
 
@@ -652,6 +665,7 @@ export default function RegisterPage() {
                                     onChange={setExpertPassword}
                                     show={showExpertPassword}
                                     onToggle={() => setShowExpertPassword((v) => !v)}
+                                    required
                                 />
                                 {expertPassword.length > 0 && (
                                     <p className={`text-[12px] px-2 ${
@@ -673,6 +687,7 @@ export default function RegisterPage() {
                                     show={showExpertConfirmPassword}
                                     onToggle={() => setShowExpertConfirmPassword((v) => !v)}
                                     placeholder="Confirm password"
+                                    required
                                 />
                                 {expertConfirmPassword.length > 0 && (
                                     <p className={`text-[12px] px-2 ${
@@ -720,38 +735,45 @@ export default function RegisterPage() {
 
                         <div className={TWO_COL_GRID}>
                             {/* Full Name */}
-                            <Field label="Full Name" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Full Name" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="Dr. Sarah Jenkins" value={fullName}
-                                       onChange={(e) => setFullName(e.target.value)} className={ROUND_INPUT}/>
+                                       onChange={(e) => setFullName(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Job Title */}
-                            <Field label="Current Job Title" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Current Job Title" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="Senior AI Research Lead" value={jobTitle}
-                                       onChange={(e) => setJobTitle(e.target.value)} className={ROUND_INPUT}/>
+                                       onChange={(e) => setJobTitle(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Employer */}
-                            <Field label="Employer" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Employer" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="Google LLC" value={employer}
-                                       onChange={(e) => setEmployer(e.target.value)} className={ROUND_INPUT}/>
+                                       onChange={(e) => setEmployer(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* National ID */}
-                            <Field label="National ID" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="National ID" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="19**********" value={nationalId}
-                                       onChange={(e) => setNationalId(e.target.value)} className={ROUND_INPUT}/>
+                                       onChange={(e) => setNationalId(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Phone */}
-                            <Field label="Phone Number" icon={<IoPersonOutline size={18}/>}>
-                                <input type="tel" placeholder="+94 00 000 0000" value={phone}
-                                       onChange={(e) => setPhone(e.target.value)} className={ROUND_INPUT}/>
+                            <Field label="Phone Number" icon={<IoPersonOutline size={18}/>} required>
+                                <input type="tel" placeholder="0712345678" value={phone}
+                                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                                       inputMode="numeric"
+                                       maxLength={10}
+                                       pattern="0[0-9]{9}"
+                                       title="Phone number must start with 0 and contain exactly 10 digits."
+                                       required
+                                       className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Field of Expertise */}
-                            <Field label="Field of Expertise" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Field of Expertise" icon={<IoPersonOutline size={18}/>} required>
                                 <select value={expertise} onChange={(e) => setExpertise(e.target.value)}
+                                        required
                                         className={SELECT_INPUT}>
                                     <option value="" className="bg-[#052e16]">Select your domain</option>
                                     {["Software Engineering", "Data Science", "Machine Learning",
@@ -763,15 +785,15 @@ export default function RegisterPage() {
                             </Field>
 
                             {/* University */}
-                            <Field label="University" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="University" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="Stanford University" value={university}
-                                       onChange={(e) => setUniversity(e.target.value)} className={ROUND_INPUT}/>
+                                       onChange={(e) => setUniversity(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Degree */}
-                            <Field label="Degree" icon={<IoPersonOutline size={18}/>}>
+                            <Field label="Degree" icon={<IoPersonOutline size={18}/>} required>
                                 <input type="text" placeholder="Ph.D. Computer Science" value={degree}
-                                       onChange={(e) => setDegree(e.target.value)} className={ROUND_INPUT}/>
+                                       onChange={(e) => setDegree(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Portfolio */}
@@ -781,9 +803,9 @@ export default function RegisterPage() {
                             </Field>
 
                             {/* LinkedIn */}
-                            <Field label="LinkedIn" icon={<IoLogoLinkedin size={18}/>}>
-                                <input type="url" placeholder="linkedin.com/in/username" value={linkedin}
-                                       onChange={(e) => setLinkedin(e.target.value)} className={ROUND_INPUT}/>
+                            <Field label="LinkedIn" icon={<IoLogoLinkedin size={18}/>} required>
+                                <input type="url" placeholder="https://linkedin.com/in/username" value={linkedin}
+                                       onChange={(e) => setLinkedin(e.target.value)} required className={ROUND_INPUT}/>
                             </Field>
 
                             {/* Instagram */}
@@ -846,6 +868,8 @@ export default function RegisterPage() {
                                  <label
                                      className="mb-2.5 block text-[11px] font-semibold uppercase tracking-[2px] text-emerald-400">
                                      Skills &amp; Technologies
+                                     <span aria-hidden="true" className="ml-1 text-red-400">*</span>
+                                     <span className="sr-only">required</span>
                                  </label>
                                 <div
                                     className="flex min-h-[60px] flex-wrap gap-2 rounded-2xl border border-emerald-500/15 bg-gradient-to-br from-[rgba(2,44,34,0.45)] to-[rgba(2,34,24,0.35)] p-3.5 shadow-[inset_0_0px_1.5px_rgba(255,255,255,0.1)]">
@@ -870,12 +894,17 @@ export default function RegisterPage() {
 
                                 {selectedSkills.includes("Other") && (
                                     <div className="mt-3">
-                                        <label className={FIELD_LABEL}>Other Skill Label</label>
+                                        <label className={FIELD_LABEL}>
+                                            Other Skill Label
+                                            <span aria-hidden="true" className="ml-1 text-red-400">*</span>
+                                            <span className="sr-only">required</span>
+                                        </label>
                                         <input
                                             type="text"
                                             placeholder="e.g. Technical Writing"
                                             value={otherSkillLabel}
                                             onChange={(e) => setOtherSkillLabel(e.target.value)}
+                                            required
                                             className={ROUND_INPUT}
                                         />
                                     </div>
@@ -884,12 +913,17 @@ export default function RegisterPage() {
 
                             {/* Bio — full width */}
                             <div className="col-span-full">
-                                <label className={FIELD_LABEL}>Professional Bio</label>
+                                <label className={FIELD_LABEL}>
+                                    Professional Bio
+                                    <span aria-hidden="true" className="ml-1 text-red-400">*</span>
+                                    <span className="sr-only">required</span>
+                                </label>
                                 <textarea
                                     placeholder="Briefly describe your journey and accomplishments..."
                                     rows={4}
                                     value={bio}
                                     onChange={(e) => setBio(e.target.value)}
+                                    required
                                     className={
                                         ROUND_INPUT.replace("rounded-full", "rounded-2xl") +
                                         " resize-y px-4 leading-relaxed"
