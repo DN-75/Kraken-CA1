@@ -179,6 +179,9 @@ export function InteractiveNebulaShader({
     const onResize = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w === 0 || h === 0) {
+        return;
+      }
       renderer.setSize(w, h);
       uniforms.iResolution.value.set(w, h);
     };
@@ -187,7 +190,12 @@ export function InteractiveNebulaShader({
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("mousemove", onMouseMove);
+    const resizeObserver = new ResizeObserver(() => {
+      onResize();
+    });
+    resizeObserver.observe(container);
     onResize();
+    requestAnimationFrame(onResize);
 
     // Animation loop
     renderer.setAnimationLoop(() => {
@@ -198,6 +206,7 @@ export function InteractiveNebulaShader({
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
+      resizeObserver.disconnect();
       renderer.setAnimationLoop(null);
       container.removeChild(renderer.domElement);
       material.dispose();
