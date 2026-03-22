@@ -44,8 +44,7 @@ const glassSurfaceStyle: CSSProperties = {
 };
 
 const pageBackdropStyle: CSSProperties = {
-  background:
-    "radial-gradient(circle at top, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.08) 24%, transparent 48%), linear-gradient(180deg, #021b14 0%, #053529 45%, #021b14 100%)",
+  background: "#000000",
 };
 
 function InfoField({ label, value }: { label: string; value: string }) {
