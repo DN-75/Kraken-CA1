@@ -16,6 +16,7 @@ import {
 } from "react-icons/io5";
 import {HiOutlineUserGroup, HiOutlineShieldCheck} from "react-icons/hi2";
 import {supabase} from "@/lib/supabaseClient";
+import {InteractiveNebulaShader} from "@/components/ui/liquid-shader";
 import type {Database} from "@/types/database.types";
 import {Field} from "./components/Field";
 import {PasswordField} from "./components/PasswordField";
@@ -404,9 +405,15 @@ export default function RegisterPage() {
 
     return (
         <div
-            className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#021C14] to-[#021C14] px-4 py-20 md:py-10">
+            className="relative flex min-h-screen flex-col items-center justify-center px-4 py-20 md:py-10">
 
-
+            {/* Liquid Shader Background - covers full page with larger spread */}
+            <InteractiveNebulaShader
+                disableCenterDimming={true}
+                className="z-0"
+                fullPage={true}
+                spread={true}
+            />
 
             {/* ════════════════ STEP 1 — Role Selection ════════════════ */}
             {step === 1 && (
