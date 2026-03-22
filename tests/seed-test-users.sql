@@ -29,9 +29,9 @@
 DO $$
 DECLARE
   -- ⚠️ REPLACE THESE UUIDS with your actual test user UUIDs from Supabase Auth
-  v_user_id UUID := '00000000-0000-0000-0000-000000000001';  -- test@example.com
-  v_pro_id UUID := '00000000-0000-0000-0000-000000000002';   -- testpro@example.com
-  v_admin_id UUID := '00000000-0000-0000-0000-000000000003'; -- testadmin@example.com
+  v_user_id UUID := '4ed2bdbf-a53e-40ca-97b1-d40d978b9a8b';  -- test@example.com
+  v_pro_id UUID := '85f966b9-ed3a-4d25-bc25-2ee6c67b3cef';   -- testpro@example.com
+  v_admin_id UUID := 'e7f4ba64-5013-4e64-8919-19635faee675'; -- testadmin@example.com
   v_pro_profile_id UUID;
 BEGIN
   -- ─────────────────────────────────────────────

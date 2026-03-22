@@ -218,7 +218,7 @@ test.describe('Edge Cases', () => {
       const profileButton = page.locator('nav button').filter({ has: page.locator('.rounded-full') }).first();
       await profileButton.click();
       await page.getByRole('button', { name: /logout/i }).click();
-      await expect(page).toHaveURL('/');
+      await expect(page).toHaveURL('/login');
 
       // Check that cache is cleared
       const cacheAfterLogout = await page.evaluate(() => {
