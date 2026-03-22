@@ -149,6 +149,12 @@ const pageBackdropStyle: CSSProperties = {
     "radial-gradient(circle at top, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.08) 24%, transparent 48%), linear-gradient(180deg, #021b14 0%, #053529 45%, #021b14 100%)",
 };
 
+const actionButtonClass =
+  "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_12px_28px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed";
+
+const iconButtonHoverClass =
+  "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_10px_24px_rgba(0,0,0,0.2)] disabled:cursor-not-allowed";
+
 async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -374,7 +380,7 @@ export default function UserProfilePage() {
                 document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
                 router.push("/login");
               }}
-              className="w-full rounded-full px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
+              className={`w-full rounded-full px-6 py-3 text-sm font-semibold text-white ${actionButtonClass}`}
               style={primaryButtonStyle}
             >
               Return to Login
@@ -417,14 +423,14 @@ export default function UserProfilePage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveTab("profile")}
-              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110"
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
               style={activeTab === "profile" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
             >
               Profile
             </button>
             <button
               onClick={() => setActiveTab("sessions")}
-              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110"
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
               style={activeTab === "sessions" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
             >
               Sessions
@@ -483,7 +489,7 @@ export default function UserProfilePage() {
                       if (!isEditing) return;
                       setIsPhotoModalOpen(true);
                     }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                    className={`flex w-8 h-8 items-center justify-center rounded-full ${iconButtonHoverClass}`}
                     style={{
                       backgroundColor: "#10B981",
                       cursor: isEditing ? "pointer" : "not-allowed",
@@ -522,7 +528,7 @@ export default function UserProfilePage() {
 
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-5 py-2.5 rounded-full font-semibold transition-all hover:brightness-110"
+                className={`px-5 py-2.5 rounded-full font-semibold ${actionButtonClass}`}
                 style={{ ...primaryButtonStyle, color: "white" }}
               >
                 {isEditing ? "Cancel" : "Edit Profile"}
@@ -658,7 +664,7 @@ export default function UserProfilePage() {
                     <button
                       type="submit"
                       disabled={saveLoading}
-                      className="flex w-full items-center justify-center gap-2 rounded-full border-0 py-3 text-sm font-semibold text-white transition-all duration-200 cursor-pointer hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-80"
+                      className={`flex w-full items-center justify-center gap-2 rounded-full border-0 py-3 text-sm font-semibold text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-80 ${actionButtonClass}`}
                       style={primaryButtonStyle}
                     >
                       {saveLoading ? "Saving..." : "Save Changes"}
@@ -904,7 +910,7 @@ function SessionCard({ booking, status, onCancel, onViewSession, loadingSession 
           <div className="p-[1px] rounded-full w-full" style={{ background: "rgba(220, 38, 38, 0.2)" }}>
             <button
               onClick={() => onCancel?.(booking.id)}
-              className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
+              className={`w-full py-2.5 text-sm font-semibold rounded-full ${actionButtonClass}`}
               style={{ ...dangerButtonStyle, color: "#FECACA" }}
             >
               Cancel Request
@@ -920,7 +926,7 @@ function SessionCard({ booking, status, onCancel, onViewSession, loadingSession 
                   window.location.href = `/payment/${booking.id}`;
                 }}
                 disabled={booking.is_paid}
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110 disabled:cursor-not-allowed"
+                className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:cursor-not-allowed ${actionButtonClass}`}
                 style={{
                   ...(booking.is_paid ? glassSurfaceMutedStyle : warningButtonStyle),
                   color: booking.is_paid ? "#A3A3A3" : "#FEF3C7",
@@ -938,7 +944,7 @@ function SessionCard({ booking, status, onCancel, onViewSession, loadingSession 
                   }
                 }}
                 disabled={!booking.is_paid || loadingSession}
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110 disabled:cursor-not-allowed"
+                className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:cursor-not-allowed ${actionButtonClass}`}
                 style={{
                   ...(booking.is_paid ? primaryButtonStyle : glassSurfaceMutedStyle),
                   color: booking.is_paid ? "white" : "#A3A3A3",
@@ -954,7 +960,7 @@ function SessionCard({ booking, status, onCancel, onViewSession, loadingSession 
         {status === "completed" && (
           <div className="p-[1px] rounded-full w-full" style={{ background: "rgba(16, 185, 129, 0.2)" }}>
             <button
-              className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
+              className={`w-full py-2.5 text-sm font-semibold rounded-full ${actionButtonClass}`}
               style={{ ...primaryButtonStyle, color: "white" }}
             >
               Rate Session
