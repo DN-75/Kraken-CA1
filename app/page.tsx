@@ -1,10 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import {
-  IoSearchOutline,
   IoShieldCheckmarkOutline,
   IoCardOutline,
   IoVideocamOutline,
@@ -15,8 +11,13 @@ import {
   IoRocketOutline,
   IoPeopleOutline,
 } from "react-icons/io5";
-import { useCachedProfessionals } from "@/hooks/useProfessionalsContext";
+import { supabase } from "@/lib/supabaseServer";
+import type { ProfessionalCardData } from "@/hooks/useProProfiles";
 import ProfessionalCard from "@/components/ProfessionalCard";
+import HeroSearch from "@/components/home/HeroSearch";
+import HomeBackground from "@/components/home/HomeBackground";
+
+export const revalidate = 3600;
 
 /* ── Data ─────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -82,43 +83,77 @@ const CONTACT_ITEMS = [
 ];
 
 /* ── Page ─────────────────────────────────────────────── */
-export default function Home() {
-  const router = useRouter();
-  const { professionals, loading, error } = useCachedProfessionals();
-  const [heroSearch, setHeroSearch] = useState("");
-  
-  // Get top 3 professionals for the home page and adapt to ProfessionalCardData format
-  const topProfessionals = useMemo(() => 
-    professionals.slice(0, 3).map(pro => ({
-      id: pro.id,
-      name: pro.profiles?.name ?? 'Unknown',
-      profile_photo: (() => {
-        const photo = pro.profiles?.profile_photo
-        return typeof photo === "string" && photo.trim() ? photo : null
-      })(),
-      job_title: pro.job_title,
-      job: pro.job,
-      price_per_hour: pro.price_per_hour,
-      avg_rating: pro.avg_rating > 0 ? pro.avg_rating : null,
-      session_count: pro.review_count, // Use review_count as session indicator
-    })),
-    [professionals]
-  );
+const getTopProfessionals = unstable_cache(
+  async (): Promise<{ topProfessionals: ProfessionalCardData[]; error: string | null }> => {
+    try {
+      const { data: professionals, error } = await supabase
+        .from("professional_profiles")
+        .select(
+          `
+            id,
+            job_title,
+            job,
+            price_per_hour,
+            profiles ( name, profile_photo ),
+            reviews ( rating ),
+            bookings ( id )
+          `,
+        )
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
+        .limit(3);
 
-  const handleHeroSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = heroSearch.trim();
-    if (!query) {
-      router.push("/browse");
-      return;
+      if (error) {
+        return { topProfessionals: [], error: error.message };
+      }
+
+      const topProfessionals: ProfessionalCardData[] = (professionals ?? []).map((pro) => {
+        const rawProfile = pro.profiles as unknown as
+          | { name: string; profile_photo: string | null }
+          | { name: string; profile_photo: string | null }[]
+          | null;
+        const profile = Array.isArray(rawProfile) ? (rawProfile[0] ?? null) : rawProfile;
+        const reviews = (pro.reviews ?? []) as { rating: number }[];
+        const bookings = (pro.bookings ?? []) as { id: string }[];
+        const averageRating =
+          reviews.length > 0
+            ? Math.round((reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length) * 10) / 10
+            : null;
+
+        return {
+          id: pro.id,
+          name: profile?.name ?? "Unknown",
+          profile_photo:
+            typeof profile?.profile_photo === "string" && profile.profile_photo.trim()
+              ? profile.profile_photo
+              : null,
+          job_title: pro.job_title,
+          job: pro.job,
+          price_per_hour: pro.price_per_hour,
+          avg_rating: averageRating,
+          session_count: bookings.length,
+        };
+      });
+
+      return { topProfessionals, error: null };
+    } catch (err) {
+      return {
+        topProfessionals: [],
+        error: err instanceof Error ? err.message : "Failed to load professionals",
+      };
     }
-    router.push(`/browse?search=${encodeURIComponent(query)}`);
-  };
+  },
+  ["home-top-professionals"],
+  { revalidate: 3600 },
+);
+
+export default async function Home() {
+  const { topProfessionals, error } = await getTopProfessionals();
 
   return (
-    <main>
+    <main className="relative  overflow-x-hidden ">
       {/* ═══ Hero ═══════════════════════════════════════ */}
-      <section className="relative min-h-[600px] md:max-lg:min-h-[520px] max-sm:min-h-[480px] max-[400px]:min-h-[420px] flex flex-col items-center justify-center text-center py-[60px] px-5 pt-[80px] md:max-lg:pt-[70px] md:max-lg:pb-[48px] max-sm:py-[40px] max-sm:px-4 max-sm:pt-[60px] max-[400px]:py-[32px] max-[400px]:px-3 max-[400px]:pt-[48px] overflow-hidden">
+      <section className="relative z-[2] min-h-[600px] md:max-lg:min-h-[520px] max-sm:min-h-[480px] max-[400px]:min-h-[420px] flex flex-col items-center justify-center text-center py-[60px] px-5 pt-[80px] md:max-lg:pt-[70px] md:max-lg:pb-[48px] max-sm:py-[40px] max-sm:px-4 max-sm:pt-[60px] max-[400px]:py-[32px] max-[400px]:px-3 max-[400px]:pt-[48px] overflow-hidden">
 
         <div
           className="hero-bg absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -143,25 +178,7 @@ export default function Home() {
           </p>
 
           {/* Search bar */}
-          <form
-            onSubmit={handleHeroSearch}
-            className="flex max-sm:flex-wrap items-center bg-white/[0.08] border border-white/10 rounded-full max-sm:rounded-2xl py-1.5 pl-6 pr-1.5 max-sm:p-3 max-sm:px-4 max-w-[520px] mx-auto mb-6 gap-3 max-sm:gap-2.5 backdrop-blur-[10px]"
-          >
-            <IoSearchOutline size={20} className="text-white/50 shrink-0 max-sm:hidden" />
-            <input
-              type="text"
-              placeholder="Search By Skill, Industry or Role"
-              value={heroSearch}
-              onChange={(e) => setHeroSearch(e.target.value)}
-              className="flex-1 max-sm:w-full max-sm:min-w-0 bg-transparent border-none outline-none text-white text-sm font-[inherit] placeholder:text-white/45"
-            />
-            <button
-              type="submit"
-              className="bg-[var(--emerald-primary)] hover:bg-[#0ea371] text-white border-none py-2.5 px-6 max-sm:w-full max-sm:text-center max-sm:py-3 max-sm:px-5 rounded-full text-[0.85rem] font-semibold cursor-pointer whitespace-nowrap transition-colors duration-200"
-            >
-              Find an Expert
-            </button>
-          </form>
+          <HeroSearch />
 
           {/* Category tags */}
           <div className="flex flex-wrap justify-center gap-2.5 max-sm:gap-2 max-[400px]:gap-1.5 mt-2">
@@ -169,7 +186,7 @@ export default function Home() {
               <Link
                 key={cat}
                 href={`/browse?category=${encodeURIComponent(cat)}`}
-                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-lg text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60"
+                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-2xl text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60 backdrop-blur-sm"
               >
                 <IoPersonOutline size={14} />
                 {cat}
@@ -179,8 +196,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ Why Choose ═════════════════════════════════ */}
-      <section className="py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
+      {/* Sections below hero with shader background */}
+      <div className="relative">
+        {/* Shader Background - positioned higher to cover Why Choose area */}
+        <HomeBackground />
+
+        {/* ═══ Why Choose ═════════════════════════════════ */}
+        <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
         <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Why Choose</p>
         <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
           Expert<span className="text-[var(--emerald-primary)]">Connect</span> ?
@@ -207,7 +229,7 @@ export default function Home() {
       </section>
 
       {/* ═══ Top Rated Mentors ══════════════════════════ */}
-      <section className="py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
+      <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
         <div className="max-w-[900px] mx-auto mb-12 md:max-lg:mb-9 md:max-lg:text-center max-sm:mb-7 max-sm:text-center">
           <h2 className="text-[2rem] md:max-lg:text-[1.7rem] max-sm:text-[1.5rem] max-[400px]:text-[1.3rem] font-extrabold text-white mb-2">
             Meet Top Rated Mentors
@@ -218,28 +240,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto">
-          {loading ? (
-            // Loading skeleton
-            <>
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="relative rounded-2xl overflow-hidden bg-[var(--card-bg)] border border-[var(--card-border)] animate-pulse"
-                >
-                  <div className="w-full h-[200px] bg-white/5" />
-                  <div className="p-5 max-sm:p-4">
-                    <div className="h-5 w-32 bg-white/10 rounded mb-2" />
-                    <div className="h-3 w-24 bg-white/5 rounded mb-2" />
-                    <div className="h-3 w-28 bg-white/5 rounded" />
-                  </div>
-                  <div className="flex items-center justify-between py-3.5 px-5 max-sm:py-3 max-sm:px-4 border-t border-[var(--card-border)]">
-                    <div className="h-5 w-16 bg-white/10 rounded" />
-                    <div className="h-4 w-20 bg-white/5 rounded" />
-                  </div>
-                </div>
-              ))}
-            </>
-          ) : error ? (
+          {error ? (
             // Error state
             <div className="col-span-full text-center py-8">
               <p className="text-white/50">Unable to load professionals</p>
@@ -259,7 +260,7 @@ export default function Home() {
       </section>
 
       {/* ═══ About Us ════════════════════════════════════ */}
-      <section id="about" className="py-14 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
+      <section id="about" className="relative z-[1] py-14 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
         <div className="text-center mb-8">
           <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Who We Are</p>
           <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
@@ -325,7 +326,7 @@ export default function Home() {
       </section>
 
       {/* ═══ Contact Us ══════════════════════════════════ */}
-      <section id="contact" className="py-12 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
+      <section id="contact" className="relative z-[1] py-12 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
         <div className="relative max-w-[750px] lg:max-xl:max-w-full md:max-lg:max-w-full mx-auto rounded-[20px] border border-[var(--card-border)] bg-[var(--card-bg)] backdrop-blur-[12px] p-8 px-7 pb-7 max-sm:p-5 max-sm:px-4 md:max-lg:p-6 md:max-lg:px-5 overflow-hidden">
           <div className="absolute -bottom-[50px] -left-[50px] w-[160px] h-[160px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.1)_0%,transparent_70%)] pointer-events-none" />
           <div className="text-center mb-4">
@@ -354,7 +355,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <form className="grid gap-2" onSubmit={(e) => e.preventDefault()}>
+          <form className="grid gap-2">
             <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-2">
               <input
                 type="text"
@@ -378,7 +379,7 @@ export default function Home() {
               className="w-full border border-[rgba(16,185,129,0.18)] bg-white/[0.035] text-white rounded-[10px] py-[9px] px-3 text-[0.8rem] font-[inherit] outline-none transition-all duration-200 focus:border-[rgba(52,211,153,0.7)] focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] placeholder:text-white/[0.38] min-h-[80px] resize-y"
             />
             <button
-              type="submit"
+              type="button"
               className="border-none rounded-[10px] py-2.5 px-4 bg-[var(--emerald-primary)] hover:bg-[#0ea371] hover:-translate-y-px text-white font-bold text-[0.8rem] cursor-pointer transition-all duration-200 w-full"
             >
               Send Message
@@ -386,6 +387,7 @@ export default function Home() {
           </form>
         </div>
       </section>
+      </div>
 
     </main>
   );

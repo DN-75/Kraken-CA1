@@ -9,6 +9,7 @@ import {
     IoLockClosedOutline,
 } from "react-icons/io5";
 import {supabase} from "@/lib/supabaseClient";
+import {InteractiveNebulaShader} from "@/components/ui/liquid-shader";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -67,15 +68,17 @@ export default function LoginPage() {
     return (
         <div
             className="min-h-screen flex flex-col items-center justify-center px-4 relative"
-            style={{
-                background:
-                    "linear-gradient(0deg, #021C14 0%, #021C14 50%, #021C14 100%)",
-            }}
-            //main tile
         >
+            {/* Liquid Shader Background - covers full page and scrolls with content */}
+            <InteractiveNebulaShader 
+                disableCenterDimming={true}
+                className="z-0"
+                fullPage={true}
+            />
+            
             {/* Login Card */}
             <div
-                className="w-full max-w-[420px] rounded-2xl p-8 sm:p-10"
+                className="w-full max-w-[420px] rounded-2xl p-8 sm:p-10 relative z-10"
                 style={{
                     background: "rgba(17, 49, 39, 0.40)",
                     backdropFilter: "blur(20px)",
@@ -264,7 +267,7 @@ export default function LoginPage() {
 
             {/* Copyright Footer */}
             <p
-                className="absolute bottom-6 text-xs text-center"
+                className="absolute bottom-6 text-xs text-center z-10"
                 style={{color: "rgba(100, 156, 140, 0.6)"}}
             >
                 © 2024 ExpertConnect. All rights reserved. Secure Cloud Mentorship.

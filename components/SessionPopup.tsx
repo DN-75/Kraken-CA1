@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { MdContentCopy, MdCheck } from "react-icons/md";
 import { FiArrowRight } from "react-icons/fi";
 
@@ -60,9 +61,11 @@ export default function SessionPopup({
           {/* Avatar Circle */}
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600">
             {profilePhotoUrl ? (
-              <img
+              <Image
                 src={profilePhotoUrl}
                 alt={professionalName}
+                width={48}
+                height={48}
                 className="h-12 w-12 rounded-full object-cover"
               />
             ) : (

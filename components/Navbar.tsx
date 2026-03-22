@@ -70,31 +70,31 @@ export default function Navbar() {
 
   // Close mobile menu on route change
   useEffect(() => {
-    // This is an intentional UI reset on navigation.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDropdownOpen(false);
   }, [pathname]);
 
   const handleLogout = async () => {
     setDropdownOpen(false);
     setMenuOpen(false);
+
+    // Clear app-level caches immediately for responsive UI state.
+    sessionStorage.removeItem("ec_session_profile");
+    sessionStorage.removeItem("ec_professionals_cache");
+    document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
+
     try {
-      // Clear all cached session data first
-      sessionStorage.removeItem("ec_session_profile");
-      sessionStorage.removeItem("ec_professionals_cache");
-      // Clear the access token cookie
-      document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
-      // Sign out from Supabase
-      await supabase.auth.signOut();
-      // Navigate and refresh
-      router.push("/");
-      router.refresh();
+      const { error } = await supabase.auth.signOut({ scope: "global" });
+      if (error) throw error;
     } catch (error) {
       console.error("Logout failed:", error);
-      // Force navigation even if signOut fails
-      router.push("/");
+    } finally {
+      // Clear persisted Supabase auth entries to avoid stale sessions.
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("sb-"))
+        .forEach((key) => localStorage.removeItem(key));
+
+      router.replace("/login");
       router.refresh();
     }
   };
@@ -103,7 +103,7 @@ export default function Navbar() {
 
   return (
     <nav
-      className="sticky top-0 z-50 w-full border-b border-emerald-500/15"
+      className="fixed top-0 left-0 right-0 z-50 w-full border-b border-emerald-500/15"
       style={{
         background: "rgba(2, 44, 34, 0.7)",
         backdropFilter: "blur(20px)",
@@ -177,6 +177,7 @@ export default function Navbar() {
                         alt={profile.name}
                         width={36}
                         height={36}
+                        loading="eager"
                         className="w-9 h-9 rounded-full object-cover"
                       />
                     ) : (

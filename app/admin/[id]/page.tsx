@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { IoCheckmarkDone, IoClose } from "react-icons/io5";
 import { useSession } from "@/hooks/useSession";
@@ -202,9 +203,11 @@ export default function ExpertReviewPage() {
               className="relative bg-[rgba(17,49,39,0.95)] border border-emerald-500/20 rounded-2xl p-4 max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <img
+              <Image
                 src={professionalData.profile_photo}
                 alt={professionalData.name}
+                width={640}
+                height={640}
                 className="w-full h-auto rounded-xl"
               />
               <button
@@ -223,12 +226,14 @@ export default function ExpertReviewPage() {
             onClick={() => professionalData.profile_photo && setShowPhotoModal(true)}
             className="w-20 h-20 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shrink-0 bg-[rgba(16,185,129,0.1)] hover:border-emerald-400/60 hover:bg-[rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer group overflow-hidden"
           >
-            {professionalData.profile_photo ? (
-              <img
-                src={professionalData.profile_photo}
-                alt={professionalData.name}
-                className="w-full h-full object-cover"
-              />
+              {professionalData.profile_photo ? (
+                <Image
+                  src={professionalData.profile_photo}
+                  alt={professionalData.name}
+                  width={80}
+                  height={80}
+                  className="w-full h-full object-cover"
+                />
             ) : (
               <svg
                 className="w-6 h-6 text-emerald-400 group-hover:text-emerald-300 transition-colors"
@@ -343,7 +348,7 @@ export default function ExpertReviewPage() {
             <button 
               onClick={() => handleAction('reject')}
               disabled={actionLoading !== null}
-              className="flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {actionLoading === 'reject' ? (
                 <span>Rejecting...</span>
@@ -357,7 +362,7 @@ export default function ExpertReviewPage() {
             <button 
               onClick={() => handleAction('approve')}
               disabled={actionLoading !== null}
-              className="flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {actionLoading === 'approve' ? (
                 <span>Approving...</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
 
@@ -17,9 +18,11 @@ function RequestCard({ request, onClick }: { request: PendingProfessional; onCli
     <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-6 backdrop-blur-sm hover:border-emerald-500/40 transition-all duration-300 flex items-center justify-between">
       <div className="flex items-center gap-6 flex-1">
         {request.image ? (
-          <img
+          <Image
             src={request.image}
             alt={request.name}
+            width={64}
+            height={64}
             className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500/30 flex-shrink-0"
           />
         ) : (
@@ -47,7 +50,7 @@ function RequestCard({ request, onClick }: { request: PendingProfessional; onCli
       </div>
       <button 
         onClick={onClick}
-        className="flex items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-emerald-600 px-6 py-1.5 text-base font-medium text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 hover:scale-105 whitespace-nowrap ml-4"
+        className="flex items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-emerald-600 px-6 py-1.5 text-base font-medium text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 hover:scale-105 whitespace-nowrap ml-4 cursor-pointer"
       >
         Review
       </button>

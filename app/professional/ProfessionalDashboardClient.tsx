@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IoPersonOutline,
@@ -267,6 +268,67 @@ function normalizeBookingForProfessional(raw: RawBookingForProfessional): Bookin
       : null,
   };
 }
+
+const glassPanelStyle: CSSProperties = {
+  background: "rgba(17, 49, 39, 0.40)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(16, 185, 129, 0.15)",
+  boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
+};
+
+const glassSurfaceStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(2, 44, 34, 0.45), rgba(2, 34, 24, 0.35))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.3), inset 0.3px 0.5px 1px rgba(255,255,255,0.35), 0 4px 5px rgba(0,0,0,0.2)",
+};
+
+const glassSurfaceMutedStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(2, 44, 34, 0.3), rgba(2, 34, 24, 0.25))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.2), inset 0.3px 0.5px 1px rgba(255,255,255,0.25), 0 4px 5px rgba(0,0,0,0.2)",
+};
+
+const primaryButtonStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(28, 196, 133, 0.45), rgba(20, 150, 100, 0.45))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(152,255,152,0.25), inset 0 1px 2px rgba(255,255,255,0.35), 0 6px 16px rgba(0,0,0,0.25)",
+};
+
+const inactivePillStyle: CSSProperties = {
+  background: "rgba(2, 44, 34, 0.28)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(152,255,152,0.08), inset 0 1px 2px rgba(255,255,255,0.12)",
+};
+
+const warningButtonStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(180, 83, 9, 0.28))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(254,240,138,0.2), inset 0 1px 2px rgba(255,255,255,0.18), 0 6px 16px rgba(0,0,0,0.2)",
+};
+
+const dangerButtonStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(220, 38, 38, 0.24), rgba(127, 29, 29, 0.3))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(254,202,202,0.18), inset 0 1px 2px rgba(255,255,255,0.16), 0 6px 16px rgba(0,0,0,0.2)",
+};
+
+const pageBackdropStyle: CSSProperties = {
+  background:
+    "radial-gradient(circle at top, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.08) 24%, transparent 48%), linear-gradient(180deg, #021b14 0%, #053529 45%, #021b14 100%)",
+};
+
+const actionButtonClass =
+  "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_12px_28px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed";
+
+const iconButtonHoverClass =
+  "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_10px_24px_rgba(0,0,0,0.2)] disabled:cursor-not-allowed";
 
 export default function ProfessionalDashboardClient() {
   const router = useRouter();
@@ -717,7 +779,7 @@ export default function ProfessionalDashboardClient() {
     }
   };
 
-  const refreshBookings = async () => {
+  const refreshBookings = useCallback(async () => {
     if (!profile?.id || !isProfessional) return;
 
     setBookingsLoading(true);
@@ -754,7 +816,35 @@ export default function ProfessionalDashboardClient() {
     } finally {
       setBookingsLoading(false);
     }
-  };
+  }, [profile?.id, isProfessional]);
+
+  useEffect(() => {
+    const refreshActiveTabData = () => {
+      if (activeTab === "availability") {
+        void fetchTimeSlots();
+      }
+
+      if (activeTab === "requests" || activeTab === "upcoming") {
+        void refreshBookings();
+      }
+    };
+
+    refreshActiveTabData();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshActiveTabData();
+      }
+    };
+
+    window.addEventListener("focus", refreshActiveTabData);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", refreshActiveTabData);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeTab, fetchTimeSlots, refreshBookings]);
 
   const handleBookingAction = async (bookingId: string, action: "approve" | "reject") => {
     setProcessingBookingId(bookingId);
@@ -875,51 +965,45 @@ export default function ProfessionalDashboardClient() {
 
   if (sessionLoading || profileLoading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background: "linear-gradient(0deg, #021711 0%, #021711 50%, #021711 100%)",
-        }}
-      >
-        <div className="text-white text-lg">Loading...</div>
+      <div className="relative flex min-h-screen items-center justify-center px-4" style={pageBackdropStyle}>
+        <div className="relative z-10 w-full max-w-md rounded-2xl p-8 text-center" style={glassPanelStyle}>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: "#10B981" }}>
+            ExpertConnect
+          </p>
+          <div className="mt-4 text-lg text-white">Loading your dashboard...</div>
+        </div>
       </div>
     );
   }
 
   if (!proProfile) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center flex-col gap-4"
-        style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
-        }}
-      >
-        <div className="text-white text-lg">{profileError || "Failed to load profile"}</div>
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut();
-            document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
-            router.push("/login");
-          }}
-          className="px-6 py-2 rounded-full text-white"
-          style={{
-            background: "linear-gradient(135deg, rgba(28,196,133,0.45), rgba(20,150,100,0.45))",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          Return to Login
-        </button>
+      <div className="relative flex min-h-screen items-center justify-center px-4" style={pageBackdropStyle}>
+        <div className="relative z-10 w-full max-w-md rounded-2xl p-8 text-center" style={glassPanelStyle}>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: "#10B981" }}>
+            ExpertConnect
+          </p>
+          <div className="mt-4 text-lg text-white">{profileError || "Failed to load profile"}</div>
+          <div className="mt-6 rounded-full p-[1px]" style={{ background: "rgba(28, 196, 133, 0.1)" }}>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
+                router.push("/login");
+              }}
+              className={`w-full rounded-full px-6 py-3 text-sm font-semibold text-white ${actionButtonClass}`}
+              style={primaryButtonStyle}
+            >
+              Return to Login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
-      }}
-    >
+    <div className="relative min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={pageBackdropStyle}>
       {isPhotoModalOpen && (
         <ProfilePhotoModal
           isOpen={isPhotoModalOpen}
@@ -949,48 +1033,38 @@ export default function ProfessionalDashboardClient() {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8 border-b border-emerald-500/20 mb-8 pb-4 overflow-x-auto">
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <div className="mb-8 rounded-2xl p-2" style={glassPanelStyle}>
+          <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setActiveTab("profile")}
-            className="text-white font-semibold pb-2 relative transition-colors"
-            style={{
-              color: activeTab === "profile" ? "white" : "#649c8c",
-              borderBottom: activeTab === "profile" ? "3px solid #10B981" : "none",
-            }}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
+            style={activeTab === "profile" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
           >
             Profile
           </button>
           <button
             onClick={() => setActiveTab("availability")}
-            className="text-white font-semibold pb-2 relative transition-colors"
-            style={{
-              color: activeTab === "availability" ? "white" : "#649c8c",
-              borderBottom: activeTab === "availability" ? "3px solid #10B981" : "none",
-            }}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
+            style={activeTab === "availability" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
           >
             Availability
           </button>
           <button
             onClick={() => setActiveTab("requests")}
-            className="text-white font-semibold pb-2 relative transition-colors"
-            style={{
-              color: activeTab === "requests" ? "white" : "#649c8c",
-              borderBottom: activeTab === "requests" ? "3px solid #10B981" : "none",
-            }}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
+            style={activeTab === "requests" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
           >
             Session Requests
           </button>
           <button
             onClick={() => setActiveTab("upcoming")}
-            className="text-white font-semibold pb-2 relative transition-colors"
-            style={{
-              color: activeTab === "upcoming" ? "white" : "#649c8c",
-              borderBottom: activeTab === "upcoming" ? "3px solid #10B981" : "none",
-            }}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
+            style={activeTab === "upcoming" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
           >
             Upcoming Sessions
           </button>
+          </div>
         </div>
 
         {successMessage && (
@@ -1014,22 +1088,15 @@ export default function ProfessionalDashboardClient() {
         )}
 
         {activeTab === "profile" && (
-          <div
-            className="w-full rounded-2xl p-8 sm:p-10"
-            style={{
-              background: "rgba(17, 49, 39, 0.40)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(16, 185, 129, 0.15)",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
-            }}
-          >
-            <div className="flex items-start gap-6 mb-8 pb-8 border-b border-emerald-500/10">
+          <div className="w-full rounded-2xl p-8 sm:p-10" style={glassPanelStyle}>
+            <div className="mb-8 flex flex-col gap-6 border-b border-emerald-500/10 pb-8 lg:flex-row lg:items-start">
               <div className="relative">
                 {proProfile.profile_photo ? (
-                  <img
+                  <Image
                     src={proProfile.profile_photo}
                     alt={proProfile.name}
+                    width={96}
+                    height={96}
                     className="w-24 h-24 rounded-full object-cover border-2 border-emerald-500/30"
                   />
                 ) : (
@@ -1047,7 +1114,7 @@ export default function ProfessionalDashboardClient() {
                       if (!isEditing) return;
                       setIsPhotoModalOpen(true);
                     }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                    className={`flex h-8 w-8 items-center justify-center rounded-full ${iconButtonHoverClass}`}
                     style={{
                       backgroundColor: "#10B981",
                       cursor: isEditing ? "pointer" : "not-allowed",
@@ -1096,15 +1163,8 @@ export default function ProfessionalDashboardClient() {
 
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-5 py-2.5 rounded-full font-semibold transition-all hover:brightness-110"
-                style={{
-                  background: "linear-gradient(135deg, rgba(28,196,133,0.45), rgba(20,150,100,0.45))",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  color: "white",
-                  boxShadow:
-                    "inset 0 0 0 0.5px rgba(152,255,152,0.25), inset 0 1px 2px rgba(255,255,255,0.35), 0 6px 16px rgba(0,0,0,0.25)",
-                }}
+                className={`rounded-full px-5 py-2.5 font-semibold text-white ${actionButtonClass}`}
+                style={primaryButtonStyle}
               >
                 {isEditing ? "Cancel" : "Edit Profile"}
               </button>
@@ -1257,7 +1317,7 @@ export default function ProfessionalDashboardClient() {
                   >
                     Skills
                   </label>
-                  <div className="flex flex-wrap gap-2 rounded-2xl p-4" style={{ background: "rgba(16, 185, 129, 0.08)" }}>
+                  <div className="flex flex-wrap gap-2 rounded-2xl p-4" style={glassSurfaceStyle}>
                     {SKILL_OPTIONS.map((skill) => {
                       const selected = formData.selectedSkills.includes(skill);
                       return (
@@ -1265,7 +1325,7 @@ export default function ProfessionalDashboardClient() {
                           key={skill}
                           type="button"
                           onClick={() => toggleSkill(skill)}
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${actionButtonClass}`}
                           style={{
                             background: selected ? "rgba(16,185,129,0.25)" : "rgba(6,78,59,0.35)",
                             color: selected ? "#A7F3D0" : "#D1FAE5",
@@ -1310,13 +1370,16 @@ export default function ProfessionalDashboardClient() {
                 </div>
 
                 <div className="flex gap-3 pt-2 border-t border-emerald-500/10">
-                  <button
-                    type="submit"
-                    disabled={saveLoading}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-80"
-                  >
-                    {saveLoading ? "Saving..." : "Save Changes"}
-                  </button>
+                  <div className="w-full rounded-full p-[1px] sm:max-w-xs" style={{ background: "rgba(28, 196, 133, 0.1)" }}>
+                    <button
+                      type="submit"
+                      disabled={saveLoading}
+                      className={`flex w-full items-center justify-center gap-2 rounded-full border-0 py-3 text-sm font-semibold text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-80 ${actionButtonClass}`}
+                      style={primaryButtonStyle}
+                    >
+                      {saveLoading ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
                 </div>
               </form>
             ) : (
@@ -1343,7 +1406,7 @@ export default function ProfessionalDashboardClient() {
                   <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: "#10B981" }}>
                     Skills
                   </label>
-                  <div className="flex flex-wrap gap-2 rounded-2xl p-4" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                  <div className="flex flex-wrap gap-2 rounded-2xl p-4" style={glassSurfaceStyle}>
                     {proProfile.skills.length > 0 ? (
                       proProfile.skills.map((skill) => (
                         <span
@@ -1372,7 +1435,7 @@ export default function ProfessionalDashboardClient() {
                   </label>
                   <div
                     className="px-4 py-3 rounded-2xl text-white text-sm"
-                    style={{ background: "rgba(16, 185, 129, 0.1)" }}
+                    style={glassSurfaceStyle}
                   >
                     {proProfile.bio || "No bio added yet. Edit profile to add one."}
                   </div>
@@ -1383,16 +1446,7 @@ export default function ProfessionalDashboardClient() {
         )}
 
         {activeTab === "availability" && (
-          <div
-            className="w-full rounded-2xl p-8 sm:p-10 space-y-8"
-            style={{
-              background: "rgba(17, 49, 39, 0.40)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(16, 185, 129, 0.15)",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
-            }}
-          >
+          <div className="w-full rounded-2xl p-8 sm:p-10 space-y-8" style={glassPanelStyle}>
             <div className="border-b border-emerald-500/10 pb-6">
               <h2 className="text-2xl font-bold text-white">Manage Availability</h2>
               <p className="text-sm mt-2" style={{ color: "#A7F3D0" }}>
@@ -1452,7 +1506,8 @@ export default function ProfessionalDashboardClient() {
               <button
                 type="submit"
                 disabled={addingSlot}
-                className="inline-flex items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 px-6 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-80"
+                className={`inline-flex items-center justify-center gap-2 rounded-full border-0 py-3 px-6 text-sm font-semibold text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-80 ${actionButtonClass}`}
+                style={primaryButtonStyle}
               >
                 <IoAddOutline size={18} />
                 {addingSlot ? "Adding..." : "Add Time Slot"}
@@ -1475,9 +1530,11 @@ export default function ProfessionalDashboardClient() {
               <h3 className="text-lg font-semibold text-white">Your Time Slots</h3>
 
               {timeSlotsLoading ? (
-                <div className="text-white/70">Loading time slots...</div>
+                <div className="rounded-xl p-5 text-sm text-white/70" style={glassSurfaceStyle}>
+                  Loading time slots...
+                </div>
               ) : timeSlots.length === 0 ? (
-                <div className="rounded-xl p-5 text-sm" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#A7F3D0" }}>
+                <div className="rounded-xl p-5 text-sm" style={{ ...glassSurfaceStyle, color: "#A7F3D0" }}>
                   No time slots added yet.
                 </div>
               ) : (
@@ -1490,7 +1547,7 @@ export default function ProfessionalDashboardClient() {
                           <div
                             key={slot.id}
                             className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3"
-                            style={{ background: "rgba(16, 185, 129, 0.1)" }}
+                            style={glassSurfaceStyle}
                           >
                             <div className="text-sm text-white">
                               {normalizeTimeLabel(slot.start_time)} - {normalizeTimeLabel(slot.end_time)}
@@ -1502,9 +1559,9 @@ export default function ProfessionalDashboardClient() {
                               type="button"
                               onClick={() => handleDeleteTimeSlot(slot.id)}
                               disabled={slot.is_booked || deletingSlotId === slot.id}
-                              className="inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition-all disabled:cursor-not-allowed"
+                              className={`inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold disabled:cursor-not-allowed ${actionButtonClass}`}
                               style={{
-                                background: slot.is_booked ? "rgba(245, 158, 11, 0.18)" : "rgba(220, 38, 38, 0.2)",
+                                ...(slot.is_booked ? warningButtonStyle : dangerButtonStyle),
                                 color: slot.is_booked ? "#FCD34D" : "#FCA5A5",
                                 opacity: slot.is_booked ? 0.8 : 1,
                               }}
@@ -1544,24 +1601,14 @@ export default function ProfessionalDashboardClient() {
             {bookingsLoading ? (
               <div
                 className="w-full rounded-2xl p-12 flex items-center justify-center"
-                style={{
-                  background: "rgba(17, 49, 39, 0.40)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(16, 185, 129, 0.15)",
-                }}
+                style={glassPanelStyle}
               >
                 <div className="text-white/70 text-lg">Loading session requests...</div>
               </div>
             ) : pendingRequests.length === 0 ? (
               <div
                 className="w-full rounded-2xl p-12 text-center"
-                style={{
-                  background: "rgba(17, 49, 39, 0.40)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(16, 185, 129, 0.15)",
-                }}
+                style={glassPanelStyle}
               >
                 <IoTimeOutline size={48} className="mx-auto text-emerald-400/50 mb-4" />
                 <p className="text-white/70 text-lg">No pending session requests right now.</p>
@@ -1601,24 +1648,14 @@ export default function ProfessionalDashboardClient() {
             {bookingsLoading ? (
               <div
                 className="w-full rounded-2xl p-12 flex items-center justify-center"
-                style={{
-                  background: "rgba(17, 49, 39, 0.40)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(16, 185, 129, 0.15)",
-                }}
+                style={glassPanelStyle}
               >
                 <div className="text-white/70 text-lg">Loading upcoming sessions...</div>
               </div>
             ) : upcomingSessions.length === 0 ? (
               <div
                 className="w-full rounded-2xl p-12 text-center"
-                style={{
-                  background: "rgba(17, 49, 39, 0.40)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(16, 185, 129, 0.15)",
-                }}
+                style={glassPanelStyle}
               >
                 <IoCalendarOutline size={48} className="mx-auto text-emerald-400/50 mb-4" />
                 <p className="text-white/70 text-lg">No upcoming booked sessions yet.</p>
@@ -1732,7 +1769,7 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
       <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: "#10B981" }}>
         {label}
       </label>
-      <div className="px-4 py-3 rounded-full text-white" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+      <div className="px-4 py-3 rounded-full text-white" style={glassSurfaceStyle}>
         {value}
       </div>
     </div>
@@ -1762,12 +1799,7 @@ function ProfessionalBookingCard({
   return (
     <div
       className="rounded-2xl p-6 border border-emerald-500/15"
-      style={{
-        background: "rgba(17, 49, 39, 0.40)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
-      }}
+      style={glassPanelStyle}
     >
       <div className="flex items-start gap-4 mb-4 pb-4 border-b border-emerald-500/10">
         <div
@@ -1775,7 +1807,13 @@ function ProfessionalBookingCard({
           style={{ background: "rgba(16, 185, 129, 0.1)" }}
         >
           {user?.profile_photo ? (
-            <img src={user.profile_photo} alt={user.name || "User"} className="w-16 h-16 rounded-full object-cover" />
+            <Image
+              src={user.profile_photo}
+              alt={user.name || "User"}
+              width={64}
+              height={64}
+              className="w-16 h-16 rounded-full object-cover"
+            />
           ) : (
             <IoPersonOutline size={24} className="text-emerald-400" />
           )}
@@ -1835,10 +1873,10 @@ function ProfessionalBookingCard({
             <button
               onClick={onViewProfile}
               disabled={loadingAction}
-              className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed"
+              className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:opacity-70 disabled:cursor-not-allowed ${actionButtonClass}`}
               style={{
+                ...glassSurfaceMutedStyle,
                 color: "#93C5FD",
-                background: "transparent",
               }}
             >
               View User Profile
@@ -1850,10 +1888,10 @@ function ProfessionalBookingCard({
               <button
                 onClick={onApprove}
                 disabled={loadingAction}
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed"
+                className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:opacity-70 disabled:cursor-not-allowed ${actionButtonClass}`}
                 style={{
-                  color: "#10B981",
-                  background: "transparent",
+                  ...primaryButtonStyle,
+                  color: "#ECFDF5",
                 }}
               >
                 {loadingAction ? "Processing..." : "Accept"}
@@ -1863,10 +1901,10 @@ function ProfessionalBookingCard({
               <button
                 onClick={onReject}
                 disabled={loadingAction}
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed"
+                className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:opacity-70 disabled:cursor-not-allowed ${actionButtonClass}`}
                 style={{
-                  color: "#FF6B6B",
-                  background: "transparent",
+                  ...dangerButtonStyle,
+                  color: "#FECACA",
                 }}
               >
                 {loadingAction ? "Processing..." : "Reject"}
@@ -1876,7 +1914,7 @@ function ProfessionalBookingCard({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-center rounded-full px-4 py-2" style={{ background: "rgba(16,185,129,0.12)" }}>
+          <div className="flex items-center justify-center rounded-full px-4 py-2" style={glassSurfaceStyle}>
             <span className="text-sm" style={{ color: "#A7F3D0" }}>
               Payment: {booking.is_paid ? "Paid" : "Pending"}
             </span>
@@ -1888,10 +1926,10 @@ function ProfessionalBookingCard({
                 type="button"
                 onClick={onViewSession}
                 disabled={loadingAction}
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
+                className={`w-full py-2.5 text-sm font-semibold rounded-full ${actionButtonClass}`}
                 style={{
+                  ...glassSurfaceMutedStyle,
                   color: "#93C5FD",
-                  background: "transparent",
                 }}
               >
                 {loadingAction ? "Opening..." : "View Session"}
@@ -1930,7 +1968,7 @@ function RequestUserProfileModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-white/80 hover:bg-emerald-500/10 hover:text-white"
+            className="cursor-pointer rounded-full p-2 text-white/80 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-500/10 hover:text-white"
             aria-label="Close profile preview"
           >
             <IoCloseOutline size={20} />
@@ -1943,7 +1981,13 @@ function RequestUserProfileModal({
             style={{ background: "rgba(16, 185, 129, 0.1)" }}
           >
             {user?.profile_photo ? (
-              <img src={user.profile_photo} alt={user.name || "User"} className="h-16 w-16 rounded-full object-cover" />
+              <Image
+                src={user.profile_photo}
+                alt={user.name || "User"}
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded-full object-cover"
+              />
             ) : (
               <IoPersonOutline size={24} className="text-emerald-400" />
             )}

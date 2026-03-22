@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { IoPersonOutline, IoTimeOutline, IoCheckmarkCircle, IoWarningOutline } from "react-icons/io5";
 import { supabase } from "@/lib/supabaseClient";
@@ -44,6 +45,7 @@ export default function PaymentPage() {
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [paymentBlocked, setPaymentBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -96,6 +98,7 @@ export default function PaymentPage() {
     if (!bookingId) return;
 
     setPaying(true);
+    setPaymentBlocked(false);
     setError(null);
     setSuccess(null);
 
@@ -119,6 +122,9 @@ export default function PaymentPage() {
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
+        if (response.status === 409) {
+          setPaymentBlocked(true);
+        }
         throw new Error(result.error || "Payment failed");
       }
 
@@ -182,7 +188,13 @@ export default function PaymentPage() {
         <div className="flex items-center gap-4 pb-5 mb-5 border-b border-emerald-500/15">
           <div className="w-16 h-16 rounded-full flex items-center justify-center border-2 border-emerald-500/30" style={{ background: "rgba(16,185,129,0.1)" }}>
             {professional?.profile_photo ? (
-              <img src={professional.profile_photo} alt={professional.name || "Professional"} className="w-16 h-16 rounded-full object-cover" />
+              <Image
+                src={professional.profile_photo}
+                alt={professional.name || "Professional"}
+                width={64}
+                height={64}
+                className="w-16 h-16 rounded-full object-cover"
+              />
             ) : (
               <IoPersonOutline size={24} className="text-emerald-400" />
             )}
@@ -211,13 +223,19 @@ export default function PaymentPage() {
         <button
           type="button"
           onClick={handlePay}
-          disabled={paying || !booking || booking.is_paid || booking.status !== "approved"}
+          disabled={paying || paymentBlocked || !booking || booking.is_paid || booking.status !== "approved"}
           className="w-full py-3 rounded-full text-white font-semibold transition-all hover:brightness-110 disabled:opacity-70 disabled:cursor-not-allowed"
           style={{
             background: "linear-gradient(135deg, rgba(28,196,133,0.85), rgba(20,150,100,0.95))",
           }}
         >
-          {booking?.is_paid ? "Already Paid" : paying ? "Processing Payment..." : "Pay Now"}
+          {booking?.is_paid
+            ? "Already Paid"
+            : paymentBlocked
+              ? "Slot Unavailable"
+              : paying
+                ? "Processing Payment..."
+                : "Pay Now"}
         </button>
       </div>
     </div>
