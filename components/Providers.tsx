@@ -11,8 +11,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <ProfessionalsProvider>
         <Navbar />
-        <ProfessionalAvailabilityNotice />
-        {children}
+        <div className="pt-16">
+          <ProfessionalAvailabilityNotice />
+          {children}
+        </div>
         <Footer />
       </ProfessionalsProvider>
     </AuthProvider>

@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabaseServer";
 import type { ProfessionalCardData } from "@/hooks/useProProfiles";
 import ProfessionalCard from "@/components/ProfessionalCard";
 import HeroSearch from "@/components/home/HeroSearch";
+import HomeBackground from "@/components/home/HomeBackground";
 
 export const revalidate = 3600;
 
@@ -150,9 +151,9 @@ export default async function Home() {
   const { topProfessionals, error } = await getTopProfessionals();
 
   return (
-    <main>
+    <main className="relative  overflow-x-hidden ">
       {/* ═══ Hero ═══════════════════════════════════════ */}
-      <section className="relative min-h-[600px] md:max-lg:min-h-[520px] max-sm:min-h-[480px] max-[400px]:min-h-[420px] flex flex-col items-center justify-center text-center py-[60px] px-5 pt-[80px] md:max-lg:pt-[70px] md:max-lg:pb-[48px] max-sm:py-[40px] max-sm:px-4 max-sm:pt-[60px] max-[400px]:py-[32px] max-[400px]:px-3 max-[400px]:pt-[48px] overflow-hidden">
+      <section className="relative z-[2] min-h-[600px] md:max-lg:min-h-[520px] max-sm:min-h-[480px] max-[400px]:min-h-[420px] flex flex-col items-center justify-center text-center py-[60px] px-5 pt-[80px] md:max-lg:pt-[70px] md:max-lg:pb-[48px] max-sm:py-[40px] max-sm:px-4 max-sm:pt-[60px] max-[400px]:py-[32px] max-[400px]:px-3 max-[400px]:pt-[48px] overflow-hidden">
 
         <div
           className="hero-bg absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -185,7 +186,7 @@ export default async function Home() {
               <Link
                 key={cat}
                 href={`/browse?category=${encodeURIComponent(cat)}`}
-                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-lg text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60"
+                className="inline-flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/70 py-2 px-4 max-sm:py-1.5 max-sm:px-3 max-[400px]:py-[5px] max-[400px]:px-2.5 rounded-2xl text-[0.8rem] max-sm:text-[0.75rem] max-[400px]:text-[0.7rem] cursor-pointer transition-all duration-200 hover:bg-[rgba(16,185,129,0.12)] hover:border-[rgba(16,185,129,0.3)] hover:text-[var(--emerald-glow)] [&>svg]:opacity-60 backdrop-blur-sm"
               >
                 <IoPersonOutline size={14} />
                 {cat}
@@ -195,10 +196,16 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ═══ Why Choose ═════════════════════════════════ */}
-      <section className="py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
+      {/* Sections below hero with shader background */}
+      <div className="relative">
+        {/* Shader Background - positioned higher to cover Why Choose area */}
+        <HomeBackground />
+
+        {/* ═══ Why Choose ═════════════════════════════════ */}
+        <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4 text-center">
         <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Why Choose</p>
-        <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
+        <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2"
+        >
           Expert<span className="text-[var(--emerald-primary)]">Connect</span> ?
         </h2>
         <p className="text-sm max-sm:text-[0.85rem] text-white/55 max-w-[520px] mx-auto mb-12 md:max-lg:mb-9 max-sm:mb-7 leading-[1.7]">
@@ -206,7 +213,12 @@ export default async function Home() {
           Accelerate your career with direct mentorship and actionable insights.
         </p>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] max-sm:grid-cols-1 md:max-lg:grid-cols-2 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] max-sm:grid-cols-1 md:max-lg:grid-cols-2 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto"
+        style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+        >
           {FEATURES.map((f) => (
             <div
               key={f.title}
@@ -223,8 +235,9 @@ export default async function Home() {
       </section>
 
       {/* ═══ Top Rated Mentors ══════════════════════════ */}
-      <section className="py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
-        <div className="max-w-[900px] mx-auto mb-12 md:max-lg:mb-9 md:max-lg:text-center max-sm:mb-7 max-sm:text-center">
+      <section className="relative z-[1] py-20 md:max-lg:py-14 max-sm:py-12 px-5 max-sm:px-4">
+        <div className="max-w-[900px] mx-auto mb-12 md:max-lg:mb-9 md:max-lg:text-center max-sm:mb-7 max-sm:text-center"
+        >
           <h2 className="text-[2rem] md:max-lg:text-[1.7rem] max-sm:text-[1.5rem] max-[400px]:text-[1.3rem] font-extrabold text-white mb-2">
             Meet Top Rated Mentors
           </h2>
@@ -233,7 +246,12 @@ export default async function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-6 md:max-lg:gap-[18px] max-sm:gap-4 max-w-[900px] lg:max-xl:max-w-[700px] md:max-lg:max-w-full max-sm:p-0 md:max-lg:px-2 mx-auto"
+        style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+        >
           {error ? (
             // Error state
             <div className="col-span-full text-center py-8">
@@ -254,7 +272,7 @@ export default async function Home() {
       </section>
 
       {/* ═══ About Us ════════════════════════════════════ */}
-      <section id="about" className="py-14 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
+      <section id="about" className="relative z-[1] py-14 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
         <div className="text-center mb-8">
           <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Who We Are</p>
           <h2 className="text-[2.2rem] lg:max-xl:text-[1.9rem] md:max-lg:text-[1.7rem] max-sm:text-[1.6rem] max-[400px]:text-[1.35rem] font-extrabold text-white mb-2">
@@ -267,8 +285,13 @@ export default async function Home() {
 
         <div className="max-w-[820px] lg:max-xl:max-w-full md:max-lg:max-w-full mx-auto grid grid-cols-3 md:max-lg:grid-cols-2 max-sm:grid-cols-1 gap-3.5 max-sm:gap-3">
           {/* Mission card - large */}
-          <div className="col-span-full relative rounded-[18px] border border-[var(--card-border)] bg-gradient-to-br from-[rgba(6,60,40,0.7)] to-[rgba(2,28,20,0.9)] p-7 max-sm:p-[18px] md:max-lg:p-[22px] pb-6 overflow-hidden">
-            <div className="absolute -top-10 -left-10 w-[200px] h-[200px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none" />
+          <div className="col-span-full relative rounded-[18px] border border-[var(--card-border)] bg-gradient-to-br from-[rgba(6,60,40,0.7)] to-[rgba(2,28,20,0.9)] p-7 max-sm:p-[18px] md:max-lg:p-[22px] pb-6 overflow-hidden"
+          style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+          >
+            <div className="absolute -top-10 -left-10 w-[200px] h-[200px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.15)_0%,transparent_70%)] pointer-events-none blur-sm" />
             <span className="inline-flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.8px] text-[var(--emerald-primary)] bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)] rounded-[20px] py-[5px] px-3.5 mb-3.5">
               <IoPeopleOutline size={14} /> Our Mission
             </span>
@@ -285,6 +308,10 @@ export default async function Home() {
             <div
               key={item.title}
               className="about-bento-card rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-[22px] px-5 max-sm:p-[18px] max-sm:px-4 transition-all duration-300 relative overflow-hidden hover:border-[rgba(16,185,129,0.35)] hover:-translate-y-[3px]"
+              style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+              }}
             >
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-[10px] bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.15)] text-[var(--emerald-primary)] mb-3">
                 {item.icon}
@@ -295,7 +322,13 @@ export default async function Home() {
           ))}
 
           {/* Stats strip */}
-          <div className="col-span-full flex flex-wrap items-center justify-center gap-7 md:max-lg:gap-[18px] max-sm:gap-4 rounded-2xl border border-[var(--card-border)] bg-[linear-gradient(90deg,rgba(6,60,40,0.4),rgba(16,185,129,0.06),rgba(6,60,40,0.4))] py-5 px-6 max-sm:p-4">
+          <div className="col-span-full flex flex-wrap items-center justify-center gap-7 md:max-lg:gap-[18px] max-sm:gap-4 rounded-2xl border border-[var(--card-border)] bg-[linear-gradient(90deg,rgba(6,60,40,0.4),rgba(16,185,129,0.06),rgba(6,60,40,0.4))] py-5 px-6 max-sm:p-4 "
+          style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+          >
+
             <div className="flex flex-col items-center gap-[3px]">
               <span className="text-2xl max-sm:text-xl font-extrabold text-[var(--emerald-primary)] leading-none">500+</span>
               <span className="text-[0.65rem] text-white/45 uppercase tracking-[0.5px]">Verified Experts</span>
@@ -320,8 +353,13 @@ export default async function Home() {
       </section>
 
       {/* ═══ Contact Us ══════════════════════════════════ */}
-      <section id="contact" className="py-12 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
-        <div className="relative max-w-[750px] lg:max-xl:max-w-full md:max-lg:max-w-full mx-auto rounded-[20px] border border-[var(--card-border)] bg-[var(--card-bg)] backdrop-blur-[12px] p-8 px-7 pb-7 max-sm:p-5 max-sm:px-4 md:max-lg:p-6 md:max-lg:px-5 overflow-hidden">
+      <section id="contact" className="relative z-[1] py-12 md:max-lg:py-10 max-sm:py-9 px-5 max-sm:px-4">
+        <div className="relative max-w-[750px] lg:max-xl:max-w-full md:max-lg:max-w-full mx-auto rounded-[20px] border border-[var(--card-border)] bg-[var(--card-bg)] backdrop-blur-[12px] p-8 px-7 pb-7 max-sm:p-5 max-sm:px-4 md:max-lg:p-6 md:max-lg:px-5 overflow-hidden"
+        style={{
+              backdropFilter: "blur(15px)",
+              WebkitBackdropFilter: "blur(15px)",
+          }}
+        >
           <div className="absolute -bottom-[50px] -left-[50px] w-[160px] h-[160px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.1)_0%,transparent_70%)] pointer-events-none" />
           <div className="text-center mb-4">
             <p className="text-[1.1rem] max-sm:text-base text-white/60 mb-2 font-medium">Get In Touch</p>
@@ -381,6 +419,7 @@ export default async function Home() {
           </form>
         </div>
       </section>
+      </div>
 
     </main>
   );

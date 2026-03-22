@@ -67,7 +67,7 @@ export default function ProfessionalAvailabilityNotice() {
   }
 
   return (
-    <div className="sticky top-0 z-40 px-4 sm:px-6 lg:px-8 py-2 bg-[rgba(120,53,15,0.94)] border-b border-amber-300/30 backdrop-blur-md">
+    <div className="sticky top-16 z-40 px-4 sm:px-6 lg:px-8 py-2 bg-[rgba(120,53,15,0.94)] border-b border-amber-300/30 backdrop-blur-md">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-amber-100">You have not added any available time slots yet.</p>
