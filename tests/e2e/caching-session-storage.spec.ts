@@ -247,4 +247,98 @@ test.describe('Caching & Session Storage', () => {
     expect(cacheState.professionalsCache).toBeNull();
     expect(cacheState.sessionProfileCache).toBeNull();
   });
+
+  test.describe('Timing & Race Conditions', () => {
+    test('should render cached professionals immediately without a loading flash while the network is unavailable', async ({ page }) => {
+      const cachedName = 'Instant Cache Mentor';
+      const cachedData = buildCachedProfessionals(cachedName, Date.now());
+      let professionalsRequestCount = 0;
+
+      await page.addInitScript(
+        ({ cacheKey, payload }) => {
+          sessionStorage.setItem(cacheKey, JSON.stringify(payload));
+        },
+        { cacheKey: PROFESSIONALS_CACHE_KEY, payload: cachedData }
+      );
+
+      await page.route('**/rest/v1/professional_profiles**', async (route) => {
+        professionalsRequestCount += 1;
+        await route.abort('failed');
+      });
+
+      await page.goto('/browse');
+
+      await expect(page.getByText(cachedName)).toBeVisible({ timeout: 2000 });
+      await expect(page.getByText('Loading mentors...')).not.toBeVisible();
+      await expect(page.getByText(/failed to load mentors/i)).not.toBeVisible();
+      expect(professionalsRequestCount).toBe(0);
+    });
+
+    test('should keep using the same professionals cache across rapid successive reloads', async ({ page }) => {
+      let professionalsRequestCount = 0;
+
+      await page.route('**/rest/v1/professional_profiles**', async (route) => {
+        professionalsRequestCount += 1;
+        await route.continue();
+      });
+
+      await page.goto('/browse');
+      await expect(page.getByPlaceholder(/search members by name/i)).toBeVisible();
+      await waitForProfessionalsCache(page);
+
+      const cacheBeforeReloads = await page.evaluate((cacheKey) => {
+        return sessionStorage.getItem(cacheKey);
+      }, PROFESSIONALS_CACHE_KEY);
+
+      await page.reload();
+      await expect(page.getByPlaceholder(/search members by name/i)).toBeVisible();
+
+      await page.reload();
+      await expect(page.getByPlaceholder(/search members by name/i)).toBeVisible();
+
+      const cacheAfterReloads = await page.evaluate((cacheKey) => {
+        return sessionStorage.getItem(cacheKey);
+      }, PROFESSIONALS_CACHE_KEY);
+
+      expect(cacheAfterReloads).toBe(cacheBeforeReloads);
+      expect(professionalsRequestCount).toBe(1);
+    });
+
+    test('should clear caches immediately when logout starts even if sign-out is still in flight', async ({ page }) => {
+      await loginAs(page, 'user');
+      await page.goto('/browse');
+      await expect(page.getByPlaceholder(/search members by name/i)).toBeVisible();
+      await waitForProfessionalsCache(page);
+      await waitForSessionProfileCache(page);
+
+      let signOutRouteSeen = false;
+      await page.route('**/auth/v1/logout**', async (route) => {
+        signOutRouteSeen = true;
+        await page.waitForTimeout(1500);
+        await route.continue();
+      });
+
+      await openProfileMenu(page);
+      await page.getByRole('button', { name: /logout/i }).click();
+
+      await expect
+        .poll(async () => {
+          return page.evaluate(({ professionalsKey, sessionKey }) => {
+            return {
+              professionalsCache: sessionStorage.getItem(professionalsKey),
+              sessionProfileCache: sessionStorage.getItem(sessionKey),
+              accessTokenCookiePresent: document.cookie.includes('ec_access_token='),
+            };
+          }, { professionalsKey: PROFESSIONALS_CACHE_KEY, sessionKey: SESSION_PROFILE_CACHE_KEY });
+        })
+        .toEqual({
+          professionalsCache: null,
+          sessionProfileCache: null,
+          accessTokenCookiePresent: false,
+        });
+
+      expect(signOutRouteSeen).toBeTruthy();
+      await expect(page).toHaveURL(/\/login$/);
+    });
+  });
 });
