@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { IoCheckmarkDone, IoClose } from "react-icons/io5";
@@ -28,6 +28,25 @@ interface ProfessionalData {
   verify_time_slot: string | null;
 }
 
+const glassPanelStyle: CSSProperties = {
+  background: "rgba(17, 49, 39, 0.40)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(16, 185, 129, 0.15)",
+  boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
+};
+
+const glassSurfaceStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(2, 44, 34, 0.45), rgba(2, 34, 24, 0.35))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.3), inset 0.3px 0.5px 1px rgba(255,255,255,0.35), 0 4px 5px rgba(0,0,0,0.2)",
+};
+
+const pageBackdropStyle: CSSProperties = {
+  background: "#000000",
+};
+
 function InfoField({ label, value }: { label: string; value: string }) {
   const isLink = 
     value.includes("http") || 
@@ -53,12 +72,13 @@ function InfoField({ label, value }: { label: string; value: string }) {
           href={getFullUrl(value)}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full rounded-full border border-[rgba(16,185,129,0.15)] py-3 px-4 text-sm text-emerald-400 hover:text-emerald-300 bg-[rgba(6,60,40,0.7)] hover:underline transition-colors block"
+          className="w-full rounded-full border border-emerald-500/15 py-3 px-4 text-sm text-emerald-400 hover:text-emerald-300 hover:underline transition-colors block overflow-hidden text-ellipsis"
+          style={glassSurfaceStyle}
         >
           {value}
         </a>
       ) : (
-        <div className="w-full rounded-full border border-[rgba(16,185,129,0.15)] py-3 px-4 text-sm text-white bg-[rgba(6,60,40,0.7)]">
+        <div className="w-full rounded-full border border-emerald-500/15 py-3 px-4 text-sm text-[#649c8c] overflow-hidden text-ellipsis" style={glassSurfaceStyle}>
           {value}
         </div>
       )}
@@ -154,7 +174,7 @@ export default function ExpertReviewPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#021C14] text-white py-8 px-6 flex items-center justify-center">
+      <main className="min-h-screen text-white py-8 px-6 flex items-center justify-center" style={pageBackdropStyle}>
         <p className="text-emerald-300">Checking access...</p>
       </main>
     );
@@ -162,7 +182,7 @@ export default function ExpertReviewPage() {
 
   if (!profile || !isAdmin) {
     return (
-      <main className="min-h-screen bg-[#021C14] text-white py-8 px-6 flex items-center justify-center">
+      <main className="min-h-screen text-white py-8 px-6 flex items-center justify-center" style={pageBackdropStyle}>
         <p className="text-emerald-300">Redirecting...</p>
       </main>
     );
@@ -170,7 +190,7 @@ export default function ExpertReviewPage() {
 
   if (fetchLoading) {
     return (
-      <main className="min-h-screen bg-[#021C14] text-white py-8 px-6 flex items-center justify-center">
+      <main className="min-h-screen text-white py-8 px-6 flex items-center justify-center" style={pageBackdropStyle}>
         <p className="text-emerald-300">Loading professional data...</p>
       </main>
     );
@@ -178,7 +198,7 @@ export default function ExpertReviewPage() {
 
   if (fetchError || !professionalData) {
     return (
-      <main className="min-h-screen bg-[#021C14] text-white py-8 px-6 flex flex-col items-center justify-center">
+      <main className="min-h-screen text-white py-8 px-6 flex flex-col items-center justify-center" style={pageBackdropStyle}>
         <p className="text-red-400 mb-4">Error: {fetchError || 'Professional not found'}</p>
         <button
           onClick={() => router.push('/admin')}
@@ -191,8 +211,8 @@ export default function ExpertReviewPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#021C14] text-white py-8 px-6">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen text-white py-8 px-6" style={pageBackdropStyle}>
+      <div className="max-w-6xl mx-auto">
         {/* ═══ Photo Modal ════════════════════════════╗ */}
         {showPhotoModal && professionalData.profile_photo && (
           <div
@@ -200,7 +220,8 @@ export default function ExpertReviewPage() {
             onClick={() => setShowPhotoModal(false)}
           >
             <div
-              className="relative bg-[rgba(17,49,39,0.95)] border border-emerald-500/20 rounded-2xl p-4 max-w-md w-full"
+              className="relative rounded-2xl p-4 max-w-md w-full"
+              style={glassPanelStyle}
               onClick={(e) => e.stopPropagation()}
             >
               <Image
@@ -221,7 +242,7 @@ export default function ExpertReviewPage() {
         )}
 
         {/* ═══ Header ════════════════════════════════╗ */}
-        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8 flex items-center gap-6">
+        <div className="rounded-2xl p-8 mb-8 flex items-center gap-6" style={glassPanelStyle}>
           <button
             onClick={() => professionalData.profile_photo && setShowPhotoModal(true)}
             className="w-20 h-20 rounded-full border-2 border-emerald-500/40 flex items-center justify-center shrink-0 bg-[rgba(16,185,129,0.1)] hover:border-emerald-400/60 hover:bg-[rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer group overflow-hidden"
@@ -256,7 +277,7 @@ export default function ExpertReviewPage() {
         </div>
 
         {/* ═══ Information Grid ══════════════════════ */}
-        <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8">
+        <div className="rounded-2xl p-8 mb-8" style={glassPanelStyle}>
           {/* Row 1 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <InfoField label="Full Name" value={professionalData.name} />
@@ -305,11 +326,12 @@ export default function ExpertReviewPage() {
               <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
                 Skills & Technologies
               </p>
-              <div className="flex flex-wrap gap-2 rounded-xl border border-[rgba(16,185,129,0.15)] bg-[rgba(6,60,40,0.5)] p-3.5">
+              <div className="flex flex-wrap gap-2 rounded-xl border border-emerald-500/15 p-3.5" style={{ background: "linear-gradient(135deg, rgba(2, 44, 34, 0.45), rgba(2, 34, 24, 0.35))" }}>
                 {professionalData.skills.map((skill, idx) => (
                   <div
                     key={idx}
-                    className="bg-emerald-500/8 border border-white/10 rounded-full px-3.5 py-1 text-sm text-white flex items-center gap-2"
+                    className="border border-emerald-500/15 rounded-full px-3.5 py-1 text-sm text-[#649c8c] flex items-center gap-2"
+                    style={{ background: "rgba(2, 44, 34, 0.5)", backdropFilter: "blur(12px)" }}
                   >
                     <svg
                       className="w-4 h-4 text-emerald-400"
@@ -332,7 +354,7 @@ export default function ExpertReviewPage() {
 
         {/* ═══ Professional Bio ══════════════════════ */}
         {professionalData.bio && (
-          <div className="bg-[rgba(6,60,40,0.5)] border border-[rgba(16,185,129,0.15)] rounded-xl p-8 mb-8">
+          <div className="rounded-2xl p-8 mb-8" style={glassPanelStyle}>
             <p className="text-emerald-400 text-xs font-semibold mb-4 uppercase tracking-wider">
               Professional Bio
             </p>
@@ -348,7 +370,8 @@ export default function ExpertReviewPage() {
             <button 
               onClick={() => handleAction('reject')}
               disabled={actionLoading !== null}
-              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-2 border-red-500/60 bg-red-500/10 hover:bg-red-500/20 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 shadow-[0_4px_15px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border border-red-500/30 px-8 py-3 text-sm font-semibold text-red-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, rgba(220, 38, 38, 0.24), rgba(127, 29, 29, 0.3))", backdropFilter: "blur(12px)" }}
             >
               {actionLoading === 'reject' ? (
                 <span>Rejecting...</span>
@@ -362,7 +385,7 @@ export default function ExpertReviewPage() {
             <button 
               onClick={() => handleAction('approve')}
               disabled={actionLoading !== null}
-              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-0 bg-linear-to-br from-emerald-400 to-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-full border-0 px-8 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-br from-emerald-400 to-emerald-600"
             >
               {actionLoading === 'approve' ? (
                 <span>Approving...</span>
