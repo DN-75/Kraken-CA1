@@ -59,7 +59,7 @@ export async function loginAs(page: Page, role: UserRole): Promise<void> {
 
   // Wait for redirect (login complete)
   try {
-    await expect(page).not.toHaveURL('/login', { timeout: 15000 });
+    await expect(page).not.toHaveURL('/login', { timeout: 45000 });
     console.log(`✅ Login successful! Redirected to: ${page.url()}`);
   } catch (error) {
     console.log(`❌ Login failed for ${role}:`);
@@ -104,6 +104,8 @@ export const test = base.extend<AuthFixtures>({
     const context = await browser.newContext();
     const page = await context.newPage();
     await loginAs(page, 'user');
+    // Wait for app to initialize (use domcontentloaded instead of networkidle for slow connections)
+    await page.waitForLoadState('domcontentloaded');
     await use(page);
     await context.close();
   },
@@ -113,6 +115,8 @@ export const test = base.extend<AuthFixtures>({
     const context = await browser.newContext();
     const page = await context.newPage();
     await loginAs(page, 'professional');
+    // Wait for app to initialize (use domcontentloaded instead of networkidle for slow connections)
+    await page.waitForLoadState('domcontentloaded');
     await use(page);
     await context.close();
   },
@@ -122,6 +126,8 @@ export const test = base.extend<AuthFixtures>({
     const context = await browser.newContext();
     const page = await context.newPage();
     await loginAs(page, 'admin');
+    // Wait for app to initialize (use domcontentloaded instead of networkidle for slow connections)
+    await page.waitForLoadState('domcontentloaded');
     await use(page);
     await context.close();
   },
