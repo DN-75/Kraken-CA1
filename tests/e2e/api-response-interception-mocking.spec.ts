@@ -1,7 +1,11 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '../fixtures';
 
-type MockProfessional = {
+const PROFESSIONALS_API = '**/rest/v1/professional_profiles**';
+const BOOKINGS_API = '**/api/bookings';
+const PROFESSIONALS_CACHE_KEY = 'ec_professionals_cache';
+
+type ProfessionalRecord = {
   id: string;
   field: string;
   job: string | null;
@@ -19,13 +23,13 @@ type MockProfessional = {
   reviews: Array<{ rating: number }>;
 };
 
-function buildMockProfessional(name: string, overrides: Partial<MockProfessional> = {}): MockProfessional {
+function buildProfessional(name: string, jobTitle: string): ProfessionalRecord {
   return {
     id: `mock-${name.toLowerCase().replace(/\s+/g, '-')}`,
     field: 'Software Engineering',
     job: 'Mock Labs',
-    job_title: 'API Mock Specialist',
-    price_per_hour: 150,
+    job_title: jobTitle,
+    price_per_hour: 120,
     created_at: '2026-01-01T00:00:00.000Z',
     profiles: {
       name,
@@ -38,60 +42,54 @@ function buildMockProfessional(name: string, overrides: Partial<MockProfessional
       },
     ],
     reviews: [{ rating: 5 }],
-    ...overrides,
   };
 }
 
 async function clearProfessionalsCache(page: Page) {
-  await page.addInitScript(() => {
-    sessionStorage.removeItem('ec_professionals_cache');
-  });
+  await page.addInitScript((cacheKey) => {
+    sessionStorage.removeItem(cacheKey);
+  }, PROFESSIONALS_CACHE_KEY);
 }
 
-async function getFirstProfessionalUrl(page: Page): Promise<string | null> {
+async function findFirstProfessionalUrl(page: Page): Promise<string | null> {
   for (const route of ['/browse', '/']) {
     await page.goto(route, { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle').catch(() => {});
 
-    const professionalLink = page.locator('a[href^="/professional/"]').first();
-    if ((await professionalLink.count()) > 0) {
-      return professionalLink.getAttribute('href');
+    const link = page.locator('a[href^="/professional/"]').first();
+    if (await link.isVisible().catch(() => false)) {
+      return link.getAttribute('href');
     }
   }
 
   return null;
 }
 
-async function openBookingPopup(page: Page) {
-  const professionalUrl = await getFirstProfessionalUrl(page);
-  test.skip(!professionalUrl, 'No professionals available for booking interception tests');
+async function openBookingDialog(page: Page): Promise<Locator> {
+  const professionalUrl = await findFirstProfessionalUrl(page);
+  test.skip(!professionalUrl, 'No professionals available for interception tests');
 
   await page.goto(professionalUrl!, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle');
 
-  const bookSessionButton = page.getByRole('button', { name: /Book Session/i });
-  await expect(bookSessionButton).toBeVisible({ timeout: 10000 });
-  await bookSessionButton.click();
+  await page.getByRole('button', { name: /Book Session/i }).click();
 
-  const popup = page.locator('.fixed.inset-0');
-  await expect(popup.getByRole('heading', { name: 'Book a Session' })).toBeVisible({ timeout: 5000 });
+  const dialog = page.locator('.fixed.inset-0');
+  await expect(dialog.getByRole('heading', { name: 'Book a Session' })).toBeVisible({ timeout: 5000 });
 
-  return popup;
+  return dialog;
 }
 
 test.describe('API Response Interception and Mocking', () => {
-  test('should render a mocked professionals response on the browse page', async ({ page }) => {
+  test('should render mocked professionals on the browse page', async ({ page }) => {
     await clearProfessionalsCache(page);
 
-    const mockedProfessionals = [
-      buildMockProfessional('Mocked Mentor Alpha'),
-      buildMockProfessional('Mocked Mentor Beta', {
-        field: 'Data Science',
-        job_title: 'Principal Analyst',
-      }),
+    const mockedProfessionals: ProfessionalRecord[] = [
+      buildProfessional('Mock Mentor One', 'Intercepted Frontend Mentor'),
+      buildProfessional('Mock Mentor Two', 'Response Mock Engineer'),
     ];
 
-    await page.route('**/rest/v1/professional_profiles**', async (route) => {
+    await page.route(PROFESSIONALS_API, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -101,44 +99,43 @@ test.describe('API Response Interception and Mocking', () => {
 
     await page.goto('/browse');
 
-    await expect(page.getByText('Mocked Mentor Alpha')).toBeVisible();
-    await expect(page.getByText('Mocked Mentor Beta')).toBeVisible();
-    await expect(page.getByText('API Mock Specialist')).toBeVisible();
-    await expect(page.getByText('Principal Analyst')).toBeVisible();
+    await expect(page.getByText('Mock Mentor One')).toBeVisible();
+    await expect(page.getByText('Mock Mentor Two')).toBeVisible();
+    await expect(page.getByText('Intercepted Frontend Mentor')).toBeVisible();
+    await expect(page.getByText('Response Mock Engineer')).toBeVisible();
   });
 
-  test('should patch the intercepted professionals response before the UI renders it', async ({ page }) => {
+  test('should modify a fetched professionals response before rendering', async ({ page }) => {
     await clearProfessionalsCache(page);
 
-    await page.route('**/rest/v1/professional_profiles**', async (route) => {
-      const response = await route.fetch();
-      const professionals = (await response.json()) as MockProfessional[];
+    await page.route(PROFESSIONALS_API, async (route) => {
+      const upstreamResponse = await route.fetch();
+      const professionals = (await upstreamResponse.json()) as ProfessionalRecord[];
 
-      professionals.unshift(
-        buildMockProfessional('Injected Mentor Gamma', {
-          field: 'Cybersecurity',
-          job_title: 'Intercepted Response Mentor',
-        })
-      );
+      const patchedProfessionals = [
+        buildProfessional('Injected Mentor', 'Patched via route.fetch'),
+        ...professionals,
+      ];
 
       await route.fulfill({
-        response,
+        response: upstreamResponse,
         contentType: 'application/json',
-        body: JSON.stringify(professionals),
+        body: JSON.stringify(patchedProfessionals),
       });
     });
 
     await page.goto('/browse');
 
-    await expect(page.getByText('Injected Mentor Gamma')).toBeVisible();
-    await expect(page.getByText('Intercepted Response Mentor')).toBeVisible();
+    await expect(page.getByText('Injected Mentor')).toBeVisible();
+    await expect(page.getByText('Patched via route.fetch')).toBeVisible();
   });
 
-  test('should mock booking creation and verify the intercepted request payload', async ({ userPage }) => {
-    let interceptedPayload: { time_slot_id?: string } | null = null;
+  test('should intercept booking creation and confirm the selected slot was posted', async ({ userPage }) => {
+    let interceptedTimeSlotId = '';
 
-    await userPage.route('**/api/bookings', async (route) => {
-      interceptedPayload = route.request().postDataJSON() as { time_slot_id?: string };
+    await userPage.route(BOOKINGS_API, async (route) => {
+      const requestBody = route.request().postDataJSON() as { time_slot_id?: string };
+      interceptedTimeSlotId = requestBody.time_slot_id ?? '';
 
       await route.fulfill({
         status: 201,
@@ -151,22 +148,18 @@ test.describe('API Response Interception and Mocking', () => {
       });
     });
 
-    const popup = await openBookingPopup(userPage);
-    const timeSlotButtons = popup.locator('button').filter({ hasText: /\d{1,2}:\d{2}\s*(AM|PM)/i });
-    const slotCount = await timeSlotButtons.count();
+    const dialog = await openBookingDialog(userPage);
+    const timeSlots = dialog.locator('button').filter({ hasText: /\d{1,2}:\d{2}\s*(AM|PM)/i });
+    const slotCount = await timeSlots.count();
 
-    test.skip(slotCount === 0, 'No time slots available for booking interception tests');
+    test.skip(slotCount === 0, 'No time slots available for interception tests');
 
-    await timeSlotButtons.first().click();
-    await popup.getByRole('button', { name: /Confirm Booking/i }).click();
+    await timeSlots.first().click();
+    await dialog.getByRole('button', { name: /Confirm Booking/i }).click();
 
-    await expect(popup.locator('.text-emerald-200')).toContainText('Mocked booking request sent successfully', {
+    await expect(dialog.locator('.text-emerald-200')).toContainText('Mocked booking request sent successfully', {
       timeout: 5000,
     });
-    if (!interceptedPayload?.time_slot_id) {
-      throw new Error('Expected intercepted booking payload to include a time_slot_id');
-    }
-
-    expect(interceptedPayload.time_slot_id).toBeTruthy();
+    await expect.poll(() => interceptedTimeSlotId).not.toBe('');
   });
 });
