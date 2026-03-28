@@ -1,19 +1,52 @@
+import type { Page, Route } from '@playwright/test';
 import { test, expect } from '../fixtures';
 import { test as baseTest } from '@playwright/test';
 
 // Helper function to get a valid professional profile URL
 async function getFirstProfessionalUrl(page: any): Promise<string | null> {
-  await page.goto('/browse');
-  await page.waitForLoadState('networkidle');
+  for (const route of ['/browse', '/']) {
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle').catch(() => {});
 
-  const professionalLink = page.locator('a[href^="/professional/"]').first();
-  const count = await professionalLink.count();
+    const professionalLink = page.locator('a[href^="/professional/"]').first();
+    const count = await professionalLink.count();
 
-  if (count > 0) {
-    const href = await professionalLink.getAttribute('href');
-    return href;
+    if (count > 0) {
+      const href = await professionalLink.getAttribute('href');
+      if (href) {
+        return href;
+      }
+    }
   }
+
   return null;
+}
+
+async function openBookingPopup(page: Page) {
+  const professionalUrl = await getFirstProfessionalUrl(page);
+  test.skip(!professionalUrl, 'No professionals available for testing');
+
+  return openBookingPopupAtUrl(page, professionalUrl!);
+}
+
+async function openBookingPopupAtUrl(page: Page, professionalUrl: string) {
+  await page.goto(professionalUrl, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('networkidle');
+  const bookSessionButton = page.getByRole('button', { name: /Book Session/i });
+  await expect(bookSessionButton).toBeVisible({ timeout: 10000 });
+  await expect(bookSessionButton).toBeEnabled({ timeout: 10000 });
+  await bookSessionButton.click();
+  const popupHeading = page.getByRole('heading', { name: 'Book a Session' });
+  const popupVisibleAfterFirstClick = await popupHeading.isVisible().catch(() => false);
+  if (!popupVisibleAfterFirstClick) {
+    await bookSessionButton.click();
+  }
+  await expect(popupHeading).toBeVisible({ timeout: 5000 });
+
+  return {
+    popup: page.locator('.fixed.inset-0'),
+    professionalUrl,
+  };
 }
 
 test.describe('Booking Flow', () => {
@@ -335,6 +368,120 @@ test.describe('Booking Flow', () => {
     });
   });
 
+  test.describe('Concurrent / Parallel User Actions', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    test('should submit only once when confirm is double-clicked during an in-flight booking request', async ({ userPage }) => {
+      let bookingRequestCount = 0;
+
+      await userPage.route('**/api/bookings', async (route) => {
+        bookingRequestCount += 1;
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            booking_id: '11111111-1111-1111-1111-111111111111',
+            message: 'Booking request sent successfully',
+          }),
+        });
+      });
+
+      const { popup } = await openBookingPopup(userPage);
+      const timeSlotButtons = popup.locator('button').filter({ hasText: /\d{1,2}:\d{2}\s*(AM|PM)/i });
+      const slotCount = await timeSlotButtons.count();
+
+      test.skip(slotCount === 0, 'No time slots available for this professional');
+
+      await timeSlotButtons.first().click();
+
+      const confirmButton = popup.getByRole('button', { name: /Confirm Booking/i });
+      await confirmButton.dblclick();
+
+      await expect(popup.getByRole('button', { name: /Sending Request/i })).toBeDisabled();
+      await expect(popup.locator('.text-emerald-200')).toContainText('Booking request sent successfully', { timeout: 5000 });
+      expect(bookingRequestCount).toBe(1);
+    });
+
+    test('should show independent outcomes when two pages confirm the same slot in parallel', async ({ browser, userPage }) => {
+      test.slow();
+
+      const storageState = await userPage.context().storageState();
+      const secondContext = await browser.newContext({ storageState });
+      const secondUserPage = await secondContext.newPage();
+      const bookingRequests: Array<{ pageLabel: string; timeSlotId: string }> = [];
+      let requestOrder = 0;
+
+      const handleConcurrentBooking = async (route: Route, pageLabel: string) => {
+        requestOrder += 1;
+        const requestBody = route.request().postDataJSON() as { time_slot_id: string };
+        bookingRequests.push({
+          pageLabel,
+          timeSlotId: requestBody.time_slot_id,
+        });
+
+        if (requestOrder === 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              booking_id: '22222222-2222-2222-2222-222222222222',
+              message: 'Booking request sent successfully',
+            }),
+          });
+          return;
+        }
+
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'This time slot is no longer available' }),
+        });
+      };
+
+      try {
+        await userPage.route('**/api/bookings', async (route) => handleConcurrentBooking(route, 'first-page'));
+        await secondUserPage.route('**/api/bookings', async (route) => handleConcurrentBooking(route, 'second-page'));
+
+        const professionalUrl = await getFirstProfessionalUrl(userPage);
+        test.skip(!professionalUrl, 'No professionals available for concurrent booking testing');
+
+        const [{ popup: firstPopup }, { popup: secondPopup }] = await Promise.all([
+          openBookingPopupAtUrl(userPage, professionalUrl!),
+          openBookingPopupAtUrl(secondUserPage, professionalUrl!),
+        ]);
+
+        const firstSlots = firstPopup.locator('button').filter({ hasText: /\d{1,2}:\d{2}\s*(AM|PM)/i });
+        const secondSlots = secondPopup.locator('button').filter({ hasText: /\d{1,2}:\d{2}\s*(AM|PM)/i });
+        const firstSlotCount = await firstSlots.count();
+        const secondSlotCount = await secondSlots.count();
+
+        test.skip(firstSlotCount === 0 || secondSlotCount === 0, 'No time slots available for concurrent booking testing');
+
+        await Promise.all([
+          firstSlots.first().click(),
+          secondSlots.first().click(),
+        ]);
+
+        await Promise.all([
+          firstPopup.getByRole('button', { name: /Confirm Booking/i }).click(),
+          secondPopup.getByRole('button', { name: /Confirm Booking/i }).click(),
+        ]);
+
+        await expect(firstPopup.locator('.text-emerald-200')).toContainText('Booking request sent successfully', { timeout: 5000 });
+        await expect(secondPopup.locator('.text-red-200')).toContainText('This time slot is no longer available', { timeout: 5000 });
+
+        expect(bookingRequests).toHaveLength(2);
+        expect(bookingRequests[0]?.timeSlotId).toBe(bookingRequests[1]?.timeSlotId);
+      } finally {
+        await secondContext.close();
+      }
+    });
+  });
+
   test.describe('Error Handling', () => {
     test('should show message when no slots available', async ({ userPage }) => {
       const professionalUrl = await getFirstProfessionalUrl(userPage);
@@ -400,6 +547,14 @@ test.describe('Booking Flow', () => {
       const professionalUrl = await getFirstProfessionalUrl(userPage);
       test.skip(!professionalUrl, 'No professionals available for testing');
 
+      await userPage.route('**/api/bookings', (route) => {
+        route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'You already have an active request for this time slot' }),
+        });
+      });
+
       await userPage.goto(professionalUrl!);
       await userPage.waitForLoadState('networkidle');
 
@@ -411,21 +566,11 @@ test.describe('Booking Flow', () => {
       const slotCount = await timeSlotButtons.count();
 
       if (slotCount > 0) {
-        // Book a slot
         await timeSlotButtons.first().click();
         await userPage.getByRole('button', { name: /Confirm Booking/i }).click();
 
-        // Wait for response and check for duplicate error OR success
-        await userPage.waitForTimeout(2000);
-
         const duplicateError = popup.getByText(/already have an active request/i);
-        const successMessage = popup.locator('.text-emerald-200');
-
-        const errorVisible = await duplicateError.isVisible().catch(() => false);
-        const successVisible = await successMessage.isVisible().catch(() => false);
-
-        // Either shows duplicate error (slot already booked before) or success (new booking)
-        expect(errorVisible || successVisible).toBeTruthy();
+        await expect(duplicateError).toBeVisible({ timeout: 5000 });
       } else {
         test.skip(true, 'No time slots available for this professional');
       }
@@ -534,15 +679,12 @@ test.describe('Booking Flow', () => {
 
       await timeSlots.first().click();
       await professionalPage.getByRole('button', { name: /Confirm Booking/i }).click();
-      await professionalPage.waitForTimeout(3000);
 
-      // Should show error "You cannot book your own profile"
       const errorMessage = popup.locator('.text-red-200');
       await expect(errorMessage).toBeVisible({ timeout: 5000 });
 
-      // Verify the error text contains the expected message
       const errorText = await errorMessage.textContent();
-      expect(errorText?.toLowerCase()).toContain('user profile not found');
+      expect(errorText?.toLowerCase()).toContain('professional accounts cannot book other professionals');
     });
   });
 
