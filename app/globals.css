@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #021C14;
+  --background: #041008;
   --foreground: #ededed;
   --emerald-primary: #10B981;
   --emerald-glow: #34D399;
@@ -12,14 +12,31 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Hide scrollbars globally while preserving scrolling */
+html,
+body {
+  overflow-x: clip;
+}
+
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Legacy Edge/IE */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chromium/Safari */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Inter, Helvetica, sans-serif;
+  font-family: var(--font-inter), Inter, Helvetica, sans-serif;
 }
 
 button {
@@ -34,8 +51,8 @@ button {
   background: linear-gradient(
     180deg,
     rgba(2, 28, 20, 0.3) 0%,
-    rgba(2, 28, 20, 0.6) 60%,
-    rgba(2, 28, 20, 1) 100%
+    rgba(2, 28, 20, 0.6) 65%,
+    rgba(0, 0, 0, 1) 100%
   );
 }
 

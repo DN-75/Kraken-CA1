@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, type CSSProperties, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useSession } from "@/hooks/useSession";
@@ -8,6 +9,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useBookings, type BookingWithDetails } from "@/hooks/useBooking";
 import { uploadProfilePhoto } from "@/utils/uploadProfilePhoto";
 import ProfilePhotoModal from "./ProfilePhotoModal";
+import SessionPopup from "@/components/SessionPopup";
 import type { Enums } from "@/types/database.types";
 import {
   IoPersonOutline,
@@ -62,6 +64,28 @@ const getStatusLabel = (value: 'undergraduate' | 'school_student' | 'job' | stri
   return "Undergraduate";
 };
 
+const MOCK_ZOOM_LINK = "https://zoom.us/j/12345678901?pwd=mockSessionLink";
+
+const formatTo12Hour = (time?: string): string => {
+  if (!time) return "--.--";
+
+  const [hourPart = "0", minutePart = "00"] = time.split(":");
+  const hour = Number.parseInt(hourPart, 10);
+  const minute = Number.parseInt(minutePart, 10);
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return "--.--";
+
+  const period = hour >= 12 ? "pm" : "am";
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+
+  return `${hour12}.${String(minute).padStart(2, "0")} ${period}`;
+};
+
+const formatDayLabel = (day?: string): string => {
+  if (!day) return "Day not set";
+  return `${day.charAt(0).toUpperCase()}${day.slice(1).toLowerCase()}`;
+};
+
 type FormDataState = {
   name: string;
   email: string;
@@ -69,6 +93,67 @@ type FormDataState = {
   time_zone: string;
   status: string;
 };
+
+const glassPanelStyle: CSSProperties = {
+  background: "rgba(17, 49, 39, 0.40)",
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: "1px solid rgba(16, 185, 129, 0.15)",
+  boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
+};
+
+const glassSurfaceStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(2, 44, 34, 0.45), rgba(2, 34, 24, 0.35))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.3), inset 0.3px 0.5px 1px rgba(255,255,255,0.35), 0 4px 5px rgba(0,0,0,0.2)",
+};
+
+const glassSurfaceMutedStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(2, 44, 34, 0.3), rgba(2, 34, 24, 0.25))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0px 1.5px rgba(255,255,255,0.2), inset 0.3px 0.5px 1px rgba(255,255,255,0.25), 0 4px 5px rgba(0,0,0,0.2)",
+};
+
+const primaryButtonStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(28, 196, 133, 0.45), rgba(20, 150, 100, 0.45))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(152,255,152,0.25), inset 0 1px 2px rgba(255,255,255,0.35), 0 6px 16px rgba(0,0,0,0.25)",
+};
+
+const inactivePillStyle: CSSProperties = {
+  background: "rgba(2, 44, 34, 0.28)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(152,255,152,0.08), inset 0 1px 2px rgba(255,255,255,0.12)",
+};
+
+const warningButtonStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(180, 83, 9, 0.28))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(254,240,138,0.2), inset 0 1px 2px rgba(255,255,255,0.18), 0 6px 16px rgba(0,0,0,0.2)",
+};
+
+const dangerButtonStyle: CSSProperties = {
+  background: "linear-gradient(135deg, rgba(220, 38, 38, 0.24), rgba(127, 29, 29, 0.3))",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "inset 0 0 0 0.5px rgba(254,202,202,0.18), inset 0 1px 2px rgba(255,255,255,0.16), 0 6px 16px rgba(0,0,0,0.2)",
+};
+
+const pageBackdropStyle: CSSProperties = {
+  background:
+    "radial-gradient(circle at top, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.08) 24%, transparent 48%), linear-gradient(180deg, #021b14 0%, #053529 45%, #021b14 100%)",
+};
+
+const actionButtonClass =
+  "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_12px_28px_rgba(0,0,0,0.22)] disabled:cursor-not-allowed";
+
+const iconButtonHoverClass =
+  "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_10px_24px_rgba(0,0,0,0.2)] disabled:cursor-not-allowed";
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -117,6 +202,8 @@ export default function UserProfilePage() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [photoSaveLoading, setPhotoSaveLoading] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [selectedSessionBooking, setSelectedSessionBooking] = useState<BookingWithDetails | null>(null);
+  const [viewingSessionId, setViewingSessionId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -228,53 +315,84 @@ export default function UserProfilePage() {
     }
   };
 
+  const handleViewSession = async (bookingId: string) => {
+    setViewingSessionId(bookingId);
+    setSaveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("You must be logged in");
+      }
+
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = (await response.json()) as {
+        error?: string;
+        booking?: BookingWithDetails;
+      };
+
+      if (!response.ok || !result.booking) {
+        throw new Error(result.error || "Failed to load session details");
+      }
+
+      setSelectedSessionBooking(result.booking);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to load session details");
+    } finally {
+      setViewingSessionId(null);
+    }
+  };
+
   if (profileLoading || bookingsLoading || (!sessionLoading && isProfessional)) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
-        }}
-      >
-        <div className="text-white text-lg">Loading...</div>
+      <div className="relative flex min-h-screen items-center justify-center px-4" style={pageBackdropStyle}>
+        <div className="relative z-10 w-full max-w-md rounded-2xl p-8 text-center" style={glassPanelStyle}>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: "#10B981" }}>
+            ExpertConnect
+          </p>
+          <div className="mt-4 text-lg text-white">Loading your dashboard...</div>
+        </div>
       </div>
     );
   }
 
   if (!userProfile) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center flex-col gap-4"
-        style={{
-          background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
-        }}
-      >
-        <div className="text-white text-lg">{profileError || "Failed to load profile"}</div>
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut();
-            document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
-            router.push("/login");
-          }}
-          className="px-6 py-2 rounded-full text-white"
-          style={{
-            background: "linear-gradient(135deg, rgba(28,196,133,0.45), rgba(20,150,100,0.45))",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          Return to Login
-        </button>
+      <div className="relative flex min-h-screen items-center justify-center px-4" style={pageBackdropStyle}>
+        <div className="relative z-10 w-full max-w-md rounded-2xl p-8 text-center" style={glassPanelStyle}>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: "#10B981" }}>
+            ExpertConnect
+          </p>
+          <div className="mt-4 text-lg text-white">{profileError || "Failed to load profile"}</div>
+          <div className="mt-6 rounded-full p-[1px]" style={{ background: "rgba(28, 196, 133, 0.1)" }}>
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                document.cookie = "ec_access_token=; path=/; max-age=0; SameSite=Lax";
+                router.push("/login");
+              }}
+              className={`w-full rounded-full px-6 py-3 text-sm font-semibold text-white ${actionButtonClass}`}
+              style={primaryButtonStyle}
+            >
+              Return to Login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: "linear-gradient(0deg, #022C22 0%, #087B5A 50%, #022C22 100%)",
-      }}
-    >
+    <div className="relative min-h-screen px-4 py-8 sm:px-6 lg:px-8" style={pageBackdropStyle}>
       {isPhotoModalOpen && (
         <ProfilePhotoModal
           isOpen={isPhotoModalOpen}
@@ -285,44 +403,44 @@ export default function UserProfilePage() {
         />
       )}
 
+      {selectedSessionBooking && (
+        <SessionPopup
+          professionalName={selectedSessionBooking.professional_profiles?.profiles?.name || "Professional"}
+          professionalRole={selectedSessionBooking.professional_profiles?.job_title || "Expert"}
+          profilePhotoUrl={selectedSessionBooking.professional_profiles?.profiles?.profile_photo || null}
+          sessionDate={formatDayLabel(selectedSessionBooking.time_slots?.day_of_week)}
+          sessionTime={`${formatTo12Hour(selectedSessionBooking.time_slots?.start_time)} to ${formatTo12Hour(selectedSessionBooking.time_slots?.end_time)}`}
+          sessionTimeZone={userProfile.time_zone || "Asia/Colombo"}
+          zoomLink={selectedSessionBooking.zoom_link || MOCK_ZOOM_LINK}
+          onClose={() => setSelectedSessionBooking(null)}
+        />
+      )}
+
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 mx-auto max-w-7xl">
         {/* Tabs */}
-        <div className="flex gap-8 border-b border-emerald-500/20 mb-8 pb-4">
-          <button
-            onClick={() => setActiveTab("profile")}
-            className="text-white font-semibold pb-2 relative transition-colors"
-            style={{
-              color: activeTab === "profile" ? "white" : "#649c8c",
-              borderBottom: activeTab === "profile" ? "3px solid #10B981" : "none",
-            }}
-          >
-            Profile
-          </button>
-          <button
-            onClick={() => setActiveTab("sessions")}
-            className="text-white font-semibold pb-2 relative transition-colors"
-            style={{
-              color: activeTab === "sessions" ? "white" : "#649c8c",
-              borderBottom: activeTab === "sessions" ? "3px solid #10B981" : "none",
-            }}
-          >
-            Sessions
-          </button>
+        <div className="mb-8 rounded-2xl p-2" style={glassPanelStyle}>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTab("profile")}
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
+              style={activeTab === "profile" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => setActiveTab("sessions")}
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold text-white ${actionButtonClass}`}
+              style={activeTab === "sessions" ? primaryButtonStyle : { ...inactivePillStyle, color: "#649c8c" }}
+            >
+              Sessions
+            </button>
+          </div>
         </div>
 
         {/* Profile Tab */}
         {activeTab === "profile" && (
-          <div
-            className="w-full rounded-2xl p-8 sm:p-10"
-            style={{
-              background: "rgba(17, 49, 39, 0.40)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              border: "1px solid rgba(16, 185, 129, 0.15)",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
-            }}
-          >
+          <div className="w-full rounded-2xl p-8 sm:p-10" style={glassPanelStyle}>
             {/* Success Message */}
             {successMessage && (
               <div
@@ -346,12 +464,14 @@ export default function UserProfilePage() {
             )}
 
             {/* Profile Header with Photo */}
-            <div className="flex items-start gap-6 mb-8 pb-8 border-b border-emerald-500/10">
+            <div className="mb-8 flex flex-col gap-6 border-b border-emerald-500/10 pb-8 lg:flex-row lg:items-start">
               <div className="relative">
                 {userProfile.profile_photo ? (
-                  <img
+                  <Image
                     src={userProfile.profile_photo}
                     alt={userProfile.name}
+                    width={96}
+                    height={96}
                     className="w-24 h-24 rounded-full object-cover border-2 border-emerald-500/30"
                   />
                 ) : (
@@ -369,7 +489,7 @@ export default function UserProfilePage() {
                       if (!isEditing) return;
                       setIsPhotoModalOpen(true);
                     }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                    className={`flex w-8 h-8 items-center justify-center rounded-full ${iconButtonHoverClass}`}
                     style={{
                       backgroundColor: "#10B981",
                       cursor: isEditing ? "pointer" : "not-allowed",
@@ -408,14 +528,8 @@ export default function UserProfilePage() {
 
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-5 py-2.5 rounded-full font-semibold transition-all hover:brightness-110"
-                style={{
-                  background: "linear-gradient(135deg, rgba(28,196,133,0.45), rgba(20,150,100,0.45))",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  color: "white",
-                  boxShadow: "inset 0 0 0 0.5px rgba(152,255,152,0.25), inset 0 1px 2px rgba(255,255,255,0.35), 0 6px 16px rgba(0,0,0,0.25)",
-                }}
+                className={`px-5 py-2.5 rounded-full font-semibold ${actionButtonClass}`}
+                style={{ ...primaryButtonStyle, color: "white" }}
               >
                 {isEditing ? "Cancel" : "Edit Profile"}
               </button>
@@ -546,13 +660,16 @@ export default function UserProfilePage() {
 
                 {/* Save Button */}
                 <div className="flex gap-3 pt-2 border-t border-emerald-500/10">
-                  <button
-                    type="submit"
-                    disabled={saveLoading}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-full border-0 bg-gradient-to-br from-emerald-400 to-emerald-600 py-3 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(16,185,129,0.35)] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-80"
-                  >
-                    {saveLoading ? "Saving..." : "Save Changes"}
-                  </button>
+                  <div className="w-full rounded-full p-[1px] sm:max-w-xs" style={{ background: "rgba(28, 196, 133, 0.1)" }}>
+                    <button
+                      type="submit"
+                      disabled={saveLoading}
+                      className={`flex w-full items-center justify-center gap-2 rounded-full border-0 py-3 text-sm font-semibold text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-80 ${actionButtonClass}`}
+                      style={primaryButtonStyle}
+                    >
+                      {saveLoading ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
                 </div>
               </form>
             ) : (
@@ -563,7 +680,7 @@ export default function UserProfilePage() {
                     <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: "#10B981" }}>
                       Full Name
                     </label>
-                    <div className="px-4 py-3 rounded-full text-white" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                    <div className="px-4 py-3 rounded-full text-white" style={glassSurfaceStyle}>
                       {userProfile.name}
                     </div>
                   </div>
@@ -573,7 +690,7 @@ export default function UserProfilePage() {
                     <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: "#10B981" }}>
                       Email Address
                     </label>
-                    <div className="px-4 py-3 rounded-full text-white" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                    <div className="px-4 py-3 rounded-full text-white" style={glassSurfaceStyle}>
                       {userProfile.email}
                     </div>
                   </div>
@@ -583,7 +700,7 @@ export default function UserProfilePage() {
                     <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: "#10B981" }}>
                       Current Status
                     </label>
-                    <div className="px-4 py-3 rounded-full text-white capitalize" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                    <div className="px-4 py-3 rounded-full text-white capitalize" style={glassSurfaceStyle}>
                       {getStatusLabel(userProfile.status)}
                     </div>
                   </div>
@@ -593,7 +710,7 @@ export default function UserProfilePage() {
                     <label className="block text-xs font-semibold tracking-widest uppercase mb-2" style={{ color: "#10B981" }}>
                       Timezone
                     </label>
-                    <div className="px-4 py-3 rounded-full text-white" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                    <div className="px-4 py-3 rounded-full text-white" style={glassSurfaceStyle}>
                       {userProfile.time_zone}
                     </div>
                   </div>
@@ -606,7 +723,7 @@ export default function UserProfilePage() {
                   </label>
                   <div
                     className="px-4 py-3 rounded-2xl text-white text-sm"
-                    style={{ background: "rgba(16, 185, 129, 0.1)" }}
+                    style={glassSurfaceStyle}
                   >
                     {userProfile.bio || "No bio added yet. Edit profile to add one."}
                   </div>
@@ -646,7 +763,13 @@ export default function UserProfilePage() {
                 </h2>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {approved.map((booking) => (
-                    <SessionCard key={booking.id} booking={booking} status="approved" />
+                    <SessionCard
+                      key={booking.id}
+                      booking={booking}
+                      status="approved"
+                      loadingSession={viewingSessionId === booking.id}
+                      onViewSession={(id) => void handleViewSession(id)}
+                    />
                   ))}
                 </div>
               </div>
@@ -668,15 +791,7 @@ export default function UserProfilePage() {
 
             {/* No Sessions */}
             {pending.length === 0 && approved.length === 0 && completed.length === 0 && (
-              <div
-                className="w-full rounded-2xl p-12 text-center"
-                style={{
-                  background: "rgba(17, 49, 39, 0.40)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(16, 185, 129, 0.15)",
-                }}
-              >
+              <div className="w-full rounded-2xl p-12 text-center" style={glassPanelStyle}>
                 <IoTimeOutline size={48} className="mx-auto text-emerald-400/50 mb-4" />
                 <p className="text-white/70 text-lg">No sessions yet. Explore mentors to book your first session!</p>
               </div>
@@ -684,6 +799,9 @@ export default function UserProfilePage() {
           </div>
         )}
       </div>
+      <p className="relative z-10 mt-8 text-center text-xs" style={{ color: "rgba(100, 156, 140, 0.6)" }}>
+        (c) 2024 ExpertConnect. All rights reserved. Secure Cloud Mentorship.
+      </p>
     </div>
   );
 }
@@ -693,9 +811,11 @@ interface SessionCardProps {
   booking: BookingWithDetails;
   status: "pending" | "approved" | "completed";
   onCancel?: (bookingId: string) => void;
+  onViewSession?: (bookingId: string) => void;
+  loadingSession?: boolean;
 }
 
-function SessionCard({ booking, status, onCancel }: SessionCardProps) {
+function SessionCard({ booking, status, onCancel, onViewSession, loadingSession = false }: SessionCardProps) {
   const { time_slots, professional_profiles } = booking;
   const professional = professional_profiles?.profiles;
   const jobTitle = professional_profiles?.job_title;
@@ -732,15 +852,7 @@ function SessionCard({ booking, status, onCancel }: SessionCardProps) {
   };
 
   return (
-    <div
-      className="rounded-2xl p-6 border border-emerald-500/15"
-      style={{
-        background: "rgba(17, 49, 39, 0.40)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.05)",
-      }}
-    >
+    <div className="rounded-2xl p-6" style={glassPanelStyle}>
       {/* Header with Professional Info */}
       <div className="flex items-start gap-4 mb-4 pb-4 border-b border-emerald-500/10">
         <div
@@ -748,9 +860,11 @@ function SessionCard({ booking, status, onCancel }: SessionCardProps) {
           style={{ background: "rgba(16, 185, 129, 0.1)" }}
         >
           {professional?.profile_photo ? (
-            <img
+            <Image
               src={professional.profile_photo}
               alt={professional.name}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full object-cover"
             />
           ) : (
@@ -796,11 +910,8 @@ function SessionCard({ booking, status, onCancel }: SessionCardProps) {
           <div className="p-[1px] rounded-full w-full" style={{ background: "rgba(220, 38, 38, 0.2)" }}>
             <button
               onClick={() => onCancel?.(booking.id)}
-              className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
-              style={{
-                color: "#FF6B6B",
-                background: "transparent",
-              }}
+              className={`w-full py-2.5 text-sm font-semibold rounded-full ${actionButtonClass}`}
+              style={{ ...dangerButtonStyle, color: "#FECACA" }}
             >
               Cancel Request
             </button>
@@ -811,24 +922,36 @@ function SessionCard({ booking, status, onCancel }: SessionCardProps) {
           <>
             <div className="p-[1px] rounded-full flex-1" style={{ background: "rgba(250, 204, 21, 0.2)" }}>
               <button
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
+                onClick={() => {
+                  window.location.href = `/payment/${booking.id}`;
+                }}
+                disabled={booking.is_paid}
+                className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:cursor-not-allowed ${actionButtonClass}`}
                 style={{
-                  color: "#FBBF24",
-                  background: "transparent",
+                  ...(booking.is_paid ? glassSurfaceMutedStyle : warningButtonStyle),
+                  color: booking.is_paid ? "#A3A3A3" : "#FEF3C7",
+                  opacity: booking.is_paid ? 0.7 : 1,
                 }}
               >
-                Pay Now
+                {booking.is_paid ? "Payment Completed" : "Pay Now"}
               </button>
             </div>
             <div className="p-[1px] rounded-full flex-1" style={{ background: "rgba(16, 185, 129, 0.2)" }}>
               <button
-                className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
+                onClick={() => {
+                  if (booking.is_paid) {
+                    onViewSession?.(booking.id);
+                  }
+                }}
+                disabled={!booking.is_paid || loadingSession}
+                className={`w-full py-2.5 text-sm font-semibold rounded-full disabled:cursor-not-allowed ${actionButtonClass}`}
                 style={{
-                  color: "#10B981",
-                  background: "transparent",
+                  ...(booking.is_paid ? primaryButtonStyle : glassSurfaceMutedStyle),
+                  color: booking.is_paid ? "white" : "#A3A3A3",
+                  opacity: booking.is_paid && !loadingSession ? 1 : 0.7,
                 }}
               >
-                Join Session
+                {booking.is_paid ? (loadingSession ? "Opening..." : "View Session") : "Pay to View Session"}
               </button>
             </div>
           </>
@@ -837,11 +960,8 @@ function SessionCard({ booking, status, onCancel }: SessionCardProps) {
         {status === "completed" && (
           <div className="p-[1px] rounded-full w-full" style={{ background: "rgba(16, 185, 129, 0.2)" }}>
             <button
-              className="w-full py-2.5 text-sm font-semibold rounded-full transition-all hover:brightness-110"
-              style={{
-                color: "#10B981",
-                background: "transparent",
-              }}
+              className={`w-full py-2.5 text-sm font-semibold rounded-full ${actionButtonClass}`}
+              style={{ ...primaryButtonStyle, color: "white" }}
             >
               Rate Session
             </button>

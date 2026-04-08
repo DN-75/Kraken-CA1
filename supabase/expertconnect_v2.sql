@@ -239,11 +239,10 @@ CREATE TABLE bookings (
   payment_link            TEXT,          -- Emailed to user on approval
   zoom_link               TEXT,          -- Added after payment confirmed
   created_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
-  updated_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+  updated_at              TIMESTAMPTZ    NOT NULL DEFAULT NOW()
 
   -- ✅ FIX 4: Prevents two bookings from claiming the same time slot
   -- This is the DB-level guarantee — do not rely on app logic alone
-  CONSTRAINT unique_slot_booking UNIQUE (time_slot_id)
 );
 
 
@@ -288,6 +287,8 @@ CREATE INDEX idx_professional_status          ON professional_profiles(status);
 CREATE INDEX idx_bookings_user                ON bookings(user_profile_id);
 CREATE INDEX idx_bookings_professional        ON bookings(professional_profile_id);
 CREATE INDEX idx_bookings_status              ON bookings(status);
+CREATE UNIQUE INDEX unique_paid_slot_booking  ON bookings(time_slot_id)
+  WHERE is_paid = TRUE AND status IN ('approved', 'completed');
 CREATE INDEX idx_time_slots_professional      ON time_slots(professional_profile_id);
 CREATE INDEX idx_time_slots_available         ON time_slots(professional_profile_id, is_booked);
 CREATE INDEX idx_reviews_professional         ON reviews(professional_profile_id);
@@ -425,30 +426,152 @@ CREATE TRIGGER trg_bookings_updated_at
   BEFORE UPDATE ON bookings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- Mark slot as booked when booking is created
-CREATE OR REPLACE FUNCTION mark_slot_booked()
-RETURNS TRIGGER AS $$
+-- Keep time_slots.is_booked aligned with paid booking state
+CREATE OR REPLACE FUNCTION sync_time_slot_booking_state(slot_uuid UUID)
+RETURNS VOID AS $$
 BEGIN
-  UPDATE time_slots SET is_booked = TRUE WHERE id = NEW.time_slot_id;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_booking_mark_slot
-  AFTER INSERT ON bookings
-  FOR EACH ROW EXECUTE FUNCTION mark_slot_booked();
-
--- Free slot if booking is cancelled or rejected
-CREATE OR REPLACE FUNCTION free_slot_on_cancel()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.status = 'cancelled' OR NEW.status = 'rejected' THEN
-    UPDATE time_slots SET is_booked = FALSE WHERE id = NEW.time_slot_id;
+  IF slot_uuid IS NULL THEN
+    RETURN;
   END IF;
+
+  UPDATE time_slots
+  SET is_booked = EXISTS (
+    SELECT 1
+    FROM bookings
+    WHERE time_slot_id = slot_uuid
+      AND is_paid = TRUE
+      AND status IN ('approved', 'completed')
+  )
+  WHERE id = slot_uuid;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION sync_booking_slot_state()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM sync_time_slot_booking_state(OLD.time_slot_id);
+    RETURN OLD;
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND OLD.time_slot_id IS DISTINCT FROM NEW.time_slot_id THEN
+    PERFORM sync_time_slot_booking_state(OLD.time_slot_id);
+  END IF;
+
+  PERFORM sync_time_slot_booking_state(NEW.time_slot_id);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_booking_free_slot
-  AFTER UPDATE ON bookings
-  FOR EACH ROW EXECUTE FUNCTION free_slot_on_cancel();
+CREATE TRIGGER trg_booking_sync_slot_on_insert
+  AFTER INSERT ON bookings
+  FOR EACH ROW EXECUTE FUNCTION sync_booking_slot_state();
+
+CREATE TRIGGER trg_booking_sync_slot_on_update
+  AFTER UPDATE OF status, is_paid, time_slot_id ON bookings
+  FOR EACH ROW EXECUTE FUNCTION sync_booking_slot_state();
+
+CREATE TRIGGER trg_booking_sync_slot_on_delete
+  AFTER DELETE ON bookings
+  FOR EACH ROW EXECUTE FUNCTION sync_booking_slot_state();
+
+-- Finalize payment atomically so bookings.is_paid and time_slots.is_booked stay in sync
+CREATE OR REPLACE FUNCTION finalize_booking_payment(
+  p_booking_id UUID,
+  p_user_profile_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_booking RECORD;
+  v_slot RECORD;
+BEGIN
+  SELECT
+    id,
+    user_profile_id,
+    professional_profile_id,
+    time_slot_id,
+    status,
+    is_paid
+  INTO v_booking
+  FROM bookings
+  WHERE id = p_booking_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BOOKING_NOT_FOUND';
+  END IF;
+
+  IF v_booking.user_profile_id <> p_user_profile_id THEN
+    RAISE EXCEPTION 'FORBIDDEN';
+  END IF;
+
+  IF v_booking.status <> 'approved' THEN
+    RAISE EXCEPTION 'ONLY_APPROVED_BOOKINGS_CAN_BE_PAID';
+  END IF;
+
+  SELECT id, is_booked
+  INTO v_slot
+  FROM time_slots
+  WHERE id = v_booking.time_slot_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'TIME_SLOT_NOT_FOUND';
+  END IF;
+
+  IF v_booking.is_paid THEN
+    UPDATE time_slots
+    SET is_booked = TRUE
+    WHERE id = v_booking.time_slot_id;
+
+    RETURN jsonb_build_object(
+      'booking_id', v_booking.id,
+      'time_slot_id', v_booking.time_slot_id,
+      'professional_profile_id', v_booking.professional_profile_id,
+      'already_paid', TRUE
+    );
+  END IF;
+
+  IF v_slot.is_booked OR EXISTS (
+    SELECT 1
+    FROM bookings
+    WHERE time_slot_id = v_booking.time_slot_id
+      AND id <> v_booking.id
+      AND is_paid = TRUE
+      AND status IN ('approved', 'completed')
+  ) THEN
+    RAISE EXCEPTION 'TIME_SLOT_ALREADY_BOOKED';
+  END IF;
+
+  UPDATE bookings
+  SET is_paid = TRUE
+  WHERE id = v_booking.id;
+
+  UPDATE time_slots
+  SET is_booked = TRUE
+  WHERE id = v_booking.time_slot_id;
+
+  RETURN jsonb_build_object(
+    'booking_id', v_booking.id,
+    'time_slot_id', v_booking.time_slot_id,
+    'professional_profile_id', v_booking.professional_profile_id,
+    'already_paid', FALSE
+  );
+EXCEPTION
+  WHEN unique_violation THEN
+    RAISE EXCEPTION 'TIME_SLOT_ALREADY_BOOKED';
+END;
+$$;
+
+UPDATE time_slots AS ts
+SET is_booked = EXISTS (
+  SELECT 1
+  FROM bookings AS b
+  WHERE b.time_slot_id = ts.id
+    AND b.is_paid = TRUE
+    AND b.status IN ('approved', 'completed')
+);

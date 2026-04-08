@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { IoSearchOutline, IoStar, IoCheckmarkCircle } from "react-icons/io5";
@@ -165,7 +166,7 @@ export default function BrowsePage() {
 
 	if (loading) {
 		return (
-			<main className="px-4 py-16 sm:px-6 lg:px-8">
+			<main className="px-4 py-16 sm:px-6 lg:px-8 min-h-screen bg-black">
 				<div className="mx-auto max-w-7xl rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] p-8 text-center text-white/70">
 					Loading mentors...
 				</div>
@@ -175,7 +176,7 @@ export default function BrowsePage() {
 
 	if (error) {
 		return (
-			<main className="px-4 py-16 sm:px-6 lg:px-8">
+			<main className="px-4 py-16 sm:px-6 lg:px-8 min-h-screen bg-black">
 				<div className="mx-auto max-w-7xl rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-center text-red-300">
 					Failed to load mentors: {error}
 				</div>
@@ -184,7 +185,7 @@ export default function BrowsePage() {
 	}
 
 	return (
-		<main className="px-4 py-8 sm:px-6 lg:px-8">
+		<main className="px-4 py-8 sm:px-6 lg:px-8 min-h-screen bg-black">
 			<div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
 				<aside className="h-fit rounded-2xl border border-[var(--card-border)] bg-[rgba(2,44,34,0.72)] p-5 backdrop-blur-xl lg:sticky lg:top-20">
 					<p className="mb-4 text-xs font-semibold uppercase tracking-[1.3px] text-white/50">
@@ -309,9 +310,11 @@ export default function BrowsePage() {
 									<div className="mb-4 flex items-start justify-between gap-3">
 										<div className="relative">
 											{mentor.profiles?.profile_photo ? (
-												<img
+												<Image
 													src={mentor.profiles.profile_photo}
 													alt={mentor.profiles.name}
+													width={56}
+													height={56}
 													className="h-14 w-14 rounded-full border-2 border-emerald-400/70 object-cover"
 												/>
 											) : (

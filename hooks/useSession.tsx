@@ -1,20 +1,20 @@
 // hooks/useSession.tsx
-// Global auth context — session is fetched ONCE and cached.
-// No loading flash on client‑side navigation.
+// Global auth context - session is fetched once and cached.
+// No loading flash on client-side navigation.
 'use client'
 
 import {
   createContext,
   useContext,
   useEffect,
-  useState,
   useRef,
+  useState,
   type ReactNode,
 } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabaseClient'
 import type { Database } from '@/types/database.types'
 
-// ── Types ──────────────────────────────────────────────
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 
 export interface SessionProfile extends ProfileRow {
@@ -32,11 +32,11 @@ interface SessionContextValue {
   patchProfile: (fields: Partial<SessionProfile>) => void
 }
 
-// ── Session‑storage helpers ────────────────────────────
 const CACHE_KEY = 'ec_session_profile'
 
 function getCachedProfile(): SessionProfile | null {
   if (typeof window === 'undefined') return null
+
   try {
     const raw = sessionStorage.getItem(CACHE_KEY)
     return raw ? JSON.parse(raw) : null
@@ -45,46 +45,53 @@ function getCachedProfile(): SessionProfile | null {
   }
 }
 
-function setCachedProfile(p: SessionProfile | null) {
+function setCachedProfile(profile: SessionProfile | null) {
   try {
-    if (p) sessionStorage.setItem(CACHE_KEY, JSON.stringify(p))
-    else sessionStorage.removeItem(CACHE_KEY)
-  } catch { /* ignore */ }
+    if (profile) {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(profile))
+      return
+    }
+
+    sessionStorage.removeItem(CACHE_KEY)
+  } catch {
+    // Ignore storage failures and keep runtime state usable.
+  }
 }
 
-// ── Context ────────────────────────────────────────────
 const SessionContext = createContext<SessionContextValue | null>(null)
 
-// ── Provider (mount once in layout) ────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Always start with null / loading — matches server HTML (no hydration mismatch).
+  // Always start with null/loading to match server-rendered HTML.
   const [profile, setProfile] = useState<SessionProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const initialised = useRef(false)
 
-  function applyProfile(p: SessionProfile | null) {
-    setProfile(p)
-    setCachedProfile(p)
+  function applyProfile(nextProfile: SessionProfile | null) {
+    setProfile(nextProfile)
+    setCachedProfile(nextProfile)
   }
 
   function patchProfile(fields: Partial<SessionProfile>) {
     setProfile((prev) => {
       if (!prev) return prev
+
       const next = { ...prev, ...fields }
       setCachedProfile(next)
       return next
     })
   }
 
-  async function fetchProfile() {
+  async function fetchProfile(sessionOverride?: Session | null) {
     // After the first successful load, don't flash the skeleton on refetch.
     if (!initialised.current) setLoading(true)
     setError(null)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const session =
+        sessionOverride ??
+        (await supabase.auth.getSession()).data.session
 
       if (!session?.user) {
         applyProfile(null)
@@ -112,18 +119,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // ── Hydrate from cache instantly (client only, after hydration) ──
-    const cached = getCachedProfile()
-    if (cached) {
-      setProfile(cached)
-      setLoading(false)
-      initialised.current = true
+    let active = true
+
+    async function bootstrapSession() {
+      const cached = getCachedProfile()
+
+      if (cached) {
+        setProfile(cached)
+        setLoading(false)
+        initialised.current = true
+      }
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!active) return
+
+        if (!session?.user) {
+          applyProfile(null)
+          return
+        }
+
+        if (cached?.id === session.user.id) {
+          return
+        }
+
+        await fetchProfile(session)
+      } catch (err: unknown) {
+        if (!active) return
+        setError(err instanceof Error ? err.message : 'Unknown error')
+        applyProfile(null)
+      } finally {
+        if (!active) return
+        initialised.current = true
+        setLoading(false)
+      }
     }
 
-    // ── Subscribe to auth changes ──
+    function scheduleProfileRefresh(session: Session | null) {
+      window.setTimeout(() => {
+        if (!active) return
+        void fetchProfile(session)
+      }, 0)
+    }
+
+    void bootstrapSession()
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         applyProfile(null)
         initialised.current = true
@@ -131,25 +177,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      if (
-        event === 'INITIAL_SESSION' ||
-        event === 'SIGNED_IN' ||
-        event === 'TOKEN_REFRESHED'
-      ) {
-        // If we already have a cached profile for this user, skip refetch on INITIAL_SESSION
-        // This prevents unnecessary re-renders that can break event handlers
-        const cached = getCachedProfile()
-        if (event === 'INITIAL_SESSION' && cached && session?.user?.id === cached.id) {
-          // Profile already loaded from cache for the same user, no need to refetch
-          initialised.current = true
-          setLoading(false)
-          return
-        }
-        await fetchProfile()
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        scheduleProfileRefresh(session)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -157,10 +193,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     error,
-    isUser:         profile?.role === 'user',
+    isUser: profile?.role === 'user',
     isProfessional: profile?.role === 'professional',
-    isAdmin:        profile?.role === 'admin',
-    refetch:        fetchProfile,
+    isAdmin: profile?.role === 'admin',
+    refetch: fetchProfile,
     patchProfile,
   }
 
@@ -169,11 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// ── Hook ───────────────────────────────────────────────
 export function useSession(): SessionContextValue {
   const ctx = useContext(SessionContext)
+
   if (!ctx) {
     throw new Error('useSession must be used inside <AuthProvider>')
   }
+
   return ctx
 }
