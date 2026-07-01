@@ -23,17 +23,16 @@ const NAV_LINKS = [
   { href: "/#about", label: "About Us" },
 ];
 
-// ── Logo SVG (reusable) ─────────────────────────────────
+// ── Logo Image (reusable) ─────────────────────────────────
 function Logo() {
   return (
-    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="2.5" />
-      <circle cx="7" cy="13" r="2.5" />
-      <circle cx="17" cy="13" r="2.5" />
-      <circle cx="12" cy="18" r="2.5" />
-      <circle cx="7" cy="8" r="1.5" opacity="0.6" />
-      <circle cx="17" cy="8" r="1.5" opacity="0.6" />
-    </svg>
+    <Image
+      src="/images/logo.png"
+      alt="ExpertConnect Logo"
+      width={36}
+      height={36}
+      className="object-contain"
+    />
   );
 }
 
@@ -116,12 +115,7 @@ export default function Navbar() {
           <div className="flex items-center gap-10">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0">
-              <div
-                className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                style={{ backgroundColor: "#10B981" }}
-              >
-                <Logo />
-              </div>
+              <Logo />
               <span className="hidden text-[18px] font-bold text-white sm:inline">
                 Expert<span style={{ color: "#10B981" }}>Connect</span>
               </span>
