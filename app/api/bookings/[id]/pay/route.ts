@@ -257,13 +257,18 @@ export async function POST(
       return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
 
-    let { data: finalizeResult, error: finalizeError } = await adminSupabase.rpc(
+    let finalizeResult: any = null;
+    let finalizeError: any = null;
+
+    const rpcRes = await adminSupabase.rpc(
       "finalize_booking_payment",
       {
         p_booking_id: bookingId,
         p_user_profile_id: userProfile.id,
       },
     );
+    finalizeResult = rpcRes.data;
+    finalizeError = rpcRes.error;
 
     if (isMissingFinalizePaymentRpc(finalizeError)) {
       console.warn("finalize_booking_payment RPC unavailable, using API fallback:", finalizeError);
