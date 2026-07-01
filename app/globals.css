@@ -43,9 +43,8 @@ button {
   font-family: Plus Jakarta Sans, Helvetica, sans-serif;
 }
 
-/* ── Hero background overlay (pseudo-element, not possible in Tailwind) ── */
-.hero-bg::after {
-  content: "";
+/* ── Hero background overlay ── */
+.hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -54,7 +53,9 @@ button {
     rgba(2, 28, 20, 0.6) 65%,
     rgba(0, 0, 0, 1) 100%
   );
+  pointer-events: none;
 }
+
 
 /* ── About bento card top-line hover effect (pseudo-element) ── */
 .about-bento-card::before {
