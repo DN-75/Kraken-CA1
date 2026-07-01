@@ -10,6 +10,7 @@ import {
 } from "react-icons/io5";
 import {supabase} from "@/lib/supabaseClient";
 import {InteractiveNebulaShader} from "@/components/ui/liquid-shader";
+import Image from "next/image";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -91,23 +92,13 @@ export default function LoginPage() {
             >
                 {/* Logo */}
                 <div className="flex items-center justify-center gap-2.5 mb-8">
-                    <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{backgroundColor: "#10B981"}}
-                    >
-                        <svg
-                            className="w-6 h-6 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <circle cx="12" cy="8" r="2.5"/>
-                            <circle cx="7" cy="13" r="2.5"/>
-                            <circle cx="17" cy="13" r="2.5"/>
-                            <circle cx="12" cy="18" r="2.5"/>
-                            <circle cx="7" cy="8" r="1.5" opacity="0.6"/>
-                            <circle cx="17" cy="8" r="1.5" opacity="0.6"/>
-                        </svg>
-                    </div>
+                    <Image
+                        src="/images/logo.png"
+                        alt="ExpertConnect Logo"
+                        width={40}
+                        height={40}
+                        className="object-contain"
+                    />
                     <span className="text-white text-xl font-bold tracking-tight">
             ExpertConnect
           </span>
