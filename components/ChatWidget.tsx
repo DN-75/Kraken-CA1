@@ -197,7 +197,8 @@ export default function ChatWidget() {
         /* Panel */
         .chat-panel {
           width: 380px;
-          max-height: 560px;
+          height: 520px;
+          max-height: calc(100vh - 100px);
           display: flex;
           flex-direction: column;
           background: #071a10;
@@ -287,7 +288,7 @@ export default function ChatWidget() {
         }
         .chat-close-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 
-        /* Messages */
+        /* Messages with custom scrollbar */
         .chat-messages {
           flex: 1;
           overflow-y: auto;
@@ -295,9 +296,22 @@ export default function ChatWidget() {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          scrollbar-width: none;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
         }
-        .chat-messages::-webkit-scrollbar { display: none; }
+        .chat-messages::-webkit-scrollbar {
+          width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+          background: rgba(16, 185, 129, 0.3);
+          border-radius: 4px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+          background: rgba(16, 185, 129, 0.5);
+        }
 
         /* Bubble */
         .chat-bubble {

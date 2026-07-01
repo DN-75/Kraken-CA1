@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy')
 
 // ── Validation Schema ───────────────────────────────────
 const updateStatusSchema = z.object({
