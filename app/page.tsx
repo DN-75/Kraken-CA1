@@ -17,7 +17,7 @@ import ProfessionalCard from "@/components/ProfessionalCard";
 import HeroSearch from "@/components/home/HeroSearch";
 import HomeBackground from "@/components/home/HomeBackground";
 
-export const revalidate = 3600;
+export const revalidate = 1;
 
 /* ── Data ─────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -144,7 +144,7 @@ const getTopProfessionals = unstable_cache(
     }
   },
   ["home-top-professionals"],
-  { revalidate: 3600 },
+  { revalidate: 1 },
 );
 
 export default async function Home() {
